@@ -4,11 +4,13 @@ import { useBoostStore } from '../stores/boosts';
 
 
 export default function BoostsEditor() {
-  const { boosts, addBoost, removeBoost, toggleBoost, updateBoost } =
+  const { boosts, addBoost, removeBoost, toggleBoost, updateBoost, loadBoosts } =
     useBoostStore();
   const [newDomain, setNewDomain] = React.useState('');
   const [newCss, setNewCss] = React.useState('');
   const [newJs, setNewJs] = React.useState('');
+
+  React.useEffect(() => { void loadBoosts(); }, [loadBoosts]);
 
   const handleAddBoost = () => {
     if (!newDomain.trim()) return;

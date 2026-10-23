@@ -1,6 +1,8 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
+import { getBoostsDatabase } from './boostsDatabase';
+import { NewBoost } from '../shared/boosts';
 
 export function registerIpcHandlers(): void {
   // Get window by webContents ID
@@ -86,5 +88,13 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('adblocker:import-ublock-list', async (_, filePath: string) => {
     const count = await adBlocker.importUblockList(filePath);
     return { imported: count, total: adBlocker.getRuleCount() };
+  });
+
+  // Per-domain Boosts are kept in the app's SQLite database, never in site storage.
+  ipcMain.handle('boosts:get-all', async () => (await getBoostsDatabase()).getAll());
+  ipcMain.handle('boosts:save', async (_, boost: NewBoost) => (await getBoostsDatabase()).save(boost));
+  ipcMain.handle('boosts:delete', async (_, id: string) => {
+    (await getBoostsDatabase()).delete(id);
+    return { deleted: true };
   });
 }

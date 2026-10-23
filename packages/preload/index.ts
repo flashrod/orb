@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { BoostRecord, NewBoost } from '../shared/boosts';
 
 // Expose protected APIs to the renderer process
 contextBridge.exposeInMainWorld('orbApi', {
@@ -38,7 +39,7 @@ contextBridge.exposeInMainWorld('orbApi', {
 
   // Boosts
   getBoosts: () => ipcRenderer.invoke('boosts:get-all'),
-  saveBoost: (boost: any) => ipcRenderer.invoke('boosts:save', boost),
+  saveBoost: (boost: NewBoost) => ipcRenderer.invoke('boosts:save', boost) as Promise<BoostRecord>,
   deleteBoost: (id: string) => ipcRenderer.invoke('boosts:delete', id),
 });
 
@@ -55,9 +56,9 @@ declare global {
       toggleAdBlocker: (enabled: boolean) => Promise<void>;
       getAdBlockerStatus: () => Promise<any>;
       importUblockList: (filePath: string) => Promise<any>;
-      getBoosts: () => Promise<any[]>;
-      saveBoost: (boost: any) => Promise<void>;
-      deleteBoost: (id: string) => Promise<void>;
+      getBoosts: () => Promise<BoostRecord[]>;
+      saveBoost: (boost: NewBoost) => Promise<BoostRecord>;
+      deleteBoost: (id: string) => Promise<{ deleted: boolean }>;
     };
   }
 }

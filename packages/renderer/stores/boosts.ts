@@ -1,58 +1,78 @@
 import { create } from 'zustand';
+import { BoostRecord, NewBoost } from '../../shared/boosts';
 
-export interface Boost {
-  id: string;
-  domain: string;
-  css: string;
-  js: string;
-  enabled: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+export type Boost = BoostRecord;
 
 interface BoostStore {
   boosts: Boost[];
-  addBoost: (boost: Omit<Boost, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  removeBoost: (id: string) => void;
-  toggleBoost: (id: string) => void;
-  updateBoost: (id: string, partial: Partial<Boost>) => void;
+  loaded: boolean;
+  error: string | null;
+  loadBoosts: () => Promise<void>;
+  addBoost: (boost: Omit<NewBoost, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  removeBoost: (id: string) => Promise<void>;
+  toggleBoost: (id: string) => Promise<void>;
+  updateBoost: (id: string, partial: Partial<Pick<Boost, 'domain' | 'css' | 'js' | 'enabled'>>) => Promise<void>;
   getBoostForDomain: (domain: string) => Boost | undefined;
 }
 
 export const useBoostStore = create<BoostStore>((set, get) => ({
   boosts: [],
+  loaded: false,
+  error: null,
 
-  addBoost: (boost: Omit<Boost, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const id = crypto.randomUUID();
-    const now = Date.now();
-    set((state) => ({
-      boosts: [
-        ...state.boosts,
-        { ...boost, id, createdAt: now, updatedAt: now },
-      ],
-    }));
+  loadBoosts: async () => {
+    try {
+      const boosts = await window.orbApi.getBoosts();
+      set({ boosts, loaded: true, error: null });
+    } catch (error) {
+      set({ loaded: true, error: error instanceof Error ? error.message : 'Could not load Boosts.' });
+    }
   },
 
-  removeBoost: (id: string) =>
-    set((state) => ({
-      boosts: state.boosts.filter((b: Boost) => b.id !== id),
-    })),
+  addBoost: async (boost) => {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    try {
+      const saved = await window.orbApi.saveBoost({ ...boost, id, createdAt: now, updatedAt: now });
+      set((state) => ({ boosts: [...state.boosts, saved], error: null }));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Could not save Boost.' });
+    }
+  },
 
-  toggleBoost: (id: string) =>
-    set((state) => ({
-      boosts: state.boosts.map((b: Boost) =>
-        b.id === id ? { ...b, enabled: !b.enabled } : b
-      ),
-    })),
+  removeBoost: async (id) => {
+    try {
+      await window.orbApi.deleteBoost(id);
+      set((state) => ({ boosts: state.boosts.filter((boost) => boost.id !== id), error: null }));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Could not remove Boost.' });
+    }
+  },
 
-  updateBoost: (id: string, partial: Partial<Boost>) =>
-    set((state) => ({
-      boosts: state.boosts.map((b: Boost) =>
-        b.id === id ? { ...b, ...partial, updatedAt: Date.now() } : b
-      ),
-    })),
+  toggleBoost: async (id) => {
+    const current = get().boosts.find((boost) => boost.id === id);
+    if (!current) return;
+    const now = Date.now();
+    try {
+      const saved = await window.orbApi.saveBoost({ ...current, enabled: !current.enabled, updatedAt: now });
+      set((state) => ({ boosts: state.boosts.map((boost) => boost.id === id ? saved : boost), error: null }));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Could not update Boost.' });
+    }
+  },
+
+  updateBoost: async (id, partial) => {
+    const current = get().boosts.find((boost) => boost.id === id);
+    if (!current) return;
+    try {
+      const saved = await window.orbApi.saveBoost({ ...current, ...partial, updatedAt: Date.now() });
+      set((state) => ({ boosts: state.boosts.map((boost) => boost.id === id ? saved : boost), error: null }));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : 'Could not update Boost.' });
+    }
+  },
 
   getBoostForDomain: (domain: string) => {
-    return get().boosts.find((b: Boost) => b.domain === domain);
+    return get().boosts.find((boost) => boost.domain === domain.toLowerCase());
   },
 }));

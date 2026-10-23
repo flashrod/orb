@@ -7,9 +7,9 @@
   "author": "flashrod",
   "license": "MIT",
   "scripts": {
-    "dev:main": "concurrently \"esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --watch\" \"esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron --watch\"",
+    "dev:main": "concurrently \"esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --external:sql.js --watch\" \"esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron --watch\"",
     "dev": "concurrently \"vite --config vite.config.ts\" \"npm run dev:main\" \"wait-on http://localhost:5173 && electron dist/main.js\"",
-    "build": "esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron && esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron && vite build",
+    "build": "esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --external:sql.js && esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron && vite build",
     "dist": "electron-builder",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
@@ -20,6 +20,7 @@
     "electron": "^30.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sql.js": "^1.15.1",
     "tailwind-merge": "^2.6.1",
     "zustand": "^4.5.2"
   },
@@ -27,6 +28,7 @@
     "@types/electron": "^1.6.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "concurrently": "^10.0.6",

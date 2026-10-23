@@ -55,7 +55,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 
 Each row is a focused commit or small reviewable slice.
 
-- [ ] **Boosts store** — CRUD per-domain CSS/JS records in an on-disk SQLite database, with typed IPC and a renderer store.
+- [x] **Boosts store** — CRUD per-domain CSS/JS records in an on-disk SQLite database, with typed IPC and a renderer store.
 - [ ] **Element picker** — hover to inspect/select an element and generate resilient selectors using semantic attributes and tag/role context.
 - [ ] **Boosts editor** — list/edit per-domain CSS/JS, enable/disable, delete, validate, and preview changes.
 - [ ] **Apply boosts** — inject enabled CSS/JS only into matching domains, with safe lifecycle handling on navigation.

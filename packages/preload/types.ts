@@ -1,3 +1,5 @@
+import { BoostRecord, NewBoost } from '../shared/boosts';
+
 export interface ExposedApi {
   getWindowById: (webContentsId: number) => Promise<any>;
   openExternal: (url: string) => Promise<void>;
@@ -13,9 +15,9 @@ export interface ExposedApi {
   getTrackerBlockingStatus: () => Promise<any>;
   toggleHttpsOnly: (enabled: boolean) => Promise<void>;
   getHttpsOnlyStatus: () => Promise<any>;
-  getBoosts: () => Promise<any[]>;
-  saveBoost: (boost: any) => Promise<void>;
-  deleteBoost: (id: string) => Promise<void>;
+  getBoosts: () => Promise<BoostRecord[]>;
+  saveBoost: (boost: NewBoost) => Promise<BoostRecord>;
+  deleteBoost: (id: string) => Promise<{ deleted: boolean }>;
 }
 
 export const exposedApi: ExposedApi = {
@@ -39,6 +41,10 @@ export const exposedApi: ExposedApi = {
   toggleHttpsOnly: async () => {},
   getHttpsOnlyStatus: async () => ({ httpsOnlyEnabled: false }),
   getBoosts: async () => [],
-  saveBoost: async () => {},
-  deleteBoost: async () => {},
+  saveBoost: async (boost) => ({
+    ...boost,
+    createdAt: boost.createdAt ?? Date.now(),
+    updatedAt: boost.updatedAt ?? Date.now(),
+  }),
+  deleteBoost: async () => ({ deleted: true }),
 };
