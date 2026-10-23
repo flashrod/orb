@@ -17,11 +17,11 @@ export default function NavigationBar({
   canGoForward?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1 px-3 h-10">
+    <nav aria-label="Page navigation" className="flex h-10 items-center gap-1 px-3 text-stone-600">
       <button
         onClick={onBack}
         disabled={!canGoBack}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white disabled:opacity-30 transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-stone-200/70 hover:text-stone-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35"
         title="Back"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -29,25 +29,25 @@ export default function NavigationBar({
       <button
         onClick={onForward}
         disabled={!canGoForward}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white disabled:opacity-30 transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-stone-200/70 hover:text-stone-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35"
         title="Forward"
       >
         <ArrowRight className="w-4 h-4" />
       </button>
       <button
         onClick={onReload}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-stone-200/70 hover:text-stone-900 active:scale-[0.98]"
         title="Reload"
       >
         <RotateCcw className="w-4 h-4" />
       </button>
       <button
         onClick={onToggleVerticalTabs}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-stone-200/70 hover:text-stone-900 active:scale-[0.98]"
         title="Vertical Tabs"
       >
         <List className="w-4 h-4" />
       </button>
-    </div>
+    </nav>
   );
 }
