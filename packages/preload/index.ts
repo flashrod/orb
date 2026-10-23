@@ -30,6 +30,10 @@ contextBridge.exposeInMainWorld('orbApi', {
   addAdBlockerAllowlist: (domain: string) => ipcRenderer.invoke('adblocker:allowlist-add', domain),
   removeAdBlockerAllowlist: (domain: string) => ipcRenderer.invoke('adblocker:allowlist-remove', domain),
   clearBlockedRequestLog: () => ipcRenderer.invoke('adblocker:blocked-log-clear'),
+  setFilterListEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('adblocker:filter-lists-set', id, enabled),
+  addFilterList: (url: string, name?: string) => ipcRenderer.invoke('adblocker:filter-lists-add', url, name),
+  removeFilterList: (id: string) => ipcRenderer.invoke('adblocker:filter-lists-remove', id),
+  refreshFilterLists: () => ipcRenderer.invoke('adblocker:filter-lists-refresh'),
   importUblockList: (filePath: string) =>
     ipcRenderer.invoke('adblocker:import-ublock-list', filePath),
 
@@ -75,6 +79,10 @@ declare global {
       addAdBlockerAllowlist: (domain: string) => Promise<string[]>;
       removeAdBlockerAllowlist: (domain: string) => Promise<string[]>;
       clearBlockedRequestLog: () => Promise<{ cleared: boolean }>;
+      setFilterListEnabled: (id: string, enabled: boolean) => Promise<any[]>;
+      addFilterList: (url: string, name?: string) => Promise<any[]>;
+      removeFilterList: (id: string) => Promise<any[]>;
+      refreshFilterLists: () => Promise<any[]>;
       importUblockList: (filePath: string) => Promise<any>;
       getBoosts: () => Promise<BoostRecord[]>;
       saveBoost: (boost: NewBoost) => Promise<BoostRecord>;

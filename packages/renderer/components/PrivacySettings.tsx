@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Check, Shield, Trash, WarningCircle } from '@phosphor-icons/react';
 
 type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
-type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[] };
+type FilterList = { id: string; name: string; url: string; enabled: boolean; custom?: boolean; ruleCount: number; error: string | null; lastUpdated: number | null };
+type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[]; filterLists: FilterList[] };
 
 function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: () => void; label: string; disabled?: boolean }) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={onChange}
@@ -11,11 +12,12 @@ function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onCh
   </button>;
 }
 
-const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, allowlist: [], blockedRequests: [] };
+const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, allowlist: [], blockedRequests: [], filterLists: [] };
 
 export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
   const [status, setStatus] = useState<Status>(emptyStatus);
   const [domain, setDomain] = useState('');
+  const [filterUrl, setFilterUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -24,7 +26,7 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
   const refresh = async () => {
     try {
       const next = await window.orbApi.getAdBlockerStatus();
-      setStatus({ ...emptyStatus, ...next, blockedRequests: next.blockedRequests || [] });
+      setStatus({ ...emptyStatus, ...next, blockedRequests: next.blockedRequests || [], filterLists: next.filterLists || [] });
       setError('');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not read privacy status.'); }
   };
@@ -66,6 +68,11 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
       {activeDomain && <button type="button" disabled={busy || status.allowlist.some((item) => item === activeDomain || activeDomain.endsWith(`.${item}`))} onClick={() => void saveDomain(activeDomain)} className="orb-control mt-3 rounded-md border orb-border px-3 py-2 text-xs disabled:opacity-50">{status.allowlist.some((item) => item === activeDomain || activeDomain.endsWith(`.${item}`)) ? `Shield exception active for ${activeDomain}` : `Allow this site · ${activeDomain}`}</button>}
       <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void saveDomain(domain); }}><input value={domain} onChange={(event) => setDomain(event.target.value)} aria-label="Site to allow" placeholder="example.com" className="orb-strong orb-placeholder h-9 min-w-0 flex-1 rounded-md border orb-border bg-transparent px-3 text-xs outline-none focus:border-[var(--orb-accent)]" /><button type="submit" disabled={busy || !domain.trim()} className="orb-accent-bg rounded-md px-3 text-xs text-white disabled:opacity-50">Add exception</button></form>
       {status.allowlist.length > 0 && <div className="mt-3 space-y-1">{status.allowlist.map((item) => <div key={item} className="orb-elevated flex items-center gap-3 rounded-md border orb-border px-3 py-2"><span className="orb-strong min-w-0 flex-1 truncate text-xs">{item}</span><Check className="orb-accent h-3.5 w-3.5" /><button type="button" aria-label={`Remove exception for ${item}`} onClick={() => void update(() => window.orbApi.removeAdBlockerAllowlist(item))} className="orb-control rounded px-2 py-1 text-[10px]">Remove</button></div>)}</div>}
+    </section>
+    <section className="border-t orb-border pt-5">
+      <div className="flex items-start justify-between gap-4"><div><h3 className="orb-strong text-xs font-semibold">Filter lists</h3><p className="orb-muted mt-1 text-[11px]">Choose which HTTPS lists are active. Refresh fetches the latest rules.</p></div><button type="button" disabled={busy} onClick={() => void update(() => window.orbApi.refreshFilterLists())} className="orb-control rounded-md border orb-border px-2.5 py-1.5 text-[10px]">Refresh lists</button></div>
+      <div className="mt-3 space-y-1.5">{status.filterLists.map((list) => <div key={list.id} className="orb-elevated flex items-center gap-3 rounded-md border orb-border px-3 py-2"><span className="min-w-0 flex-1"><span className="orb-strong block truncate text-[11px]">{list.name}{list.custom ? ' · custom' : ''}</span><span className="orb-muted block truncate text-[10px]">{list.error ? `Update failed: ${list.error}` : `${list.ruleCount.toLocaleString()} rules · ${list.lastUpdated ? `updated ${new Date(list.lastUpdated).toLocaleString()}` : 'not loaded yet'}`}</span></span><Toggle checked={list.enabled} onChange={() => void update(() => window.orbApi.setFilterListEnabled(list.id, !list.enabled))} label={`Enable ${list.name}`} disabled={busy} />{list.custom && <button type="button" disabled={busy} onClick={() => void update(() => window.orbApi.removeFilterList(list.id))} className="orb-control rounded px-2 py-1 text-[10px]">Remove</button>}</div>)}</div>
+      <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void update(() => window.orbApi.addFilterList(filterUrl)).then(() => setFilterUrl('')); }}><input type="url" value={filterUrl} onChange={(event) => setFilterUrl(event.target.value)} aria-label="Custom filter list URL" placeholder="https://filters.example/list.txt" className="orb-strong orb-placeholder h-9 min-w-0 flex-1 rounded-md border orb-border bg-transparent px-3 text-xs outline-none focus:border-[var(--orb-accent)]" /><button type="submit" disabled={busy || !filterUrl} className="orb-control rounded-md border orb-border px-3 text-xs disabled:opacity-50">Add HTTPS list</button></form>
     </section>
     <section className="border-t orb-border pt-5">
       <div className="flex items-start justify-between gap-4"><div><h3 className="orb-strong text-xs font-semibold">Blocked requests</h3><p className="orb-muted mt-1 text-[11px]">Recent matches · up to 500 entries, with query strings removed.</p></div><button type="button" disabled={!status.blockedRequests.length || busy} onClick={() => void update(() => window.orbApi.clearBlockedRequestLog())} className="orb-control flex items-center gap-1 rounded-md border orb-border px-2.5 py-1.5 text-[10px] disabled:opacity-50"><Trash className="h-3 w-3" />Clear log</button></div>

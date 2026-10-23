@@ -4,30 +4,38 @@ import path from 'node:path';
 import { decideFilterAction, FilterRequestContext, NetworkFilterRule, matchesFilterRule, parseFilterLine } from './filterRules';
 
 // Filter list sources (from Arc's manifest.json reverse engineering)
-const FILTER_LIST_SOURCES = [
+type FilterListType = 'generic' | 'privacy' | 'cookies';
+interface FilterListSource { id: string; name: string; type: FilterListType; url: string; enabled: boolean; custom?: boolean }
+interface FilterListStatus extends FilterListSource { lastUpdated: number | null; ruleCount: number; error: string | null }
+
+const FILTER_LIST_SOURCES: FilterListSource[] = [
   {
     id: 'easylist',
     name: 'EasyList',
     type: 'generic' as const,
     url: 'https://easylist.to/easylist/easylist.txt',
+    enabled: true,
   },
   {
     id: 'ublock',
     name: 'uBlock Origin Filters',
     type: 'generic' as const,
     url: 'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt',
+    enabled: true,
   },
   {
     id: 'easyprivacy',
     name: 'EasyPrivacy',
     type: 'privacy' as const,
     url: 'https://easylist.to/easylist/easyprivacy.txt',
+    enabled: true,
   },
   {
     id: 'cookiemonster',
     name: 'CookieMonster',
     type: 'cookies' as const,
     url: 'https://secure.fanboy.co.nz/fanboy-cookiemonster.txt',
+    enabled: false,
   },
 ];
 
@@ -45,6 +53,8 @@ export class AdBlocker {
   private cosmeticRules: CosmeticFilterRule[] = [];
   private userAllowlist: Set<string> = new Set(); // domains the user explicitly allows
   private blockedRequests: { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number }[] = [];
+  private filterSources = [...FILTER_LIST_SOURCES];
+  private filterListStatuses: FilterListStatus[] = this.filterSources.map((source) => ({ ...source, lastUpdated: null, ruleCount: 0, error: null }));
 
   enabled = true;
   trackerBlockingEnabled = true;
@@ -57,12 +67,18 @@ export class AdBlocker {
     this.preferencesLoaded = true;
     try {
       const file = path.join(app.getPath('userData'), 'privacy-preferences.json');
-      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; userAllowlist: string[] }>;
+      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; userAllowlist: string[]; filterLists: FilterListSource[] }>;
       if (typeof state.enabled === 'boolean') this.enabled = state.enabled;
       if (typeof state.trackerBlockingEnabled === 'boolean') this.trackerBlockingEnabled = state.trackerBlockingEnabled;
       if (typeof state.cosmeticFilteringEnabled === 'boolean') this.cosmeticFilteringEnabled = state.cosmeticFilteringEnabled;
       if (typeof state.httpsOnlyEnabled === 'boolean') this.httpsOnlyEnabled = state.httpsOnlyEnabled;
       if (Array.isArray(state.userAllowlist)) this.userAllowlist = new Set(state.userAllowlist.filter((item) => typeof item === 'string').map((item) => item.toLowerCase()));
+      if (Array.isArray(state.filterLists)) {
+        const saved = new Map(state.filterLists.map((item) => [item.id, item]));
+        this.filterSources = FILTER_LIST_SOURCES.map((source) => ({ ...source, enabled: saved.get(source.id)?.enabled ?? source.enabled }));
+        for (const source of state.filterLists) if (source.custom && /^https:\/\//i.test(source.url)) this.filterSources.push(source);
+        this.filterListStatuses = this.filterSources.map((source) => ({ ...source, lastUpdated: null, ruleCount: 0, error: null }));
+      }
     } catch { /* First launch uses conservative defaults. */ }
   }
 
@@ -75,18 +91,22 @@ export class AdBlocker {
         cosmeticFilteringEnabled: this.cosmeticFilteringEnabled,
         httpsOnlyEnabled: this.httpsOnlyEnabled,
         userAllowlist: [...this.userAllowlist],
+        filterLists: this.filterSources,
       }, null, 2));
     } catch (error) { console.error('[Privacy] Could not persist preferences:', error); }
   }
 
-  async loadLists(sources: typeof FILTER_LIST_SOURCES = FILTER_LIST_SOURCES): Promise<void> {
+  async loadLists(sources: FilterListSource[] = this.filterSources): Promise<void> {
     const networkRules: NetworkFilterRule[] = [];
     const trackerRules: NetworkFilterRule[] = [];
     const cosmeticRules: CosmeticFilterRule[] = [];
 
-    for (const source of sources) {
+    for (const source of sources.filter((item) => item.enabled)) {
+      const startedAt = Date.now();
+      let ruleCount = 0;
       try {
         const response = await fetch(source.url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const text = await response.text();
         const lines = text.split('\n');
 
@@ -94,19 +114,20 @@ export class AdBlocker {
           const trimmed = line.trim();
 
           // Skip comments, empty lines, Adblock Plus header, ! title lines
-          if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('#')) continue;
+          if (!trimmed || trimmed.startsWith('!') || (trimmed.startsWith('#') && !trimmed.includes('##'))) continue;
           if (trimmed.startsWith('[Adblock')) continue;
 
           // Element hiding rule: example.com##.selector or ##.selector (global)
           if (trimmed.includes('##')) {
             const cosmeticRule = this.parseCosmeticRule(trimmed);
-            if (cosmeticRule) cosmeticRules.push(cosmeticRule);
+            if (cosmeticRule) { cosmeticRules.push(cosmeticRule); ruleCount++; }
             continue;
           }
 
           // Network rule
           const networkRule = parseFilterLine(trimmed);
           if (networkRule) {
+            ruleCount++;
             if (source.type === 'privacy' || source.type === 'cookies') {
               trackerRules.push(networkRule);
             } else {
@@ -114,7 +135,10 @@ export class AdBlocker {
             }
           }
         }
+        this.filterListStatuses = this.filterListStatuses.map((status) => status.id === source.id ? { ...status, lastUpdated: startedAt, ruleCount, error: null } : status);
       } catch (err) {
+        const error = err instanceof Error ? err.message : 'Could not fetch this filter list.';
+        this.filterListStatuses = this.filterListStatuses.map((status) => status.id === source.id ? { ...status, error } : status);
         console.error(`[AdBlocker] Failed to load ${source.url}:`, err);
       }
     }
@@ -126,6 +150,39 @@ export class AdBlocker {
     console.log(
       `[AdBlocker] Loaded ${networkRules.length} ad network rules, ${trackerRules.length} tracker rules, ${cosmeticRules.length} cosmetic rules`
     );
+  }
+
+  getFilterLists(): FilterListStatus[] { return this.filterListStatuses.map((source) => ({ ...source })); }
+
+  async setFilterListEnabled(id: string, enabled: boolean): Promise<FilterListStatus[]> {
+    this.filterSources = this.filterSources.map((source) => source.id === id ? { ...source, enabled } : source);
+    this.filterListStatuses = this.filterListStatuses.map((source) => source.id === id ? { ...source, enabled } : source);
+    this.persistPreferences();
+    await this.loadLists();
+    return this.getFilterLists();
+  }
+
+  async addCustomFilterList(url: string, name?: string): Promise<FilterListStatus[]> {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') throw new Error('Filter lists must use HTTPS.');
+    const id = `custom-${Buffer.from(parsed.href).toString('base64url').slice(0, 18)}`;
+    if (!this.filterSources.some((source) => source.id === id)) {
+      const source: FilterListSource = { id, name: name?.trim() || parsed.hostname, url: parsed.href, type: 'generic', enabled: true, custom: true };
+      this.filterSources = [...this.filterSources, source];
+      this.filterListStatuses = [...this.filterListStatuses, { ...source, lastUpdated: null, ruleCount: 0, error: null }];
+      this.persistPreferences();
+    }
+    await this.loadLists();
+    return this.getFilterLists();
+  }
+
+  async removeCustomFilterList(id: string): Promise<FilterListStatus[]> {
+    if (!this.filterSources.some((source) => source.id === id && source.custom)) throw new Error('Only custom filter lists can be removed.');
+    this.filterSources = this.filterSources.filter((source) => source.id !== id);
+    this.filterListStatuses = this.filterListStatuses.filter((source) => source.id !== id);
+    this.persistPreferences();
+    await this.loadLists();
+    return this.getFilterLists();
   }
 
   // Parse element hiding rule: example.com##.ad-banner or ##.ad-banner

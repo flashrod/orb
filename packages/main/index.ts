@@ -53,6 +53,7 @@ function createMainWindow() {
 }
 
 app.whenReady().then(async () => {
+  initAdBlocker(session.fromPartition('persist:orb', { cache: true }));
   // Each workspace WebView uses a profile-specific persistent partition. Install
   // privacy hooks before Chromium attaches that WebView to its session.
   app.on('web-contents-created', (_event, contents) => {

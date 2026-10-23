@@ -78,8 +78,22 @@ export function registerIpcHandlers(): void {
       httpsOnlyEnabled: adBlocker.isHttpsOnly(),
       allowlist: adBlocker.getAllowlist(),
       blockedRequests: adBlocker.getBlockedRequests(),
+      filterLists: adBlocker.getFilterLists(),
     };
   });
+  ipcMain.handle('adblocker:filter-lists-set', (_event, id: string, enabled: boolean) => {
+    if (typeof id !== 'string' || typeof enabled !== 'boolean') throw new Error('Invalid filter list selection.');
+    return adBlocker.setFilterListEnabled(id, enabled);
+  });
+  ipcMain.handle('adblocker:filter-lists-add', (_event, url: string, name?: string) => {
+    if (typeof url !== 'string' || (name !== undefined && typeof name !== 'string')) throw new Error('Invalid filter list URL.');
+    return adBlocker.addCustomFilterList(url, name);
+  });
+  ipcMain.handle('adblocker:filter-lists-remove', (_event, id: string) => {
+    if (typeof id !== 'string') throw new Error('Invalid filter list selection.');
+    return adBlocker.removeCustomFilterList(id);
+  });
+  ipcMain.handle('adblocker:filter-lists-refresh', () => adBlocker.loadLists().then(() => adBlocker.getFilterLists()));
 
   ipcMain.handle('adblocker:allowlist-add', (_event, value: string) => {
     if (typeof value !== 'string') throw new Error('Enter a valid site.');
