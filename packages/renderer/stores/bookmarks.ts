@@ -18,7 +18,7 @@ export interface BookmarkImportNode {
 interface BookmarkStore {
   items: BookmarkItem[];
   addBookmark: (title: string, url: string, parentId?: string | null) => void;
-  addFolder: (title: string) => void;
+  addFolder: (title: string, parentId?: string | null) => void;
   removeItem: (id: string) => void;
   moveItem: (id: string, parentId: string | null, beforeId?: string) => void;
   renameItem: (id: string, title: string) => void;
@@ -33,7 +33,7 @@ export const useBookmarkStore = create<BookmarkStore>()(persist((set, get) => ({
     if (existing) return { items: state.items.map((item) => item.id === existing.id ? { ...item, title, parentId } : item) };
     return { items: [...state.items, { id: crypto.randomUUID(), title, url, parentId, kind: 'bookmark' }] };
   }),
-  addFolder: (title) => set((state) => ({ items: [...state.items, { id: crypto.randomUUID(), title, url: '', parentId: null, kind: 'folder' }] })),
+  addFolder: (title, parentId = null) => set((state) => ({ items: [...state.items, { id: crypto.randomUUID(), title, url: '', parentId, kind: 'folder' }] })),
   removeItem: (id) => set((state) => {
     const removed = new Set([id]);
     let changed = true;

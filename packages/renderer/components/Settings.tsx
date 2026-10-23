@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowCounterClockwise, Check, Code, DotsSixVertical, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, BookmarkSimple, Check, Code, DotsSixVertical, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
 import { useAdBlockerStore } from '../stores/adBlocker';
 import { MotionPreference, PaletteToken, useAppearanceStore } from '../stores/appearance';
 import BoostsEditor from './BoostsEditor';
@@ -7,8 +7,9 @@ import { TOOLBAR_ITEMS, ToolbarItemId, useToolbarStore } from '../stores/toolbar
 import ProfilesWorkspacesSettings from './ProfilesWorkspacesSettings';
 import { SEARCH_PROVIDERS } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
+import BookmarksManager from './BookmarksManager';
 
-type SettingsSection = 'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles';
+type SettingsSection = 'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles' | 'bookmarks';
 
 const sections: { id: SettingsSection; title: string; note: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'appearance', title: 'Appearance', note: 'Colors and browser layout', Icon: SlidersHorizontal },
@@ -16,6 +17,7 @@ const sections: { id: SettingsSection; title: string; note: string; Icon: React.
   { id: 'boosts', title: 'Boosts', note: 'Per-site customizations', Icon: Code },
   { id: 'toolbar', title: 'Toolbar', note: 'Choose and arrange controls', Icon: Rows },
   { id: 'profiles', title: 'Profiles & Workspaces', note: 'Separate browsing contexts', Icon: UsersThree },
+  { id: 'bookmarks', title: 'Bookmarks', note: 'Folders, import, and export', Icon: BookmarkSimple },
 ];
 
 const themeColors: Record<string, Record<PaletteToken, string>> = {
@@ -62,7 +64,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
   );
 }
 
-export default function Settings({ onClose, initialSection = 'appearance' }: { onClose: () => void; initialSection?: SettingsSection }) {
+export default function Settings({ onClose, onNavigate, initialSection = 'appearance' }: { onClose: () => void; onNavigate: (url: string) => void; initialSection?: SettingsSection }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const { enabled, toggle } = useAdBlockerStore();
   const { searchProvider, setSearchProvider } = useBrowserPreferencesStore();
@@ -229,6 +231,8 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
             {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor /></div>}
 
             {section === 'profiles' && <ProfilesWorkspacesSettings />}
+
+            {section === 'bookmarks' && <BookmarksManager onNavigate={(url) => { onNavigate(url); onClose(); }} />}
 
             {section === 'toolbar' && <div className="mx-auto max-w-[680px] space-y-5">
               <div><h2 className="orb-strong text-sm font-semibold">Toolbar controls</h2><p className="orb-muted mt-1 text-xs leading-5">Drag the grip to put controls where they work best. Hide controls you don’t need; the address field can be moved too.</p></div>
