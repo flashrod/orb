@@ -50,8 +50,21 @@ export default function App() {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [spaces.length, commandBarOpen]);
+
+    // Handle navigate events from CommandBar / AddressBar
+    const handleNavigateEvent = (e: CustomEvent) => {
+      const { url } = e.detail as { url: string };
+      if (activeTabId) {
+        updateTab(activeTabId, { url });
+      }
+    };
+    window.addEventListener('orb:navigate', handleNavigateEvent as EventListener);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('orb:navigate', handleNavigateEvent as EventListener);
+    };
+  }, [spaces.length, commandBarOpen, activeTabId, updateTab]);
 
   const activeSpace = spaces.find((s: { id: string }) => s.id === activeSpaceId);
   const spaceTabs = activeSpaceId

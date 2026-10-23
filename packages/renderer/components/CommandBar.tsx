@@ -1,13 +1,29 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, X, ArrowUp, ArrowDown, LogIn } from 'lucide-react';
+import { Search, X, ArrowUp, ArrowDown, LogIn, Globe, LayoutDashboard, Plus } from 'lucide-react';
+import { useTabStore } from '../stores/tabs';
+import { useSpaceStore } from '../stores/spaces';
 
 interface CommandResult {
   id: string;
+  type: 'tab' | 'space' | 'command' | 'url';
   title: string;
   subtitle: string;
   icon: React.ReactNode;
   action: () => void;
   host?: string;
+  url?: string;
+}
+
+const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  globe: Globe,
+  dashboard: LayoutDashboard,
+  search: Search,
+  plus: Plus,
+};
+
+function getIcon(name: string, className?: string) {
+  const Icon = ICONS[name] || Globe;
+  return <Icon className={className} />;
 }
 
 export default function CommandBar({
@@ -20,48 +36,133 @@ export default function CommandBar({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const mockResults: CommandResult[] = [
-    {
-      id: 'new-tab',
-      title: 'New Tab',
-      subtitle: 'Open a new tab in the current space',
-      icon: <Search className="w-4 h-4" />,
-      action: () => {
-        window.dispatchEvent(new CustomEvent('orb:new-tab'));
-        onClose();
-      },
-    },
-    {
-      id: 'new-space',
-      title: 'New Space',
-      subtitle: 'Create a new browsing space',
-      icon: <Search className="w-4 h-4" />,
-      action: () => {
-        window.dispatchEvent(new CustomEvent('orb:new-space'));
-        onClose();
-      },
-    },
-    {
-      id: 'devtools',
-      title: 'Developer Tools',
-      subtitle: 'Open Chrome DevTools',
-      icon: <Search className="w-4 h-4" />,
-      action: () => {
-        window.dispatchEvent(new CustomEvent('orb:toggle-devtools'));
-        onClose();
-      },
-    },
-  ];
+  const { tabs, activeTabId } = useTabStore();
+  const { spaces, activeSpaceId } = useSpaceStore();
 
   useEffect(() => {
     inputRef.current?.focus();
-
-    const filtered = mockResults.filter((r) =>
-      r.title.toLowerCase().includes(query.toLowerCase())
-    );
-    setResults(filtered);
+    setResults(buildResults(query));
     setSelectedIndex(-1);
-  }, [query]);
+  }, [query, tabs, spaces, activeTabId, activeSpaceId]);
+
+  const buildResults = (q: string): CommandResult[] => {
+    const lower = q.toLowerCase().trim();
+    const results: CommandResult[] = [];
+
+    // 1. Open tabs (dedup by host - show most recent tab per host)
+    const tabResults = buildTabResults(lower);
+    results.push(...tabResults);
+
+    // 2. Spaces
+    const spaceResults = buildSpaceResults(lower);
+    results.push(...spaceResults);
+
+    // 3. Commands
+    if (!lower) {
+      results.push(
+        {
+          id: 'cmd-new-tab',
+          type: 'command',
+          title: 'New Tab',
+          subtitle: 'Open a new tab (⌘T)',
+          icon: getIcon('plus', 'w-4 h-4'),
+          action: () => {
+            window.dispatchEvent(new CustomEvent('orb:new-tab'));
+            onClose();
+          },
+        },
+        {
+          id: 'cmd-new-space',
+          type: 'command',
+          title: 'New Space',
+          subtitle: 'Create a new browsing space',
+          icon: getIcon('dashboard', 'w-4 h-4'),
+          action: () => {
+            window.dispatchEvent(new CustomEvent('orb:new-space'));
+            onClose();
+          },
+        },
+        {
+          id: 'cmd-devtools',
+          type: 'command',
+          title: 'Developer Tools',
+          subtitle: 'Open DevTools (⌘⌥I)',
+          icon: getIcon('search', 'w-4 h-4'),
+          action: () => {
+            window.dispatchEvent(new CustomEvent('orb:toggle-devtools'));
+            onClose();
+          },
+        }
+      );
+    } else {
+      // URL navigation - treat query as URL/search
+      const url = lower.includes('://') || lower.includes('.') ? lower : `https://www.google.com/search?q=${encodeURIComponent(lower)}`;
+      results.push({
+        id: 'cmd-navigate',
+        type: 'url',
+        title: lower.includes(' ') ? `Search for "${lower}"` : `Go to ${lower}`,
+        subtitle: url,
+        icon: getIcon('globe', 'w-4 h-4'),
+        action: () => {
+          window.dispatchEvent(new CustomEvent('orb:navigate', { detail: { url } }));
+          onClose();
+        },
+        url,
+      });
+    }
+
+    return results;
+  };
+
+  const buildTabResults = (q: string): CommandResult[] => {
+    const tabsCopy = [...tabs].reverse(); // most recent first
+    const seenHosts = new Set<string>();
+    const results: CommandResult[] = [];
+
+    for (const tab of tabsCopy) {
+      if (!tab.title.toLowerCase().includes(q) && !tab.url.toLowerCase().includes(q)) continue;
+
+      const host = new URL(tab.url).hostname;
+      if (seenHosts.has(host)) continue; // dedup by host
+      seenHosts.add(host);
+
+      results.push({
+        id: `tab-${tab.id}`,
+        type: 'tab',
+        title: tab.title || host,
+        subtitle: host,
+        icon: getIcon('globe', 'w-4 h-4'),
+        action: () => {
+          const { setActiveTab } = useTabStore.getState();
+          setActiveTab(tab.id);
+          onClose();
+        },
+        host,
+        url: tab.url,
+      });
+
+      if (results.length >= 8) break; // limit tab results
+    }
+
+    return results;
+  };
+
+  const buildSpaceResults = (q: string): CommandResult[] => {
+    return spaces
+      .filter((s) => s.name.toLowerCase().includes(q))
+      .map((space) => ({
+        id: `space-${space.id}`,
+        type: 'space',
+        title: space.name,
+        subtitle: 'Space',
+        icon: getIcon(space.icon, 'w-4 h-4'),
+        action: () => {
+          const { setActiveSpace } = useSpaceStore.getState();
+          setActiveSpace(space.id);
+          onClose();
+        },
+      }));
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -91,15 +192,15 @@ export default function CommandBar({
       onClick={onClose}
     >
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={(e) => e.stopPropagation()}
       />
       <div
-        className="w-full max-w-md bg-orb-panel border border-white/10 rounded-2xl shadow-2xl"
+        className="w-full max-w-lg bg-orb-panel border border-white/10 rounded-2xl shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4">
-          <div className="relative">
+          <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
             <input
               ref={inputRef}
@@ -107,7 +208,7 @@ export default function CommandBar({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Search tabs, spaces, commands..."
+              placeholder="Search tabs, spaces, or type a URL..."
               className="w-full bg-transparent text-white placeholder-white/30 text-base outline-none pl-10 pr-4 py-2"
               autoComplete="off"
             />
@@ -121,7 +222,7 @@ export default function CommandBar({
             )}
           </div>
 
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {results.length === 0 ? (
               <div className="px-4 py-3 text-sm text-white/40">No results</div>
             ) : (
