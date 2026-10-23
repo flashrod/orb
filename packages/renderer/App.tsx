@@ -4,28 +4,27 @@ import { useTabStore } from './stores/tabs';
 import Sidebar from './components/Sidebar';
 import TabBar from './components/TabBar';
 import CommandBar from './components/CommandBar';
-import AddressBar from './components/AddressBar';
-import NavigationBar from './components/NavigationBar';
+import BrowserToolbar from './components/BrowserToolbar';
 import WebView from './components/WebView';
 import VerticalTabPanel from './components/VerticalTabPanel';
 import Settings from './components/Settings';
 import { useAppearanceStore } from './stores/appearance';
 import StartPage from './components/StartPage';
 import { useBoostStore } from './stores/boosts';
-import { useBookmarkStore } from './stores/bookmarks';
 import BookmarksBar from './components/BookmarksBar';
+import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts'>('appearance');
+  const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts' | 'toolbar'>('appearance');
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
+  const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
   const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
-  const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, customColors, setTabLayout } = useAppearanceStore();
-  const { items: bookmarks, addBookmark, removeItem } = useBookmarkStore();
+  const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, compactSideTabs, customColors, setTabLayout } = useAppearanceStore();
 
   const webviewRef = useRef<any>(null);
 
@@ -98,6 +97,10 @@ export default function App() {
         e.preventDefault();
         document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus();
       }
+      if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split' && useAppearanceStore.getState().compactSideTabs) {
+        e.preventDefault();
+        setTabRailKeyboardRevealed((revealed) => !revealed);
+      }
       if (e.key === 'Escape') {
         setCommandBarOpen(false);
       }
@@ -149,6 +152,7 @@ export default function App() {
     : [];
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
+  const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, tabRailKeyboardRevealed, false);
 
   const handlePickElement = async () => {
     if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
@@ -211,43 +215,33 @@ export default function App() {
 
       {/* Main content area */}
       <main className="relative flex min-w-0 flex-1 overflow-hidden">
-        {tabLayout === 'split' && (
+        {!tabPresentation.horizontalTabsVisible ? (
           <VerticalTabPanel
             isOpen
             embedded
+            compact={compactSideTabs}
+            keyboardRevealed={tabRailKeyboardRevealed}
+            onToggleKeyboardReveal={() => setTabRailKeyboardRevealed((revealed) => !revealed)}
             onClose={() => setTabLayout('top')}
             spaceId={activeSpaceId || ''}
           />
-        )}
+        ) : null}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        {tabLayout === 'top' && <TabBar
+        {tabPresentation.horizontalTabsVisible ? <TabBar
           tabs={spaceTabs}
           activeTabId={activeTabId}
           activeSpaceId={activeSpaceId || ''}
           setActiveTab={setActiveTab}
-        />}
-        {/* Navigation controls */}
-        <div className="orb-surface flex h-[52px] shrink-0 items-center border-b orb-border px-2">
-          <NavigationBar
-            onBack={navigateBack}
-            onForward={navigateForward}
-            onReload={navigateReload}
-            onToggleVerticalTabs={() => setTabLayout(tabLayout === 'top' ? 'split' : 'top')}
-            onPickElement={() => void handlePickElement()}
-            canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
-          />
-          <AddressBar
-            activeTab={activeTab}
-            onNavigate={handleNavigate}
-            isBookmarked={Boolean(activeTab && bookmarks.some((item) => item.kind === 'bookmark' && item.url === activeTab.url))}
-            onBookmark={() => {
-              if (!activeTab || activeTab.url === 'about:blank') return;
-              const existing = bookmarks.find((item) => item.kind === 'bookmark' && item.url === activeTab.url);
-              if (existing) removeItem(existing.id);
-              else addBookmark(activeTab.title || (() => { try { return new URL(activeTab.url).hostname; } catch { return activeTab.url; } })(), activeTab.url);
-            }}
-          />
-        </div>
+        /> : null}
+        <BrowserToolbar
+          activeTab={activeTab}
+          onNavigate={handleNavigate}
+          onBack={navigateBack}
+          onForward={navigateForward}
+          onReload={navigateReload}
+          onPickElement={() => void handlePickElement()}
+          canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
+        />
         {bookmarksBarVisible && <BookmarksBar onNavigate={handleNavigate} />}
 
         {/* Web Content */}

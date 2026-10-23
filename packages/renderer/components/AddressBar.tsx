@@ -1,18 +1,14 @@
 import React from 'react';
-import { BookmarkSimple, MagnifyingGlass } from '@phosphor-icons/react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 import { resolveAddressOrSearch } from '../lib/navigation';
 
 
 export default function AddressBar({
   activeTab,
   onNavigate,
-  isBookmarked = false,
-  onBookmark,
 }: {
   activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate?: (url: string) => void;
-  isBookmarked?: boolean;
-  onBookmark?: () => void;
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [url, setUrl] = React.useState(activeTab?.url === 'about:blank' ? '' : activeTab?.url || '');
@@ -50,12 +46,9 @@ export default function AddressBar({
             onFocus={(event) => { setFocused(true); if (activeTab?.url !== 'about:blank') event.currentTarget.select(); }}
             onBlur={() => setFocused(false)}
             placeholder="Search or type address"
-            className="orb-strong orb-placeholder w-full rounded-md border border-transparent bg-transparent py-1.5 pl-9 pr-10 text-[13px] outline-none transition-colors focus:border-[var(--orb-border-strong)] focus:bg-[var(--orb-elevated)] focus:shadow-sm"
+            className="orb-strong orb-placeholder w-full rounded-md border border-transparent bg-transparent py-1.5 pl-9 pr-4 text-[13px] outline-none transition-colors focus:border-[var(--orb-border-strong)] focus:bg-[var(--orb-elevated)] focus:shadow-sm"
             autoComplete="off"
           />
-          <button type="button" onClick={onBookmark} disabled={!activeTab || activeTab.url === 'about:blank'} aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'} title={isBookmarked ? 'Remove bookmark' : 'Bookmark this page'} className={`orb-control absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded ${isBookmarked ? 'orb-accent' : ''} disabled:opacity-35`}>
-            <BookmarkSimple weight={isBookmarked ? 'fill' : 'regular'} className="h-4 w-4" />
-          </button>
         </form>
         {focused && (
           <div className="orb-elevated orb-shadow orb-strong absolute left-0 right-0 top-full mt-1 rounded-lg border orb-border py-2">

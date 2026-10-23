@@ -3,6 +3,7 @@ import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
+import { installExtension, listExtensions, removeExtension } from './extensions';
 
 export function registerIpcHandlers(): void {
   // Get window by webContents ID
@@ -96,5 +97,18 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('boosts:delete', async (_, id: string) => {
     (await getBoostsDatabase()).delete(id);
     return { deleted: true };
+  });
+
+  ipcMain.handle('extensions:list', () => listExtensions());
+  ipcMain.handle('extensions:install', async () => {
+    const owner = BrowserWindow.getFocusedWindow();
+    const options = { title: 'Load unpacked extension', properties: ['openDirectory'] as ('openDirectory')[] };
+    const result = owner ? await dialog.showOpenDialog(owner, options) : await dialog.showOpenDialog(options);
+    if (result.canceled || !result.filePaths[0]) return null;
+    return installExtension(result.filePaths[0]);
+  });
+  ipcMain.handle('extensions:remove', async (_, id: string) => {
+    await removeExtension(id);
+    return { removed: true };
   });
 }

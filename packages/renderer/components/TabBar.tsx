@@ -17,7 +17,7 @@ export default function TabBar({
   activeSpaceId: string;
   setActiveTab: (id: string | null) => void;
 }) {
-  const { removeTab, addTab, moveTab } = useTabStore();
+  const { removeTab, addTab, moveTab, updateTab } = useTabStore();
   const [draggingId, setDraggingId] = React.useState<string | null>(null);
 
   const handleNewTab = () => {
@@ -56,6 +56,9 @@ export default function TabBar({
               className="orb-control absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
             >
               <X className="h-3 w-3" />
+            </button>
+            <button type="button" aria-label={`${tab.isPinned ? 'Unpin' : 'Pin'} ${tab.title || hostname}`} title={`${tab.isPinned ? 'Unpin' : 'Pin'} tab`} onClick={() => updateTab(tab.id, { isPinned: !tab.isPinned })} className={`orb-control absolute right-6 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded transition-opacity ${tab.isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}>
+              <PushPin className="h-3 w-3" weight={tab.isPinned ? 'fill' : 'regular'} />
             </button>
           </div>
         );

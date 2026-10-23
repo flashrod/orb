@@ -167,6 +167,7 @@ export default forwardRef<WebViewHandle, {
       <webview
         ref={webviewRef}
         className="w-full h-full"
+        partition="persist:orb"
         allowpopups
         preload=""
       />

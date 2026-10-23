@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { windowManager } from './windowManager';
 import { registerIpcHandlers } from './ipcHandlers';
 import { initAdBlocker } from './adBlocker';
+import { restoreExtensions } from './extensions';
 
 app.setAppUserModelId('company.thebrowser.orb');
 
@@ -27,6 +28,7 @@ function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
+      partition: 'persist:orb',
       spellcheck: false,
       backgroundThrottling: false,
     },
@@ -58,7 +60,8 @@ function createMainWindow() {
   return mainWindow;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await restoreExtensions();
   createMainWindow();
   registerIpcHandlers();
 

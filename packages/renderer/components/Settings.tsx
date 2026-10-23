@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { ArrowCounterClockwise, Check, Code, Rows, Shield, SidebarSimple, SlidersHorizontal, X } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Check, Code, DotsSixVertical, Rows, Shield, SidebarSimple, SlidersHorizontal, X } from '@phosphor-icons/react';
 import { useAdBlockerStore } from '../stores/adBlocker';
 import { MotionPreference, PaletteToken, useAppearanceStore } from '../stores/appearance';
 import BoostsEditor from './BoostsEditor';
+import { TOOLBAR_ITEMS, ToolbarItemId, useToolbarStore } from '../stores/toolbar';
 
-type SettingsSection = 'appearance' | 'privacy' | 'boosts';
+type SettingsSection = 'appearance' | 'privacy' | 'boosts' | 'toolbar';
 
 const sections: { id: SettingsSection; title: string; note: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'appearance', title: 'Appearance', note: 'Colors and browser layout', Icon: SlidersHorizontal },
   { id: 'privacy', title: 'Privacy & Shields', note: 'Blocking and protections', Icon: Shield },
   { id: 'boosts', title: 'Boosts', note: 'Per-site customizations', Icon: Code },
+  { id: 'toolbar', title: 'Toolbar', note: 'Choose and arrange controls', Icon: Rows },
 ];
 
 const themeColors: Record<string, Record<PaletteToken, string>> = {
@@ -59,9 +61,10 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 export default function Settings({ onClose, initialSection = 'appearance' }: { onClose: () => void; initialSection?: SettingsSection }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const { enabled, toggle } = useAdBlockerStore();
+  const { order, hidden, move, toggleHidden, reset } = useToolbarStore();
   const {
-    theme, accent, density, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, motion,
-    setTheme, setAccent, setDensity, setTabLayout, setSidebarWidth, setSidebarAutoHide, setBookmarksBarVisible, setMotion,
+    theme, accent, density, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, compactSideTabs, motion,
+    setTheme, setAccent, setDensity, setTabLayout, setSidebarWidth, setSidebarAutoHide, setBookmarksBarVisible, setCompactSideTabs, setMotion,
     customColors, setCustomColor, resetCustomColors,
   } = useAppearanceStore();
   const selected = sections.find((item) => item.id === section) || sections[0];
@@ -167,6 +170,13 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
                   </div>
                 </section>
 
+                {tabLayout === 'split' && <section className="border-t orb-border pt-5">
+                  <div className="orb-elevated flex items-center justify-between rounded-md border orb-border px-3 py-2.5">
+                    <span><span className="orb-strong block text-xs font-medium">Compact side tabs</span><span className="orb-muted mt-1 block text-[10px]">Collapse the rail; hover its edge or press ⌘/Ctrl + Shift + E to reveal it.</span></span>
+                    <Toggle checked={compactSideTabs} onChange={() => setCompactSideTabs(!compactSideTabs)} label="Compact side tabs" />
+                  </div>
+                </section>}
+
                 <section className="border-t orb-border pt-5">
                   <div className="orb-elevated flex w-full items-center justify-between rounded-md border orb-border px-3 py-2.5 text-left">
                     <span><span className="orb-strong block text-xs font-medium">Show bookmarks bar</span><span className="orb-muted mt-1 block text-[10px]">Keep your saved pages and folders below the address bar.</span></span>
@@ -188,6 +198,21 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
             )}
 
             {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor /></div>}
+
+            {section === 'toolbar' && <div className="mx-auto max-w-[680px] space-y-5">
+              <div><h2 className="orb-strong text-sm font-semibold">Toolbar controls</h2><p className="orb-muted mt-1 text-xs leading-5">Drag the grip to put controls where they work best. Hide controls you don’t need; the address field can be moved too.</p></div>
+              <div className="space-y-2">{order.map((id, index) => {
+                const item = TOOLBAR_ITEMS.find((entry) => entry.id === id);
+                if (!item) return null;
+                return <div key={id} draggable onDragStart={(event) => { event.dataTransfer.setData('text/plain', id); event.dataTransfer.effectAllowed = 'move'; }} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const source = event.dataTransfer.getData('text/plain') as ToolbarItemId; if (source && source !== id) move(source, id); }} className="orb-elevated flex items-center gap-3 rounded-lg border orb-border px-3 py-2.5">
+                  <span aria-hidden="true" className="orb-muted cursor-grab"><DotsSixVertical className="h-4 w-4" /></span>
+                  <span className="orb-strong flex-1 text-xs">{item.label}</span>
+                  <span className="orb-muted text-[10px]">{index + 1}</span>
+                  <Toggle checked={!hidden.includes(id)} onChange={() => toggleHidden(id)} label={`Show ${item.label}`} />
+                </div>;
+              })}</div>
+              <button type="button" onClick={reset} className="orb-control rounded-md border orb-border px-3 py-2 text-xs">Restore default toolbar</button>
+            </div>}
           </div>
         </div>
       </aside>

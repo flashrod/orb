@@ -3,6 +3,9 @@ import { BoostRecord, NewBoost } from '../shared/boosts';
 
 // Expose protected APIs to the renderer process
 contextBridge.exposeInMainWorld('orbApi', {
+  listExtensions: () => ipcRenderer.invoke('extensions:list'),
+  installExtension: () => ipcRenderer.invoke('extensions:install'),
+  removeExtension: (id: string) => ipcRenderer.invoke('extensions:remove', id),
   // Window management
   getWindowById: (webContentsId: number) =>
     ipcRenderer.invoke('window:get-by-id', webContentsId),
@@ -46,6 +49,9 @@ contextBridge.exposeInMainWorld('orbApi', {
 declare global {
   interface Window {
     orbApi: {
+      listExtensions: () => Promise<{ id: string; name: string; version: string }[]>;
+      installExtension: () => Promise<{ id: string; name: string; version: string } | null>;
+      removeExtension: (id: string) => Promise<{ removed: boolean }>;
       getWindowById: (webContentsId: number) => Promise<any>;
       openExternal: (url: string) => Promise<void>;
       toggleDevTools: () => Promise<void>;

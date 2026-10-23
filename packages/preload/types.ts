@@ -1,6 +1,9 @@
 import { BoostRecord, NewBoost } from '../shared/boosts';
 
 export interface ExposedApi {
+  listExtensions: () => Promise<{ id: string; name: string; version: string }[]>;
+  installExtension: () => Promise<{ id: string; name: string; version: string } | null>;
+  removeExtension: (id: string) => Promise<{ removed: boolean }>;
   getWindowById: (webContentsId: number) => Promise<any>;
   openExternal: (url: string) => Promise<void>;
   toggleDevTools: () => Promise<void>;
@@ -21,6 +24,9 @@ export interface ExposedApi {
 }
 
 export const exposedApi: ExposedApi = {
+  listExtensions: async () => [],
+  installExtension: async () => null,
+  removeExtension: async () => ({ removed: true }),
   // These are implemented in the preload script via contextBridge
   // This type file is for TypeScript in the renderer
   getWindowById: () => Promise.resolve(null),

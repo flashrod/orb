@@ -16,6 +16,7 @@ interface AppearanceStore {
   sidebarWidth: number;
   sidebarAutoHide: boolean;
   bookmarksBarVisible: boolean;
+  compactSideTabs: boolean;
   motion: MotionPreference;
   customColors: Partial<Record<PaletteToken, string>>;
   setTheme: (theme: AppearanceTheme) => void;
@@ -25,6 +26,7 @@ interface AppearanceStore {
   setSidebarWidth: (width: number) => void;
   setSidebarAutoHide: (enabled: boolean) => void;
   setBookmarksBarVisible: (enabled: boolean) => void;
+  setCompactSideTabs: (enabled: boolean) => void;
   setMotion: (motion: MotionPreference) => void;
   setCustomColor: (token: PaletteToken, color: string) => void;
   resetCustomColors: () => void;
@@ -39,7 +41,8 @@ export const useAppearanceStore = create<AppearanceStore>()(
       tabLayout: 'top',
       sidebarWidth: 72,
       sidebarAutoHide: false,
-      bookmarksBarVisible: true,
+      bookmarksBarVisible: false,
+      compactSideTabs: false,
       motion: 'gentle',
       customColors: {},
       setTheme: (theme) => set({ theme }),
@@ -49,6 +52,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
       setSidebarAutoHide: (sidebarAutoHide) => set({ sidebarAutoHide }),
       setBookmarksBarVisible: (bookmarksBarVisible) => set({ bookmarksBarVisible }),
+      setCompactSideTabs: (compactSideTabs) => set({ compactSideTabs }),
       setMotion: (motion) => set({ motion }),
       setCustomColor: (token, color) => set((state) => {
         const customColors = { ...state.customColors };
@@ -60,6 +64,10 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
+      version: 2,
+      migrate: (persistedState: any, version) => version < 2
+        ? { ...persistedState, bookmarksBarVisible: false }
+        : persistedState,
       storage: createJSONStorage(() => localStorage),
     }
   )
