@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useRef, useState, useCallback, useImperativeHandle } from 'react';
 import { pickPageElement, PickedElement } from '../lib/elementPicker';
+import { profilePartition } from '../lib/profiles';
 
 type WebViewHandle = {
   navigateBack: () => void;
@@ -14,6 +15,7 @@ export default forwardRef<WebViewHandle, {
   tabId: string;
   url: string;
   spaceId: string;
+  profileId: string;
   onUrlChange?: (url: string) => void;
   onTitleChange?: (title: string) => void;
   onFaviconChange?: (favicon: string) => void;
@@ -22,6 +24,7 @@ export default forwardRef<WebViewHandle, {
   tabId,
   url,
   spaceId,
+  profileId,
   onUrlChange,
   onTitleChange,
   onFaviconChange,
@@ -30,6 +33,7 @@ export default forwardRef<WebViewHandle, {
   tabId: string;
   url: string;
   spaceId: string;
+  profileId: string;
   onUrlChange?: (url: string) => void;
   onTitleChange?: (title: string) => void;
   onFaviconChange?: (favicon: string) => void;
@@ -167,7 +171,7 @@ export default forwardRef<WebViewHandle, {
       <webview
         ref={webviewRef}
         className="w-full h-full"
-        partition="persist:orb"
+        partition={profilePartition(profileId)}
         allowpopups
         preload=""
       />

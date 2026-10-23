@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { restoreTabSnapshot } from '../lib/tabPersistence';
 
 export interface Tab {
   id: string;
@@ -23,7 +25,7 @@ interface TabStore {
   getTabsForSpace: (spaceId: string) => Tab[];
 }
 
-export const useTabStore = create<TabStore>((set, get) => ({
+export const useTabStore = create<TabStore>()(persist((set, get) => ({
   tabs: [],
   activeTabId: null,
 
@@ -32,7 +34,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
     const now = Date.now();
     set((state) => ({
       tabs: [
-        ...state.tabs,
+        ...state.tabs.map((existing) => ({ ...existing, isActive: false })),
         { ...tab, id, isActive: true, createdAt: now, updatedAt: now },
       ],
       activeTabId: id,
@@ -41,7 +43,6 @@ export const useTabStore = create<TabStore>((set, get) => ({
 
   removeTab: (id: string) =>
     set((state) => {
-      const tab = state.tabs.find((t: Tab) => t.id === id);
       const newTabs = state.tabs.filter((t: Tab) => t.id !== id);
       let newActiveId = state.activeTabId;
 
@@ -51,10 +52,13 @@ export const useTabStore = create<TabStore>((set, get) => ({
         newActiveId = null;
       }
 
-      return { tabs: newTabs, activeTabId: newActiveId };
+      return { tabs: newTabs.map((t) => ({ ...t, isActive: t.id === newActiveId })), activeTabId: newActiveId };
     }),
 
-  setActiveTab: (id: string | null) => set({ activeTabId: id }),
+  setActiveTab: (id: string | null) => set((state) => ({
+    activeTabId: id,
+    tabs: state.tabs.map((tab) => ({ ...tab, isActive: tab.id === id })),
+  })),
 
   updateTab: (id: string, partial: Partial<Tab>) =>
     set((state) => ({
@@ -79,4 +83,10 @@ export const useTabStore = create<TabStore>((set, get) => ({
   getTabsForSpace: (spaceId: string) => {
     return get().tabs.filter((t: Tab) => t.spaceId === spaceId);
   },
+}), {
+  name: 'orb-tabs',
+  version: 1,
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({ tabs: state.tabs, activeTabId: state.activeTabId }),
+  migrate: (persistedState) => restoreTabSnapshot(persistedState),
 }));

@@ -34,14 +34,6 @@ function createMainWindow() {
     },
   });
 
-  // Single shared Electron session so all spaces share cache/cookies/storage
-  const orbSession = session.fromPartition('persist:orb', {
-    cache: true,
-  });
-
-  // Initialize ad blocker on the shared session
-  initAdBlocker(orbSession);
-
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
@@ -61,6 +53,16 @@ function createMainWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Each workspace WebView uses a profile-specific persistent partition. Install
+  // privacy hooks before Chromium attaches that WebView to its session.
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-attach-webview', (_attachEvent, webPreferences) => {
+      const partition = webPreferences.partition;
+      if (partition === 'persist:orb' || partition?.startsWith('persist:orb-profile-')) {
+        initAdBlocker(session.fromPartition(partition, { cache: true }));
+      }
+    });
+  });
   await restoreExtensions();
   createMainWindow();
   registerIpcHandlers();

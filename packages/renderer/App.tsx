@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSpaceStore } from './stores/spaces';
+import { useProfileStore } from './stores/profiles';
+import { resolveSpaceProfile } from './lib/profiles';
 import { useTabStore } from './stores/tabs';
 import TabBar from './components/TabBar';
 import CommandBar from './components/CommandBar';
@@ -18,11 +20,12 @@ const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgen
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts' | 'toolbar'>('appearance');
+  const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles'>('appearance');
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
   const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
-  const { spaces, activeSpaceId, addSpace } = useSpaceStore();
+  const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
+  const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
   const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, customColors, setTabLayout } = useAppearanceStore();
 
@@ -54,6 +57,7 @@ export default function App() {
       addSpace({ name: 'Personal', icon: 'globe', color: '#a0522d', tabIds: [] });
     }
     const defaultSpaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
+    if (defaultSpaceId && !useSpaceStore.getState().activeSpaceId) setActiveSpace(defaultSpaceId);
     if (useTabStore.getState().tabs.length === 0 && defaultSpaceId) {
       useTabStore.getState().addTab({
         spaceId: defaultSpaceId,
@@ -64,7 +68,17 @@ export default function App() {
         isActive: true,
       });
     }
-  }, [addSpace]);
+  }, [addSpace, setActiveSpace]);
+
+  useEffect(() => {
+    if (!activeSpaceId || tabs.length === 0) return;
+    const tabsInSpace = tabs.filter((tab) => tab.spaceId === activeSpaceId);
+    if (tabsInSpace.length === 0) {
+      useTabStore.getState().addTab({ spaceId: activeSpaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
+    } else if (!tabsInSpace.some((tab) => tab.id === activeTabId)) {
+      setActiveTab(tabsInSpace[tabsInSpace.length - 1].id);
+    }
+  }, [activeSpaceId, tabs, activeTabId, setActiveTab]);
 
   // Closing the final tab minimizes the window. Recreate the next tab when the
   // user brings Orb back, matching the macOS browser workflow without quitting.
@@ -175,6 +189,7 @@ export default function App() {
     : [];
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
+  const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, tabRailKeyboardRevealed, false);
 
   const handlePickElement = async () => {
@@ -271,10 +286,12 @@ export default function App() {
             /> : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />
           ) : activeTabId ? (
             <WebView
+              key={`${activeTabId}:${activeProfile.id}`}
               ref={webviewRef}
               tabId={activeTabId}
               url={activeTab?.url || ''}
               spaceId={activeSpaceId || ''}
+              profileId={activeProfile.id}
               onUrlChange={(url) => updateTab(activeTabId, { url })}
               onTitleChange={(title) => updateTab(activeTabId, { title })}
               onFaviconChange={(favicon) => updateTab(activeTabId, { favicon })}

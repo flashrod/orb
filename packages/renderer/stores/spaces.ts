@@ -7,6 +7,7 @@ export interface Space {
   icon: string;
   color: string;
   tabIds: string[];
+  profileId: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -14,10 +15,11 @@ export interface Space {
 interface SpaceStore {
   spaces: Space[];
   activeSpaceId: string | null;
-  addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt' | 'profileId'> & { profileId?: string }) => void;
   removeSpace: (id: string) => void;
   setActiveSpace: (id: string | null) => void;
   updateSpace: (id: string, partial: Partial<Space>) => void;
+  reorderSpace: (id: string, index: number) => void;
   addTabToSpace: (spaceId: string, tabId: string) => void;
   removeTabFromSpace: (spaceId: string, tabId: string) => void;
 }
@@ -27,13 +29,13 @@ export const useSpaceStore = create<SpaceStore>()(
     (set) => ({
       spaces: [],
       activeSpaceId: null,
-      addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt'>) => {
+      addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt' | 'profileId'> & { profileId?: string }) => {
         const id = crypto.randomUUID();
         const now = Date.now();
         set((state) => ({
           spaces: [
             ...state.spaces,
-            { ...space, id, createdAt: now, updatedAt: now },
+            { ...space, profileId: space.profileId || 'default', id, createdAt: now, updatedAt: now },
           ],
           activeSpaceId: id,
         }));
@@ -50,6 +52,14 @@ export const useSpaceStore = create<SpaceStore>()(
             s.id === id ? { ...s, ...partial, updatedAt: Date.now() } : s
           ),
         })),
+      reorderSpace: (id, index) => set((state) => {
+        const spaces = [...state.spaces];
+        const currentIndex = spaces.findIndex((space) => space.id === id);
+        if (currentIndex < 0) return state;
+        const [space] = spaces.splice(currentIndex, 1);
+        spaces.splice(Math.max(0, Math.min(index, spaces.length)), 0, space);
+        return { spaces };
+      }),
       addTabToSpace: (spaceId: string, tabId: string) =>
         set((state) => ({
           spaces: state.spaces.map((s: Space) =>
@@ -69,6 +79,13 @@ export const useSpaceStore = create<SpaceStore>()(
     }),
     {
       name: 'orb-spaces',
+      version: 2,
+      migrate: (persistedState: any) => ({
+        ...persistedState,
+        spaces: Array.isArray(persistedState?.spaces)
+          ? persistedState.spaces.map((space: Partial<Space>) => ({ ...space, profileId: space.profileId || 'default' }))
+          : [],
+      }),
       storage: createJSONStorage(() => localStorage),
     }
   )

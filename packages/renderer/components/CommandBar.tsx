@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MagnifyingGlass, X, SignIn, Globe, SquaresFour, Plus } from '@phosphor-icons/react';
 import { useTabStore } from '../stores/tabs';
 import { useSpaceStore } from '../stores/spaces';
+import { useProfileStore } from '../stores/profiles';
 import { resolveAddressOrSearch } from '../lib/navigation';
 
 interface CommandResult {
   id: string;
-  type: 'tab' | 'space' | 'command' | 'url';
+  type: 'tab' | 'space' | 'profile' | 'command' | 'url';
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -41,12 +42,13 @@ export default function CommandBar({
 
   const { tabs, activeTabId } = useTabStore();
   const { spaces, activeSpaceId } = useSpaceStore();
+  const profiles = useProfileStore((state) => state.profiles);
 
   useEffect(() => {
     inputRef.current?.focus();
     setResults(buildResults(query));
     setSelectedIndex(-1);
-  }, [query, tabs, spaces, activeTabId, activeSpaceId]);
+  }, [query, tabs, spaces, profiles, activeTabId, activeSpaceId]);
 
   const buildResults = (q: string): CommandResult[] => {
     const lower = q.toLowerCase().trim();
@@ -59,6 +61,25 @@ export default function CommandBar({
     // 2. Spaces
     const spaceResults = buildSpaceResults(lower);
     results.push(...spaceResults);
+
+    results.push(...profiles
+      .filter((profile) => profile.name.toLowerCase().includes(lower))
+      .map((profile) => ({
+        id: `profile-${profile.id}`,
+        type: 'profile' as const,
+        title: profile.name,
+        subtitle: `Switch profile · ${spaces.find((space) => space.profileId === profile.id)?.name || 'no workspace assigned'}`,
+        icon: getIcon('globe', 'w-4 h-4'),
+        action: () => {
+          let targetSpace = useSpaceStore.getState().spaces.find((space) => space.profileId === profile.id);
+          if (!targetSpace) {
+            useSpaceStore.getState().addSpace({ name: profile.name, icon: 'globe', color: profile.color, tabIds: [], profileId: profile.id });
+            targetSpace = useSpaceStore.getState().spaces.at(-1);
+          }
+          if (targetSpace) useSpaceStore.getState().setActiveSpace(targetSpace.id);
+          onClose();
+        },
+      })));
 
     // 3. Commands
     if (!lower) {
