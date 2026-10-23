@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTabStore } from '../stores/tabs';
-import { X, Pin, RefreshCw } from 'lucide-react';
+import { X, Pin, Plus } from 'lucide-react';
 
 const FAVICON_CACHE: Record<string, string> = {};
 
@@ -37,7 +37,7 @@ export default function TabBar({
   const handleNewTab = () => {
     addTab({
       spaceId: activeSpaceId,
-      url: 'https://orb.newtab',
+      url: 'about:blank',
       title: 'New Tab',
       favicon: '',
       isPinned: false,
@@ -89,10 +89,11 @@ export default function TabBar({
       ))}
       <button
         onClick={handleNewTab}
+        aria-label="New tab"
         className="w-7 h-7 rounded-sm hover:bg-zinc-50 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
         title="New Tab (⌘T)"
       >
-        <RefreshCw className="w-3 h-3 text-zinc-500" />
+        <Plus className="w-4 h-4 text-zinc-500" />
       </button>
     </div>
   );
