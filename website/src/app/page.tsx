@@ -3,7 +3,6 @@ import Hero from '@/components/Hero';
 import Features from '@/components/Features';
 import Privacy from '@/components/Privacy';
 import Waitlist from '@/components/Waitlist';
-import FAQ from '@/components/FAQ';
 import Footer from '@/components/Footer';
 
 export default function Page() {
@@ -14,7 +13,6 @@ export default function Page() {
       <Features />
       <Privacy />
       <Waitlist />
-      <FAQ />
       <Footer />
     </main>
   );

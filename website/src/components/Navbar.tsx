@@ -70,10 +70,10 @@ export default function Navbar() {
               Privacy
             </Link>
             <Link
-              href="#faq"
+              href="/docs"
               className="text-xs font-medium text-orb-text-muted uppercase tracking-widest hover:text-orb-accent transition-colors"
             >
-              FAQ
+              Docs
             </Link>
             <Link
               href="https://github.com/flashrod/orb/issues/new/choose"

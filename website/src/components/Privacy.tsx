@@ -1,62 +1,34 @@
 'use client';
 
 import { useScrollReveal } from '@/lib/useScrollReveal';
-import { Eye, Link as LinkIcon, Globe, Shield, Lock, Bug } from '@phosphor-icons/react';
+import { Eye, Lock, Bug, Globe } from '@phosphor-icons/react';
 
 type PrivacyItem = {
   icon: React.ElementType;
   title: string;
   description: string;
-  details?: string[];
 };
 
 const privacyItems: PrivacyItem[] = [
   {
     icon: Eye,
     title: 'Ad + tracker blocking',
-    description:
-      'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch. 60k+ network rules, 56k+ tracker rules, 28k+ cosmetic rules.',
-    details: [
-      'Network rules: `||domain.com^` with `$options`, `$domain=`, and `~domain=` modifiers',
-      'Cosmetic rules: `##selector` and `##+regex` element hiding',
-      'Allowlist: `@@` exceptions per domain',
-      'Blocked-request audit log with reason and rule match',
-    ],
+    description: 'Real EasyList and uBlock rules. Blocked requests are logged so you can see what was stopped.',
   },
   {
     icon: Lock,
     title: 'Third-party cookies',
-    description:
-      'Blocked by default with built-in exceptions for common login and payment providers.',
-    details: [
-      'Default-deny for third-party Cookie and Set-Cookie headers',
-      'Built-in exceptions for SSO and payment providers',
-      'One-click "this site is broken" toggle remembers per site',
-      'Permission handler prompts before granting sensitive access',
-    ],
+    description: 'Blocked by default. Per-site exceptions for login and payment providers.',
   },
   {
     icon: Bug,
     title: 'Fingerprinting protection',
-    description:
-      'Client-hint headers stripped or normalized to low-entropy values.',
-    details: [
-      'Strips Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version',
-      'Strips X-Client-Data, X-Requested-With',
-      'Accept-Language trimmed to first entry',
-      'Consistent fingerprint across sessions — no randomized entropy',
-    ],
+    description: 'Client-hint headers stripped. Consistent fingerprint across sessions.',
   },
   {
     icon: Globe,
     title: 'HTTPS-only mode',
-    description:
-      'HTTP is upgraded to HTTPS automatically with clean fallbacks.',
-    details: [
-      'HTTP → HTTPS redirect via redirectURL on all navigations',
-      'Per-site exceptions for legacy HTTP-only sites',
-      'Clear insecure indicator in address bar',
-    ],
+    description: 'HTTP upgraded to HTTPS automatically. Per-site exceptions.',
   },
 ];
 
@@ -86,29 +58,10 @@ export default function Privacy() {
                   </div>
                   <h4 className="text-lg font-semibold">{item.title}</h4>
                 </div>
-                <p className="text-sm text-orb-text mb-3 leading-relaxed">{item.description}</p>
-                {item.details && (
-                  <ul className="text-[11px] text-orb-text-muted space-y-1.5">
-                    {item.details.map((d, j) => (
-                      <li key={j} className="flex items-start gap-1.5">
-                        <span className="text-orb-accent">•</span> {d}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <p className="text-sm text-orb-text leading-relaxed">{item.description}</p>
               </div>
             );
           })}
-        </div>
-        <div className="mt-8 pt-8 border-t border-orb-border">
-          <h4 className="text-sm font-semibold text-orb-text-strong mb-3 uppercase tracking-widest">
-            The rule
-          </h4>
-          <p className="text-sm text-orb-text leading-relaxed">
-            We never claim a privacy feature until it changes runtime behavior. No hardcoded slop,
-            no marketing toggles that do nothing. If a rule is in the list, it is enforced on every
-            request.
-          </p>
         </div>
       </div>
     </section>

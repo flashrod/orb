@@ -1,7 +1,7 @@
 'use client';
 
 import { useScrollReveal } from '@/lib/useScrollReveal';
-import { Layout, Globe, Shield, Eye, Clock } from '@phosphor-icons/react';
+import { Layout, Globe, Shield } from '@phosphor-icons/react';
 
 function SplitViewIcon() {
   return (
@@ -33,57 +33,31 @@ const features: Feature[] = [
   {
     icon: Layout,
     title: 'Spaces',
-    description:
-      'Named, color-coded spaces isolate tabs, bookmarks, and history by context. Work, personal, and research never mix. Each space gets its own profile partition for cookie and storage isolation.',
+    description: 'Named spaces keep your tabs, bookmarks, and history separate by context.',
     colSpan: 2,
   },
   {
     icon: Globe,
     title: 'Boosts',
-    description:
-      'Inject custom CSS and JavaScript into any site with an intelligent element picker. Hide cookie banners, reshape news layouts, strip autoplaying videos, or dark-mode a site that refuses it.',
+    description: 'Custom CSS and JS for any site. Hide cookie banners, reshape layouts, dark-mode the web.',
     colSpan: 2,
   },
   {
     icon: Shield,
     title: 'Ad + tracker blocking',
-    description:
-      'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch. 60k+ network rules, 56k+ tracker rules, 28k+ cosmetic rules. Blocked requests are logged so you can see what was stopped.',
-    colSpan: 1,
-  },
-  {
-    icon: Eye,
-    title: 'Third-party cookies',
-    description:
-      'Blocked by default with built-in exceptions for common login and payment providers. One-click "this site is broken" toggle remembers per-site choices.',
-    colSpan: 1,
-  },
-  {
-    icon: Shield,
-    title: 'Fingerprinting protection',
-    description:
-      'Client-hint headers (Sec-CH-UA, X-Client-Data, Accept-Language) stripped or normalized to low-entropy values. Consistent fingerprint across sessions.',
-    colSpan: 1,
-  },
-  {
-    icon: Clock,
-    title: 'HTTPS-only mode',
-    description:
-      'HTTP is upgraded to HTTPS automatically with clean fallbacks and per-site exceptions. Never accidentally load an insecure page.',
+    description: 'Real EasyList and uBlock rules. Third-party cookies blocked by default.',
     colSpan: 1,
   },
   {
     icon: SplitViewIcon,
     title: 'Split view',
-    description:
-      'View two tabs side by side with a draggable divider. Swap panes or close split view with keyboard control. Works with tab groups and pinned tabs.',
+    description: 'Two tabs side by side with a draggable divider.',
     colSpan: 1,
   },
   {
     icon: TabGroupsIcon,
     title: 'Tab groups',
-    description:
-      'Collapse and rename tab groups. Drag tabs between groups. Groups persist across restarts with their own color and name.',
+    description: 'Collapse, rename, and reorder tab groups that persist across restarts.',
     colSpan: 1,
   },
 ];
@@ -99,7 +73,7 @@ export default function Features() {
             <div className="section-number">[ 01 ]</div>
             <h2 className="section-title">Built for focus</h2>
             <p className="text-orb-text max-w-2xl">
-              Everything Orb does, it does transparently. No hidden telemetry, no dark patterns.
+              Orb is a calm browser. No dark patterns, no hidden telemetry.
             </p>
           </div>
         </div>
