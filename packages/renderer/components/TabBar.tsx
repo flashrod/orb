@@ -41,6 +41,7 @@ export default function TabBar({
       title: 'New Tab',
       favicon: '',
       isPinned: false,
+      isActive: true,
     });
   };
 

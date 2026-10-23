@@ -44,12 +44,13 @@ export class WindowManager {
   }
 
   getWindow(webContentsId: number): BrowserWindow | undefined {
-    return this.windows.get(webContentsId.toString())?.window;
+    const entry = this.windows.get(webContentsId.toString());
+    return entry?.window ?? undefined;
   }
 
   getWindowBySpaceId(spaceId: string): BrowserWindow | undefined {
     const entry = [...this.windows.values()].find((w) => w.spaceId === spaceId);
-    return entry?.window;
+    return entry?.window ?? undefined;
   }
 
   destroyWindow(webContentsId: number): void {

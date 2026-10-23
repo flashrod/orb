@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Link } from 'lucide-react';
+
 
 export default function AddressBar({
   activeTab,
@@ -22,7 +22,7 @@ export default function AddressBar({
   return (
     <div className="h-10 border-b border-white/5 bg-white/5 flex items-center px-4">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40">🔍</span>
         <form
           onSubmit={handleSubmit}
           className="w-full"
@@ -41,7 +41,7 @@ export default function AddressBar({
         {focused && (
           <div className="absolute top-full left-0 right-0 bg-white/10 border border-white/10 rounded-b-lg mt-1 py-2 shadow-lg">
             <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-white/80 hover:bg-white/5 cursor-pointer">
-              <Link className="w-4 h-4 text-white/60" />
+              <span>🔍</span>
               <span>Search with default engine</span>
             </div>
           </div>

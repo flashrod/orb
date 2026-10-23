@@ -1,7 +1,7 @@
 import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
-import { createWindowManager } from './windowManager';
+import { windowManager } from './windowManager';
 import { registerIpcHandlers } from './ipcHandlers';
 import { initAdBlocker } from './adBlocker';
 

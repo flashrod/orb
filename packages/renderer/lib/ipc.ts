@@ -1,6 +1,16 @@
 import { ipcRenderer } from 'electron';
 
-export const orbIpc = {
+export type OrbIpc = {
+  getWindowById: (webContentsId: number) => Promise<any>;
+  openExternal: (url: string) => Promise<void>;
+  toggleDevTools: (webContentsId: number) => Promise<void>;
+  focusWindow: (webContentsId: number) => Promise<void>;
+  saveDialog: (options: any) => Promise<any>;
+  openDialog: (options: any) => Promise<any>;
+  getAppVersion: () => Promise<string>;
+};
+
+export const orbIpc: OrbIpc = {
   getWindowById: (webContentsId: number) =>
     ipcRenderer.invoke('window:get-by-id', webContentsId),
   openExternal: (url: string) => ipcRenderer.invoke('window:open-external', url),
@@ -12,10 +22,4 @@ export const orbIpc = {
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
 };
 
-export type OrbIpc = typeof orbIpc;
 
-declare global {
-  interface Window {
-    orbApi: OrbIpc;
-  }
-}

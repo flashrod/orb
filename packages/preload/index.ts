@@ -29,6 +29,18 @@ contextBridge.exposeInMainWorld('orbApi', {
 
 declare global {
   interface Window {
-    orbApi: typeof import('./index').exposedApi;
+    orbApi: {
+      getWindowById: (webContentsId: number) => Promise<any>;
+      openExternal: (url: string) => Promise<void>;
+      toggleDevTools: (webContentsId: number) => Promise<void>;
+      focusWindow: (webContentsId: number) => Promise<void>;
+      saveDialog: (options: any) => Promise<any>;
+      openDialog: (options: any) => Promise<any>;
+      getAppVersion: () => Promise<string>;
+      toggleAdBlocker: (enabled: boolean) => Promise<void>;
+      getBoosts: () => Promise<any[]>;
+      saveBoost: (boost: any) => Promise<void>;
+      deleteBoost: (id: string) => Promise<void>;
+    };
   }
 }

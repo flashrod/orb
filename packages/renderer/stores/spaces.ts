@@ -1,4 +1,4 @@
-import { createStore } from 'zustand';
+import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface Space {
@@ -27,7 +27,7 @@ export const useSpaceStore = create<SpaceStore>()(
     (set) => ({
       spaces: [],
       activeSpaceId: null,
-      addSpace: (space) => {
+      addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt'>) => {
         const id = crypto.randomUUID();
         const now = Date.now();
         set((state) => ({
@@ -38,31 +38,31 @@ export const useSpaceStore = create<SpaceStore>()(
           activeSpaceId: id,
         }));
       },
-      removeSpace: (id) =>
+      removeSpace: (id: string) =>
         set((state) => ({
-          spaces: state.spaces.filter((s) => s.id !== id),
+          spaces: state.spaces.filter((s: Space) => s.id !== id),
           activeSpaceId: state.activeSpaceId === id ? null : state.activeSpaceId,
         })),
-      setActiveSpace: (id) => set({ activeSpaceId: id }),
-      updateSpace: (id, partial) =>
+      setActiveSpace: (id: string | null) => set({ activeSpaceId: id }),
+      updateSpace: (id: string, partial: Partial<Space>) =>
         set((state) => ({
-          spaces: state.spaces.map((s) =>
+          spaces: state.spaces.map((s: Space) =>
             s.id === id ? { ...s, ...partial, updatedAt: Date.now() } : s
           ),
         })),
-      addTabToSpace: (spaceId, tabId) =>
+      addTabToSpace: (spaceId: string, tabId: string) =>
         set((state) => ({
-          spaces: state.spaces.map((s) =>
+          spaces: state.spaces.map((s: Space) =>
             s.id === spaceId && !s.tabIds.includes(tabId)
               ? { ...s, tabIds: [...s.tabIds, tabId], updatedAt: Date.now() }
               : s
           ),
         })),
-      removeTabFromSpace: (spaceId, tabId) =>
+      removeTabFromSpace: (spaceId: string, tabId: string) =>
         set((state) => ({
-          spaces: state.spaces.map((s) =>
+          spaces: state.spaces.map((s: Space) =>
             s.id === spaceId
-              ? { ...s, tabIds: s.tabIds.filter((t) => t !== tabId), updatedAt: Date.now() }
+              ? { ...s, tabIds: s.tabIds.filter((t: string) => t !== tabId), updatedAt: Date.now() }
               : s
           ),
         })),

@@ -1,6 +1,7 @@
 import React from 'react';
+import { Plus, Trash2, Code } from 'lucide-react';
 import { useBoostStore } from '../stores/boosts';
-import { Plus, Code2, Code, Trash2, Toggle } from 'lucide-react';
+
 
 export default function BoostsEditor() {
   const { boosts, addBoost, removeBoost, toggleBoost, updateBoost } =
@@ -40,7 +41,7 @@ export default function BoostsEditor() {
             <p className="text-white/50">No boosts yet. Add custom CSS/JS for any domain.</p>
           </div>
         ) : (
-          boosts.map((boost) => (
+          boosts.map((boost: { id: string; domain: string; css: string; js: string; enabled: boolean }) => (
             <div
               key={boost.id}
               className="card-base flex flex-col gap-4"
@@ -48,7 +49,7 @@ export default function BoostsEditor() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-orb-accent">
-                    <Code className="w-4 h-4" />
+                    📄
                   </div>
                   <div>
                     <div className="text-sm font-medium">{boost.domain}</div>

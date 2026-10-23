@@ -1,3 +1,5 @@
+import { create } from 'zustand';
+
 export interface Boost {
   id: string;
   domain: string;
@@ -20,7 +22,7 @@ interface BoostStore {
 export const useBoostStore = create<BoostStore>((set, get) => ({
   boosts: [],
 
-  addBoost: (boost) => {
+  addBoost: (boost: Omit<Boost, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = crypto.randomUUID();
     const now = Date.now();
     set((state) => ({
@@ -31,26 +33,26 @@ export const useBoostStore = create<BoostStore>((set, get) => ({
     }));
   },
 
-  removeBoost: (id) =>
+  removeBoost: (id: string) =>
     set((state) => ({
-      boosts: state.boosts.filter((b) => b.id !== id),
+      boosts: state.boosts.filter((b: Boost) => b.id !== id),
     })),
 
-  toggleBoost: (id) =>
+  toggleBoost: (id: string) =>
     set((state) => ({
-      boosts: state.boosts.map((b) =>
+      boosts: state.boosts.map((b: Boost) =>
         b.id === id ? { ...b, enabled: !b.enabled } : b
       ),
     })),
 
-  updateBoost: (id, partial) =>
+  updateBoost: (id: string, partial: Partial<Boost>) =>
     set((state) => ({
-      boosts: state.boosts.map((b) =>
+      boosts: state.boosts.map((b: Boost) =>
         b.id === id ? { ...b, ...partial, updatedAt: Date.now() } : b
       ),
     })),
 
-  getBoostForDomain: (domain) => {
-    return get().boosts.find((b) => b.domain === domain);
+  getBoostForDomain: (domain: string) => {
+    return get().boosts.find((b: Boost) => b.domain === domain);
   },
 }));

@@ -11,6 +11,11 @@ const SPACE_ICONS: Record<string, React.ComponentType<{ className?: string }>> =
   plus: Plus,
 };
 
+function getSpaceIcon(iconName: string) {
+  const Icon = SPACE_ICONS[iconName] || Globe;
+  return <Icon className="w-5 h-5" />;
+}
+
 export default function Sidebar({
   spaces,
   activeSpaceId,
@@ -23,7 +28,7 @@ export default function Sidebar({
   const { addSpace, removeSpace } = useSpaceStore();
 
   const handleNewSpace = () => {
-    addSpace({ name: 'New Space', icon: 'globe', color: '#3b82f6' });
+    addSpace({ name: 'New Space', icon: 'globe', color: '#3b82f6', tabIds: [] });
   };
 
   return (
@@ -48,7 +53,7 @@ export default function Sidebar({
                 }`}
                 title={space.name}
               >
-                <SPACE_ICONS[space.icon] className="w-5 h-5" />
+                {getSpaceIcon(space.icon)}
               </button>
             ))}
             <button

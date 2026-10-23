@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useSpaceStore } from '../stores/spaces';
-import { useTabStore } from '../stores/tabs';
-import Sidebar from './Sidebar';
-import TabBar from './TabBar';
-import CommandBar from './CommandBar';
-import AddressBar from './AddressBar';
-import WebView from './WebView';
+import { useSpaceStore } from './stores/spaces';
+import { useTabStore } from './stores/tabs';
+import Sidebar from './components/Sidebar';
+import TabBar from './components/TabBar';
+import CommandBar from './components/CommandBar';
+import AddressBar from './components/AddressBar';
+import WebView from './components/WebView';
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
@@ -37,9 +37,9 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [spaces.length, commandBarOpen]);
 
-  const activeSpace = spaces.find((s) => s.id === activeSpaceId);
+  const activeSpace = spaces.find((s: { id: string }) => s.id === activeSpaceId);
   const spaceTabs = activeSpaceId
-    ? tabs.filter((t) => t.spaceId === activeSpaceId)
+    ? tabs.filter((t: { spaceId: string }) => t.spaceId === activeSpaceId)
     : [];
 
   return (
@@ -62,14 +62,14 @@ export default function App() {
         />
 
         {/* Address Bar */}
-        <AddressBar activeTab={tabs.find((t) => t.id === activeTabId)} />
+        <AddressBar activeTab={tabs.find((t: { id: string }) => t.id === activeTabId)} />
 
         {/* Web Content */}
         <div className="flex-1 relative overflow-hidden bg-black">
           {activeTabId ? (
             <WebView
               tabId={activeTabId}
-              url={tabs.find((t) => t.id === activeTabId)?.url || ''}
+              url={tabs.find((t: { id: string }) => t.id === activeTabId)?.url || ''}
               spaceId={activeSpaceId || ''}
             />
           ) : (

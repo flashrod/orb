@@ -23,12 +23,14 @@ export default function WebView({
     };
 
     const handleLoadCommit = () => {
-      setPageTitle(webview.getURL());
+      const wv = webview as any;
+      setPageTitle(wv.getURL ? wv.getURL() : '');
     };
 
     const handleDidStopLoad = () => {
       setIsLoading(false);
-      setPageTitle(webview.getTitle() || webview.getURL());
+      const wv = webview as any;
+      setPageTitle(wv.getTitle ? wv.getTitle() : '');
     };
 
     const handleNewWindow = (e: any) => {

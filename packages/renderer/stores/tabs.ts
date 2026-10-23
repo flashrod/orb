@@ -1,3 +1,5 @@
+import { create } from 'zustand';
+
 export interface Tab {
   id: string;
   spaceId: string;
@@ -25,7 +27,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
   tabs: [],
   activeTabId: null,
 
-  addTab: (tab) => {
+  addTab: (tab: Omit<Tab, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = crypto.randomUUID();
     const now = Date.now();
     set((state) => ({
@@ -37,10 +39,10 @@ export const useTabStore = create<TabStore>((set, get) => ({
     }));
   },
 
-  removeTab: (id) =>
+  removeTab: (id: string) =>
     set((state) => {
-      const tab = state.tabs.find((t) => t.id === id);
-      const newTabs = state.tabs.filter((t) => t.id !== id);
+      const tab = state.tabs.find((t: Tab) => t.id === id);
+      const newTabs = state.tabs.filter((t: Tab) => t.id !== id);
       let newActiveId = state.activeTabId;
 
       if (state.activeTabId === id && newTabs.length > 0) {
@@ -52,21 +54,21 @@ export const useTabStore = create<TabStore>((set, get) => ({
       return { tabs: newTabs, activeTabId: newActiveId };
     }),
 
-  setActiveTab: (id) => set({ activeTabId: id }),
+  setActiveTab: (id: string | null) => set({ activeTabId: id }),
 
-  updateTab: (id, partial) =>
+  updateTab: (id: string, partial: Partial<Tab>) =>
     set((state) => ({
-      tabs: state.tabs.map((t) =>
+      tabs: state.tabs.map((t: Tab) =>
         t.id === id ? { ...t, ...partial, updatedAt: Date.now() } : t
       ),
     })),
 
-  moveTab: (tabId, newSpaceId, index) =>
+  moveTab: (tabId: string, newSpaceId: string, index: number) =>
     set((state) => {
-      const tab = state.tabs.find((t) => t.id === tabId);
+      const tab = state.tabs.find((t: Tab) => t.id === tabId);
       if (!tab) return state;
 
-      const withoutTab = state.tabs.filter((t) => t.id !== tabId);
+      const withoutTab = state.tabs.filter((t: Tab) => t.id !== tabId);
       const updatedTab = { ...tab, spaceId: newSpaceId, updatedAt: Date.now() };
 
       withoutTab.splice(index, 0, updatedTab);
@@ -74,7 +76,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
       return { tabs: withoutTab };
     }),
 
-  getTabsForSpace: (spaceId) => {
-    return get().tabs.filter((t) => t.spaceId === spaceId);
+  getTabsForSpace: (spaceId: string) => {
+    return get().tabs.filter((t: Tab) => t.spaceId === spaceId);
   },
 }));

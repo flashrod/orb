@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, X, ArrowUp, ArrowDown, Enter } from 'lucide-react';
+import { Search, X, ArrowUp, ArrowDown, LogIn } from 'lucide-react';
 
 interface CommandResult {
   id: string;
@@ -146,7 +146,7 @@ export default function CommandBar({
                       </div>
                     </div>
                     <div className="text-xs text-white/30">
-                      {index === 0 && <Enter className="w-3 h-3" />}
+                      {index === 0 && <LogIn className="w-3 h-3" />}
                     </div>
                   </div>
                 </div>
