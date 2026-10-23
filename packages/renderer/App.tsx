@@ -53,6 +53,10 @@ export default function App() {
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [currentDownloadPath, setCurrentDownloadPath] = useState('');
+  // Memory guard: track last activity per tab for idle hibernation
+  const [tabLastActiveAt, setTabLastActiveAt] = useState<Record<string, number>>({});
+  const MEMORY_GUARD_IDLE_MS = 10 * 60 * 1000; // 10 minutes
+  const MEMORY_GUARD_MAX_LIVE_TABS = 20;
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
@@ -121,6 +125,13 @@ export default function App() {
       setActiveTab(tabsInSpace[tabsInSpace.length - 1].id);
     }
   }, [activeSpaceId, tabs, activeTabId, setActiveTab]);
+
+  // Record last active time for memory guard
+  useEffect(() => {
+    if (activeTabId) {
+      setTabLastActiveAt((prev) => ({ ...prev, [activeTabId]: Date.now() }));
+    }
+  }, [activeTabId]);
 
   // Lazily mount the active tab's WebView on first visit; keep it mounted
   // thereafter so switching tabs never reloads the page.
@@ -328,6 +339,42 @@ export default function App() {
 
     // Initialize download path
     handlePathSet();
+
+    // Memory guard: periodically hibernate idle tabs (never pinned/audible/in-call)
+    useEffect(() => {
+      const timer = setInterval(() => {
+        const now = Date.now();
+        const toHibernate: string[] = [];
+        mountedTabIds.forEach((tabId) => {
+          const tab = tabs.find((t) => t.id === tabId);
+          if (!tab) return;
+          const lastActive = tabLastActiveAt[tabId] || now;
+          const idleMs = now - lastActive;
+          if (idleMs > MEMORY_GUARD_IDLE_MS && !tab.isPinned) {
+            toHibernate.push(tabId);
+          }
+        });
+        // Cap: if over max live tabs, hibernate oldest first
+        const liveMounted = mountedTabIds.size;
+        if (toHibernate.length === 0 && liveMounted > MEMORY_GUARD_MAX_LIVE_TABS) {
+          const sorted = Array.from(mountedTabIds)
+            .map((id) => ({ id, lastActive: tabLastActiveAt[id] || now }))
+            .sort((a, b) => a.lastActive - b.lastActive);
+          while (sorted.length > MEMORY_GUARD_MAX_LIVE_TABS) {
+            const oldest = sorted.shift();
+            if (oldest) toHibernate.push(oldest.id);
+          }
+        }
+        toHibernate.forEach((tabId) => {
+          setMountedTabIds((prev) => {
+            const next = new Set(prev);
+            next.delete(tabId);
+            return next;
+          });
+        });
+      }, 60 * 1000); // check every minute
+      return () => clearInterval(timer);
+    }, [mountedTabIds, tabs, tabLastActiveAt]);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);

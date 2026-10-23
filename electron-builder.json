@@ -1,5 +1,5 @@
 {
-  "appId": "company.thebrowser.orb",
+  "appId": "org.orb.browser",
   "productName": "Orb",
   "mac": {
     "target": ["dmg"],

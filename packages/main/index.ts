@@ -9,7 +9,7 @@ import { createMenu } from './menu';
 import { PermissionStore, PermissionName, PermissionState } from './permissions';
 import { DownloadStore, DownloadState } from './downloads';
 
-app.setAppUserModelId('company.thebrowser.orb');
+app.setAppUserModelId('org.orb.browser');
 
 // Keep a global reference of the window object, otherwise it will be
 // closed automatically when the JavaScript object is garbage collected.
