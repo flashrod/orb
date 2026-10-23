@@ -7,10 +7,12 @@ import CommandBar from './components/CommandBar';
 import AddressBar from './components/AddressBar';
 import NavigationBar from './components/NavigationBar';
 import WebView from './components/WebView';
+import VerticalTabPanel from './components/VerticalTabPanel';
 
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
+  const [verticalTabsOpen, setVerticalTabsOpen] = useState(false);
   const { spaces, activeSpaceId, setActiveSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
 
@@ -74,6 +76,7 @@ export default function App() {
             onBack={navigateBack}
             onForward={navigateForward}
             onReload={navigateReload}
+            onToggleVerticalTabs={() => setVerticalTabsOpen(!verticalTabsOpen)}
           />
         </div>
 
@@ -103,6 +106,15 @@ export default function App() {
             </div>
           )}
         </div>
+
+        {/* Vertical Tabs Panel */}
+        {verticalTabsOpen && (
+          <VerticalTabPanel
+            isOpen={verticalTabsOpen}
+            onClose={() => setVerticalTabsOpen(false)}
+            spaceId={activeSpaceId || ''}
+          />
+        )}
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} />}
