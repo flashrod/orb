@@ -104,8 +104,10 @@ export default forwardRef<WebViewHandle, {
       onLoadingChange?.(false);
       const wv = webview as any;
       const title = wv.getTitle ? wv.getTitle() : '';
-      setPageTitle(title);
-      onTitleChange?.(title);
+      if (title) {
+        setPageTitle(title);
+        onTitleChange?.(title);
+      }
     };
 
     const handleDidFailLoad = (event: any) => {
@@ -140,6 +142,13 @@ export default forwardRef<WebViewHandle, {
       }
     };
 
+    const handleTitleUpdated = (event: any, title: string) => {
+      if (typeof title === 'string' && title.trim().length > 0) {
+        setPageTitle(title);
+        onTitleChange?.(title);
+      }
+    };
+
     webview.addEventListener('did-start-loading', handleDidStartLoading);
     webview.addEventListener('did-navigate', handleNavigation);
     webview.addEventListener('did-navigate-in-page', handleNavigation);
@@ -149,6 +158,7 @@ export default forwardRef<WebViewHandle, {
     webview.addEventListener('ipc-message', handleIpcMessage);
     webview.addEventListener('dom-ready', handleDomReady);
     ;(webview as any).addEventListener('page-favicon-updated', handleFaviconUpdated);
+    ;(webview as any).addEventListener('page-title-updated', handleTitleUpdated);
 
     return () => {
       webview.removeEventListener('did-start-loading', handleDidStartLoading);
@@ -160,6 +170,7 @@ export default forwardRef<WebViewHandle, {
       webview.removeEventListener('ipc-message', handleIpcMessage);
       webview.removeEventListener('dom-ready', handleDomReady);
       ;(webview as any).removeEventListener('page-favicon-updated', handleFaviconUpdated);
+      ;(webview as any).removeEventListener('page-title-updated', handleTitleUpdated);
     };
   }, [
     tabId,
