@@ -11,6 +11,8 @@ export interface ExposedApi {
   importUblockList: (filePath: string) => Promise<any>;
   toggleTrackerBlocking: (enabled: boolean) => Promise<void>;
   getTrackerBlockingStatus: () => Promise<any>;
+  toggleHttpsOnly: (enabled: boolean) => Promise<void>;
+  getHttpsOnlyStatus: () => Promise<any>;
   getBoosts: () => Promise<any[]>;
   saveBoost: (boost: any) => Promise<void>;
   deleteBoost: (id: string) => Promise<void>;
@@ -34,6 +36,8 @@ export const exposedApi: ExposedApi = {
     trackerBlockingEnabled: true,
     trackerRuleCount: 0,
   }),
+  toggleHttpsOnly: async () => {},
+  getHttpsOnlyStatus: async () => ({ httpsOnlyEnabled: false }),
   getBoosts: async () => [],
   saveBoost: async () => {},
   deleteBoost: async () => {},

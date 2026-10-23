@@ -57,6 +57,7 @@ export class AdBlocker {
   enabled = true;
   trackerBlockingEnabled = true;
   cosmeticFilteringEnabled = true;
+  httpsOnlyEnabled = false;
 
   async loadLists(sources: typeof FILTER_LIST_SOURCES = FILTER_LIST_SOURCES): Promise<void> {
     const networkRules: NetworkFilterRule[] = [];
@@ -356,6 +357,14 @@ export class AdBlocker {
     this.cosmeticFilteringEnabled = enabled;
   }
 
+  setHttpsOnly(enabled: boolean): void {
+    this.httpsOnlyEnabled = enabled;
+  }
+
+  isHttpsOnly(): boolean {
+    return this.httpsOnlyEnabled;
+  }
+
   getRuleCount(): number {
     return this.networkRules.length;
   }
@@ -436,6 +445,21 @@ export function initAdBlocker(ses: Electron.Session): void {
       } else {
         callback({});
       }
+    }
+  );
+
+  // HTTPS-only mode: upgrade http:// to https://
+  ses.webRequest.onBeforeRequest(
+    {
+      urls: ['http://*'],
+    },
+    (details, callback) => {
+      if (!adBlocker.httpsOnlyEnabled) {
+        callback({});
+        return;
+      }
+      const httpsUrl = details.url.replace('http://', 'https://');
+      callback({ redirectURL: httpsUrl });
     }
   );
 

@@ -31,6 +31,12 @@ contextBridge.exposeInMainWorld('orbApi', {
   getTrackerBlockingStatus: () =>
     ipcRenderer.invoke('adblocker:get-tracker-status'),
 
+  // HTTPS-only
+  toggleHttpsOnly: (enabled: boolean) =>
+    ipcRenderer.invoke('adblocker:set-https-only', enabled),
+  getHttpsOnlyStatus: () =>
+    ipcRenderer.invoke('adblocker:get-https-status'),
+
   // Boosts
   getBoosts: () => ipcRenderer.invoke('boosts:get-all'),
   saveBoost: (boost: any) => ipcRenderer.invoke('boosts:save', boost),

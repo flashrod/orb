@@ -74,6 +74,17 @@ export function registerIpcHandlers(): void {
     };
   });
 
+  // HTTPS-only: toggle
+  ipcMain.handle('adblocker:set-https-only', (_, enabled: boolean) => {
+    adBlocker.setHttpsOnly(enabled);
+    return { httpsOnlyEnabled: adBlocker.isHttpsOnly() };
+  });
+
+  // HTTPS-only: get status
+  ipcMain.handle('adblocker:get-https-status', () => {
+    return { httpsOnlyEnabled: adBlocker.isHttpsOnly() };
+  });
+
   // Ad blocker: import uBlock Origin filter list from file
   ipcMain.handle('adblocker:import-ublock-list', async (_, filePath: string) => {
     const count = await adBlocker.importUblockList(filePath);
