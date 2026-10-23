@@ -66,6 +66,24 @@ export default function App() {
     }
   }, [addSpace]);
 
+  // Closing the final tab minimizes the window. Recreate the next tab when the
+  // user brings Orb back, matching the macOS browser workflow without quitting.
+  useEffect(() => {
+    const restoreTabIfNeeded = () => {
+      if (useTabStore.getState().tabs.length > 0) return;
+      const spaceStore = useSpaceStore.getState();
+      let targetSpaceId = spaceStore.activeSpaceId || spaceStore.spaces[0]?.id;
+      if (!targetSpaceId) {
+        spaceStore.addSpace({ name: 'Personal', icon: 'globe', color: '#a0522d', tabIds: [] });
+        targetSpaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
+      }
+      if (!targetSpaceId) return;
+      useTabStore.getState().addTab({ spaceId: targetSpaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
+    };
+    window.addEventListener('focus', restoreTabIfNeeded);
+    return () => window.removeEventListener('focus', restoreTabIfNeeded);
+  }, []);
+
   const handleNavigate = useCallback((url: string) => {
     let targetTabId = useTabStore.getState().activeTabId;
     if (!targetTabId) {

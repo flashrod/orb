@@ -38,8 +38,8 @@ export function registerIpcHandlers(): void {
     BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools();
   });
 
-  ipcMain.handle('window:close-current', (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.close();
+  ipcMain.handle('window:minimize-current', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize();
   });
 
   // Focus window

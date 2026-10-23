@@ -42,11 +42,8 @@ export default function TabBar({
   const handleCloseMany = (tabIds: string[]) => tabIds.forEach((id) => removeTab(id));
   const closeTab = (id: string) => {
     const allTabs = useTabStore.getState().tabs;
-    if (isLastTabToClose(allTabs, id) && window.orbApi?.closeCurrentWindow) {
-      void window.orbApi.closeCurrentWindow();
-      return;
-    }
     removeTab(id);
+    if (isLastTabToClose(allTabs, id)) void window.orbApi?.minimizeCurrentWindow();
   };
 
   return (

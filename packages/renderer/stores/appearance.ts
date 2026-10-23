@@ -8,6 +8,17 @@ export type TabLayout = 'top' | 'split';
 export type MotionPreference = 'off' | 'gentle' | 'lively';
 export type PaletteToken = 'canvas' | 'surface' | 'elevated' | 'sidebar' | 'border' | 'text' | 'text-strong' | 'text-muted' | 'accent';
 
+export function migrateAppearanceSettings(persistedState: unknown, version: number): Record<string, unknown> {
+  const state = persistedState && typeof persistedState === 'object'
+    ? persistedState as Record<string, unknown>
+    : {};
+  return {
+    ...state,
+    ...(version < 2 ? { bookmarksBarVisible: false } : {}),
+    ...(version < 4 ? { showStartPage: true } : {}),
+  };
+}
+
 interface AppearanceStore {
   theme: AppearanceTheme;
   accent: AppearanceAccent;
@@ -44,7 +55,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       sidebarWidth: 72,
       sidebarAutoHide: false,
       bookmarksBarVisible: false,
-      showStartPage: false,
+      showStartPage: true,
       compactSideTabs: false,
       motion: 'gentle',
       customColors: {},
@@ -68,12 +79,8 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
-      version: 3,
-      migrate: (persistedState: any, version) => ({
-        ...persistedState,
-        ...(version < 2 ? { bookmarksBarVisible: false } : {}),
-        ...(version < 3 ? { showStartPage: false } : {}),
-      }),
+      version: 4,
+      migrate: migrateAppearanceSettings,
       storage: createJSONStorage(() => localStorage),
     }
   )

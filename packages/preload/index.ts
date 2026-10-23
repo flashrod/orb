@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     ipcRenderer.invoke('window:get-by-id', webContentsId),
   openExternal: (url: string) => ipcRenderer.invoke('window:open-external', url),
   toggleDevTools: () => ipcRenderer.invoke('window:toggle-devtools'),
-  closeCurrentWindow: () => ipcRenderer.invoke('window:close-current'),
+  minimizeCurrentWindow: () => ipcRenderer.invoke('window:minimize-current'),
   focusWindow: (webContentsId: number) => ipcRenderer.invoke('window:focus', webContentsId),
 
   // Dialogs
@@ -56,7 +56,7 @@ declare global {
       getWindowById: (webContentsId: number) => Promise<any>;
       openExternal: (url: string) => Promise<void>;
       toggleDevTools: () => Promise<void>;
-      closeCurrentWindow: () => Promise<void>;
+      minimizeCurrentWindow: () => Promise<void>;
       focusWindow: (webContentsId: number) => Promise<void>;
       saveDialog: (options: any) => Promise<any>;
       openDialog: (options: any) => Promise<any>;

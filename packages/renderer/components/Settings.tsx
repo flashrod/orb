@@ -177,9 +177,16 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
                 </section>
 
                 <section className="border-t orb-border pt-5">
-                  <div className="orb-elevated flex w-full items-center justify-between rounded-md border orb-border px-3 py-2.5 text-left">
-                    <span><span className="orb-strong block text-xs font-medium">Show Essentials on new tabs</span><span className="orb-muted mt-1 block text-[10px]">Open the dashboard with your pinned sites. Turn this off for a blank page and a focused address bar.</span></span>
-                    <Toggle checked={showStartPage} onChange={() => setShowStartPage(!showStartPage)} label="Show Essentials dashboard on new tabs" />
+                  <div className="orb-elevated rounded-md border orb-border px-3 py-3">
+                    <div className="mb-3"><span className="orb-strong block text-xs font-medium">New tab page</span><span className="orb-muted mt-1 block text-[10px]">Choose what opens whenever you create a tab. Essentials is the default.</span></div>
+                    <div role="radiogroup" aria-label="New tab page" className="grid grid-cols-2 gap-2">
+                      <button type="button" role="radio" aria-checked={showStartPage} onClick={() => setShowStartPage(true)} className={`rounded-md border px-3 py-2 text-left text-xs transition-colors ${showStartPage ? 'orb-accent-soft orb-accent border-[var(--orb-accent)]' : 'orb-control orb-border'}`}>
+                        <span className="block font-medium">Essentials</span><span className="orb-muted mt-1 block text-[10px]">Pinned sites and recent pages</span>
+                      </button>
+                      <button type="button" role="radio" aria-checked={!showStartPage} onClick={() => setShowStartPage(false)} className={`rounded-md border px-3 py-2 text-left text-xs transition-colors ${!showStartPage ? 'orb-accent-soft orb-accent border-[var(--orb-accent)]' : 'orb-control orb-border'}`}>
+                        <span className="block font-medium">Blank page</span><span className="orb-muted mt-1 block text-[10px]">Just the page and address bar</span>
+                      </button>
+                    </div>
                   </div>
                 </section>
               </div>

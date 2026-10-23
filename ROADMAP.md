@@ -15,7 +15,8 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [x] Keep the horizontal tab row and vertical tab rail mutually exclusive; put top tabs above the shared navigation/address row.
 - [x] Drag to reorder tabs in either tab layout; both layouts support pin, close, and new-tab actions.
 - [x] Right-click tab menu for new tab to the right, duplicate, reload, pin/unpin, and close related tabs; pinned tabs move first and collapse to icons in both layouts.
-- [x] Blank new tabs by default with address focus; Essentials dashboard is an optional Appearance setting.
+- [x] Choose Essentials or a blank page for new tabs; Essentials is the default and blank pages focus the address bar.
+- [x] Closing the last tab minimizes the window; restoring the window creates a fresh tab instead of quitting the browser.
 - [x] Keep top tabs clear of macOS traffic-light controls.
 - [x] Compact side tabs collapse to an edge reveal, open on hover, and toggle with Cmd/Ctrl+Shift+E.
 - [x] Remove the persistent Spaces sidebar; switch workspaces through the keyboard-first command bar.
