@@ -1,6 +1,7 @@
 import { session, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import { decideFilterAction, FilterRequestContext, NetworkFilterRule, matchesFilterRule, parseFilterLine } from './filterRules';
 
 // Filter list sources (from Arc's manifest.json reverse engineering)
 const FILTER_LIST_SOURCES = [
@@ -31,16 +32,6 @@ const FILTER_LIST_SOURCES = [
 ];
 
 // A parsed network filter rule
-interface NetworkFilterRule {
-  type: 'block' | 'allow';
-  pattern: string;        // string to match or regex source
-  isRegex: boolean;
-  domain?: string;        // domain restriction (||domain.com^)
-  options: Set<string>;   // $script, $image, $stylesheet, $third-party, etc.
-  applyToDomains: string[]; // $domain=example.com,foo.com
-  exceptDomains: string[];  // $domain=~example.com
-}
-
 // A parsed cosmetic (element hiding) filter rule
 interface CosmeticFilterRule {
   selector: string;       // CSS selector to hide
@@ -77,18 +68,6 @@ export class AdBlocker {
           if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('#')) continue;
           if (trimmed.startsWith('[Adblock')) continue;
 
-          // Allowlist rule: @@||example.com^
-          if (trimmed.startsWith('@@')) {
-            const allowRule = this.parseNetworkRule(trimmed.slice(2));
-            if (allowRule) {
-              // For allowlist, we add domain to userAllowlist if it's a domain rule
-              if (allowRule.domain) {
-                this.userAllowlist.add(allowRule.domain);
-              }
-            }
-            continue;
-          }
-
           // Element hiding rule: example.com##.selector or ##.selector (global)
           if (trimmed.includes('##')) {
             const cosmeticRule = this.parseCosmeticRule(trimmed);
@@ -97,7 +76,7 @@ export class AdBlocker {
           }
 
           // Network rule
-          const networkRule = this.parseNetworkRule(trimmed);
+          const networkRule = parseFilterLine(trimmed);
           if (networkRule) {
             if (source.type === 'privacy' || source.type === 'cookies') {
               trackerRules.push(networkRule);
@@ -118,79 +97,6 @@ export class AdBlocker {
     console.log(
       `[AdBlocker] Loaded ${networkRules.length} ad network rules, ${trackerRules.length} tracker rules, ${cosmeticRules.length} cosmetic rules`
     );
-  }
-
-  // Parse a network filter rule (||domain.com^, ||domain.com^$script,third-party, /regex/)
-  private parseNetworkRule(raw: string): NetworkFilterRule | null {
-    let ruleText = raw.trim();
-    if (!ruleText) return null;
-
-    let isRegex = false;
-    let options: Set<string> = new Set();
-    let applyToDomains: string[] = [];
-    let exceptDomains: string[] = [];
-
-    // Regex rule: /pattern/options
-    if (ruleText.startsWith('/') && ruleText.lastIndexOf('/') > 0) {
-      const lastSlash = ruleText.lastIndexOf('/');
-      const regexSource = ruleText.slice(1, lastSlash);
-      const regexOpts = ruleText.slice(lastSlash + 1);
-      isRegex = true;
-      ruleText = regexSource;
-      // Parse regex option flags
-      for (const ch of regexOpts) {
-        options.add(ch);
-      }
-    }
-
-    // Split options: ||domain.com^$script,image
-    const optionSplit = ruleText.split('$');
-    const basePattern = optionSplit[0];
-    const optionString = optionSplit[1] || '';
-
-    // Parse $options
-    if (optionString) {
-      for (const opt of optionString.split(',')) {
-        const trimmedOpt = opt.trim();
-        if (!trimmedOpt) continue;
-
-        // $domain=example.com,~foo.com
-        if (trimmedOpt.startsWith('domain=')) {
-          const domains = trimmedOpt.slice(7).split(',');
-          for (const d of domains) {
-            if (d.startsWith('~')) {
-              exceptDomains.push(d.slice(1));
-            } else {
-              applyToDomains.push(d);
-            }
-          }
-        } else {
-          options.add(trimmedOpt);
-        }
-      }
-    }
-
-    // Detect domain anchor: ||domain.com^
-    let domain: string | undefined;
-    let pattern = basePattern;
-
-    if (basePattern.startsWith('||') && basePattern.endsWith('^')) {
-      domain = basePattern.slice(2, -1);
-      pattern = domain; // match against hostname
-    } else if (basePattern.startsWith('|') && basePattern.endsWith('^')) {
-      // Anchored to start: |http://example.com
-      domain = undefined;
-      pattern = basePattern.slice(1, -1);
-    } else if (basePattern.endsWith('^')) {
-      // End anchor: example.com^
-      domain = basePattern.slice(0, -1);
-      pattern = domain;
-    }
-
-    // Determine type (block vs allow - allowlist already handled above)
-    const type: 'block' | 'allow' = 'block';
-
-    return { type, pattern, isRegex, domain, options, applyToDomains, exceptDomains };
   }
 
   // Parse element hiding rule: example.com##.ad-banner or ##.ad-banner
@@ -218,47 +124,33 @@ export class AdBlocker {
     return { selector, domain, isRegexSelect };
   }
 
-  // Check if a URL should be blocked by ad rules
-  shouldBlock(url: string): boolean {
+  // ABP allow rules override block rules in the same list and apply to matching request context.
+  shouldBlock(url: string, context: FilterRequestContext = { resourceType: 'other' }): boolean {
     if (!this.enabled) return false;
-
     try {
-      const urlObj = new URL(url);
-      const hostname = urlObj.hostname;
-
-      // User allowlist takes precedence
-      if (this.userAllowlist.has(hostname)) return false;
-
-      for (const rule of this.networkRules) {
-        if (!this.matchesNetworkRule(rule, url, hostname)) continue;
-        return true;
-      }
-    } catch {
-      // If URL parsing fails, don't block
-    }
-
-    return false;
+      const hostname = new URL(url).hostname.toLowerCase();
+      if ([...this.userAllowlist].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) return false;
+      return decideFilterAction(this.networkRules, url, context) === 'block';
+    } catch { return false; }
   }
 
-  // Check if a URL should be blocked by tracker rules
-  shouldBlockTracker(url: string): boolean {
+  shouldBlockTracker(url: string, context: FilterRequestContext = { resourceType: 'other' }): boolean {
     if (!this.trackerBlockingEnabled) return false;
-
     try {
-      const urlObj = new URL(url);
-      const hostname = urlObj.hostname;
+      const hostname = new URL(url).hostname.toLowerCase();
+      if ([...this.userAllowlist].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) return false;
+      return decideFilterAction(this.trackerRules, url, context) === 'block';
+    } catch { return false; }
+  }
 
-      if (this.userAllowlist.has(hostname)) return false;
-
-      for (const rule of this.trackerRules) {
-        if (!this.matchesNetworkRule(rule, url, hostname)) continue;
-        return true;
-      }
-    } catch {
-      // If URL parsing fails, don't block
-    }
-
-    return false;
+  shouldBlockRequest(url: string, context: FilterRequestContext): boolean {
+    if (!this.enabled) return false;
+    try {
+      const hostname = new URL(url).hostname.toLowerCase();
+      if ([...this.userAllowlist].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) return false;
+      const rules = [...this.networkRules, ...(this.trackerBlockingEnabled ? this.trackerRules : [])];
+      return decideFilterAction(rules, url, context) === 'block';
+    } catch { return false; }
   }
 
   // Check if an element should be hidden (cosmetic filtering)
@@ -304,47 +196,6 @@ export class AdBlocker {
     return [...this.userAllowlist].sort();
   }
 
-  private matchesNetworkRule(
-    rule: NetworkFilterRule,
-    url: string,
-    hostname: string
-  ): boolean {
-    // Domain anchor check
-    if (rule.domain) {
-      if (!hostname.includes(rule.domain)) return false;
-    }
-
-    // $domain= restriction
-    if (rule.applyToDomains.length > 0) {
-      if (!rule.applyToDomains.some((d) => hostname.includes(d))) return false;
-    }
-
-    // $domain=~ exception
-    if (rule.exceptDomains.length > 0) {
-      if (rule.exceptDomains.some((d) => hostname.includes(d))) return false;
-    }
-
-    // $third-party check - need request domain context, skip for now (treat as match)
-    // In a full implementation we'd compare request origin vs top-frame origin
-
-    // Option filters
-    if (rule.options.has('script') && !rule.options.has('image')) {
-      // If only $script, we can't determine resource type from URL alone in onBeforeRequest
-      // This is a limitation; full implementation needs webRequest with resourceType
-    }
-
-    // Pattern match
-    if (rule.isRegex) {
-      try {
-        return new RegExp(rule.pattern).test(url);
-      } catch {
-        return false;
-      }
-    }
-
-    return url.includes(rule.pattern) || hostname.includes(rule.pattern);
-  }
-
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
@@ -388,7 +239,6 @@ export class AdBlocker {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith('!') || trimmed.startsWith('#')) continue;
         if (trimmed.startsWith('[Adblock')) continue;
-        if (trimmed.startsWith('@@')) continue;
 
         if (trimmed.includes('##')) {
           const rule = this.parseCosmeticRule(trimmed);
@@ -397,7 +247,7 @@ export class AdBlocker {
             imported++;
           }
         } else {
-          const rule = this.parseNetworkRule(trimmed);
+          const rule = parseFilterLine(trimmed);
           if (rule) {
             this.networkRules.push(rule);
             imported++;
@@ -432,7 +282,12 @@ export function initAdBlocker(ses: Electron.Session): void {
       urls: ['<all_urls>'],
     },
     (details, callback) => {
-      if (adBlocker.shouldBlock(details.url) || adBlocker.shouldBlockTracker(details.url)) {
+      const requestDetails = details as Electron.OnBeforeRequestListenerDetails & { initiator?: string };
+      const context: FilterRequestContext = {
+        resourceType: details.resourceType,
+        initiatorUrl: requestDetails.initiator || details.referrer || undefined,
+      };
+      if (adBlocker.shouldBlockRequest(details.url, context)) {
         callback({ cancel: true });
         return;
       }
