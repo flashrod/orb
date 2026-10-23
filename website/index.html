@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orb — A calm, private browser for macOS</title>
+  <meta name="description" content="Orb is an Arc-inspired browser built for focus. Spaces, Boosts, real ad + tracker blocking, and a warm monochrome UI you can restyle completely." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Iowan+Old+Style:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            orb: {
+              canvas: '#eeece7',
+              surface: '#f5f3ee',
+              elevated: '#faf9f6',
+              sidebar: '#e8e5de',
+              border: '#d8d4ca',
+              'border-strong': '#c7c1b5',
+              text: '#57534e',
+              'text-strong': '#292524',
+              'text-muted': '#8e8980',
+              hover: '#e7e3da',
+              accent: '#a0522d',
+              'accent-soft': '#e9ddd4',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+            serif: ['"Iowan Old Style"', 'Palatino Linotype', 'Georgia', 'serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: var(--orb-canvas);
+      color: var(--orb-text);
+    }
+    .orb-text-balance {
+      text-wrap: balance;
+    }
+    .serif {
+      font-family: 'Iowan Old Style', 'Palatino Linotype', 'Georgia', serif;
+    }
+    .glass {
+      background: color-mix(in srgb, var(--orb-surface) 85%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 600ms ease, transform 600ms ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased selection:bg-orb-accent selection:text-white">
+
+  <!-- Nav -->
+  <nav class="fixed top-0 left-0 right-0 z-50 glass border-b border-orb-border/60 px-6 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl bg-orb-accent flex items-center justify-center text-white font-serif font-bold text-xs tracking-wider">O</div>
+        <span class="serif font-semibold text-orb-text-strong text-sm tracking-tight">Orb</span>
+      </div>
+      <div class="hidden md:flex items-center gap-8 text-xs font-medium text-orb-text-muted uppercase tracking-widest">
+        <a href="#features" class="hover:text-orb-accent transition-colors">Features</a>
+        <a href="#privacy" class="hover:text-orb-accent transition-colors">Privacy</a>
+        <a href="#waitlist" class="hover:text-orb-accent transition-colors">Waitlist</a>
+        <a href="https://github.com/flashrod/orb/issues" target="_blank" rel="noopener" class="hover:text-orb-accent transition-colors">File a bug</a>
+      </div>
+      <a href="#waitlist" class="hidden md:block px-4 py-2 rounded-full bg-orb-accent text-white text-xs font-medium hover:bg-orb-accent/90 transition-colors">Get early access</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative pt-32 pb-24 px-6 overflow-hidden">
+    <div class="max-w-4xl mx-auto text-center reveal" data-delay="0">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orb-accent-soft text-orb-accent text-xs font-medium mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
+        macOS first — public beta coming soon
+      </div>
+      <h1 class="serif text-6xl md:text-8xl font-semibold text-orb-text-strong leading-tight mb-6 orb-text-balance">
+        A browser that feels <br /><span class="text-orb-accent">like yours.</span>
+      </h1>
+      <p class="text-lg md:text-xl text-orb-text mb-10 max-w-xl mx-auto orb-text-balance">
+        Orb is an Arc-inspired browser for focus and privacy. Spaces, Boosts, real ad + tracker blocking — wrapped in a warm monochrome UI you can restyle completely. Built for macOS, Apple Silicon first.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="#waitlist" class="px-8 py-3.5 rounded-full bg-orb-text-strong text-white font-medium text-sm hover:bg-orb-accent transition-colors">Join the waitlist</a>
+        <a href="https://github.com/flashrod/orb" target="_blank" rel="noopener" class="px-8 py-3.5 rounded-full border border-orb-border text-orb-text-strong font-medium text-sm hover:bg-orb-hover transition-colors">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-24 px-6 bg-orb-surface">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16 reveal" data-delay="100">
+        <h2 class="serif text-4xl md:text-5xl font-semibold text-orb-text-strong mb-4">Built for focus, not distraction</h2>
+        <p class="text-orb-text max-w-2xl mx-auto">Everything Orb does, it does transparently. No hidden telemetry, no dark patterns.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="reveal" data-delay="200">
+          <div class="w-10 h-10 rounded-xl bg-orb-accent-soft flex items-center justify-center text-orb-accent mb-6">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          </div>
+          <h3 class="font-semibold text-orb-text-strong mb-3">Spaces</h3>
+          <p class="text-orb-text text-sm leading-relaxed">Named, color-coded spaces that isolate your tabs, bookmarks, and browsing context. Work, personal, research — never mixed.</p>
+        </div>
+        <div class="reveal" data-delay="300">
+          <div class="w-10 h-10 rounded-xl bg-orb-accent-soft flex items-center justify-center text-orb-accent mb-6">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.482 7.225 7.164 5.057 12 5c4.777 0 8.543 2.168 9.542 7m-7.29 0v4.5m7.292 0v-4.5m-5.853 0c-.342.052-.68.12-1.01.195-.36.08-.73.14-1.096.195s-.736-.06-1.096-.195c-.33-.075-.668-.143-1.01-.195zM13.75 7.5c.342-.052.68-.12 1.01-.195.36-.08.73-.14 1.096-.195s.736.06 1.096.195c.33.075.668.143 1.01.195zM4 16.5c.342-.052.68-.12 1.01-.195.36-.08.73-.14 1.096-.195s.736.06 1.096.195c.33.075.668.143 1.01.195z"></path></svg>
+          </div>
+          <h3 class="font-semibold text-orb-text-strong mb-3">Boosts</h3>
+          <p class="text-orb-text text-sm leading-relaxed">Per-site custom CSS and JS with an intelligent element picker. Hide cookie banners, clean up news sites, reshape the web to your taste.</p>
+        </div>
+        <div class="reveal" data-delay="400">
+          <div class="w-10 h-10 rounded-xl bg-orb-accent-soft flex items-center justify-center text-orb-accent mb-6">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v1m-6 0a2 2 0 002-2h2a2 2 0 002 2v1m-6 0a2 2 0 012-2h2a2 2 0 012 2v1m0 0a2 2 0 002 2h2a2 2 0 002-2zm0 0v1m0 0v1m0 0v1m0 0v1m0 0v1m0 0v1m0 0v1m0 0v1m0-11.75h.01v.75l.002.001h.01v-.75h.01v.75l.002.001h.01v-.75h.01v.75zM12 12.75h.01v.75l.002.001h.01v-.75h.01v.75l.002.001h.01v-.75h.01v.75l.002.001h.01v-.75h.01v.75l.002.001h.01v-.75h.01v.75zM12 4.75h.01v.75l.002.001h.01v-.75h.01v.75l.002.001h.01v-.75h.01v.75l.002.001h.01v-.75h.01v.75z"></path></svg>
+          </div>
+          <h3 class="font-semibold text-orb-text-strong mb-3">Real privacy</h3>
+          <p class="text-orb-text text-sm leading-relaxed">EasyList + uBlock filtering, third-party cookie blocking, fingerprinting protection, HTTPS-only mode. Default-deny permissions. Nothing phones home.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section id="privacy" class="py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="reveal" data-delay="100">
+        <div class="border-l-4 border-orb-accent pl-6 mb-8">
+          <h2 class="serif text-4xl font-semibold text-orb-text-strong mb-4">Privacy that isn&rsquo;t slop</h2>
+        </div>
+        <p class="text-lg text-orb-text mb-8 leading-relaxed">
+          Most browsers treat privacy as a toggle. Orb treats it as the default. Ad and tracker blocking use real EasyList/uBlock rule parsing — not a list of hardcoded domains. Third-party cookies are blocked. Fingerprinting headers are stripped. HTTPS upgrades happen automatically. You get a blocked-request log and granular allowlists so you see exactly what was stopped and why.
+        </p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 reveal" data-delay="200">
+        <div class="p-6 rounded-2xl border border-orb-border bg-orb-surface">
+          <h4 class="font-semibold text-orb-text-strong mb-2">Ad + tracker blocking</h4>
+          <p class="text-sm text-orb-text">EasyList, uBlock Origin, EasyPrivacy, CookieMonster — compiled filter rules with cosmetic filtering.</p>
+        </div>
+        <div class="p-6 rounded-2xl border border-orb-border bg-orb-surface">
+          <h4 class="font-semibold text-orb-text-strong mb-2">Third-party cookies</h4>
+          <p class="text-sm text-orb-text">Blocked by default with per-site exceptions and a one-click "this site is broken" toggle.</p>
+        </div>
+        <div class="p-6 rounded-2xl border border-orb-border bg-orb-surface">
+          <h4 class="font-semibold text-orb-text-strong mb-2">Fingerprinting defense</h4>
+          <p class="text-sm text-orb-text">Client-hint header stripping and consistent low-entropy values so you don&rsquo;t stand out.</p>
+        </div>
+        <div class="p-6 rounded-2xl border border-orb-border bg-orb-surface">
+          <h4 class="font-semibold text-orb-text-strong mb-2">HTTPS-only mode</h4>
+          <p class="text-sm text-orb-text">Automatic HTTP → HTTPS upgrades with clean fallbacks and per-site exceptions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Waitlist -->
+  <section id="waitlist" class="py-24 px-6 bg-orb-accent">
+    <div class="max-w-3xl mx-auto text-center reveal" data-delay="100">
+      <h2 class="serif text-4xl md:text-5xl font-semibold text-white mb-6">Be among the first to browse Orb</h2>
+      <p class="text-white/80 text-lg mb-10 max-w-lg mx-auto">macOS public beta is coming soon. Enter your email and we&rsquo;ll let you know when it&rsquo;s ready.</p>
+      <form id="waitlist-form" class="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
+        <input type="email" id="waitlist-email" placeholder="you@example.com" class="flex-1 px-5 py-3 rounded-full border border-white/20 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white text-sm" required />
+        <button type="submit" class="px-8 py-3 rounded-full bg-white text-orb-accent text-sm font-medium hover:bg-orb-surface transition-colors">Join waitlist</button>
+      </form>
+      <p id="waitlist-msg" class="mt-4 text-sm text-white/70"></p>
+    </div>
+  </section>
+
+  <!-- Bug reporting -->
+  <section class="py-20 px-6">
+    <div class="max-w-4xl mx-auto reveal" data-delay="100">
+      <div class="flex flex-col md:flex-row items-center gap-8">
+        <div class="md:w-1/2">
+          <h2 class="serif text-3xl md:text-4xl font-semibold text-orb-text-strong mb-4">Found something rough?</h2>
+          <p class="text-orb-text mb-6">Orb is in active development. If you hit a bug, a visual glitch, or a site that doesn&rsquo;t load right, tell us on GitHub. Screenshots and steps to reproduce help enormously.</p>
+          <a href="https://github.com/flashrod/orb/issues/new/choose" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-orb-accent font-medium text-sm hover:underline">File a bug on GitHub →</a>
+        </div>
+        <div class="md:w-1/2 p-8 rounded-2xl border border-orb-border bg-orb-surface">
+          <h4 class="font-semibold text-orb-text-strong mb-4">What to include</h4>
+          <ul class="space-y-3 text-sm text-orb-text">
+            <li class="flex items-start gap-2"><span class="text-orb-accent">●</span> Steps to reproduce</li>
+            <li class="flex items-start gap-2"><span class="text-orb-accent">●</span> What you expected vs what happened</li>
+            <li class="flex items-start gap-2"><span class="text-orb-accent">●</span> macOS version + Orb build</li>
+            <li class="flex items-start gap-2"><span class="text-orb-accent">●</span> Screenshot or screen recording</li>
+            <li class="flex items-start gap-2"><span class="text-orb-accent">●</span> Whether it happens in a specific Space or profile</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-orb-border bg-orb-surface py-12 px-6">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-lg bg-orb-accent flex items-center justify-center text-white text-[10px] font-serif font-bold">O</div>
+        <span class="serif font-semibold text-orb-text-strong text-xs tracking-tight">Orb</span>
+      </div>
+      <p class="text-[10px] text-orb-text-muted">Orb is open source. Built with Electron, React, TypeScript, and Chromium.</p>
+      <div class="flex items-center gap-6 text-[10px] text-orb-text-muted uppercase tracking-widest">
+        <a href="https://github.com/flashrod/orb" target="_blank" rel="noopener" class="hover:text-orb-accent transition-colors">GitHub</a>
+        <a href="https://github.com/flashrod/orb/blob/main/README.md" target="_blank" rel="noopener" class="hover:text-orb-accent transition-colors">README</a>
+        <a href="mailto:hi@orb.browser" class="hover:text-orb-accent transition-colors">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Reveal on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const delay = entry.target.dataset.delay || 0;
+          setTimeout(() => entry.target.classList.add('visible'), delay);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+
+    // Waitlist form
+    const form = document.getElementById('waitlist-form');
+    const msg = document.getElementById('waitlist-msg');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('waitlist-email').value;
+      const btn = form.querySelector('button');
+      const originalText = btn.textContent;
+      btn.textContent = 'Adding…';
+      btn.disabled = true;
+
+      // Simulated — replace with your actual endpoint (Mailchimp, ConvertKit, etc.)
+      await new Promise((r) => setTimeout(r, 1200));
+
+      btn.textContent = 'You&rsquo;re on the list.';
+      btn.classList.remove('bg-white', 'text-orb-accent');
+      btn.classList.add('bg-orb-accent-soft', 'text-orb-accent');
+      msg.textContent = "Thanks — we&rsquo;ll email you when the beta opens.";
+      msg.classList.add('text-orb-accent-soft');
+
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        btn.classList.add('bg-white', 'text-orb-accent');
+        btn.classList.remove('bg-orb-accent-soft', 'text-orb-accent');
+        form.reset();
+        msg.textContent = '';
+      }, 3000);
+    });
+  </script>
+</body>
+</html>
