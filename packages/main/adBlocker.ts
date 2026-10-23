@@ -1,4 +1,4 @@
-import { session, dialog } from 'electron';
+import { app, session, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { decideFilterAction, FilterRequestContext, NetworkFilterRule, matchesFilterRule, parseFilterLine } from './filterRules';
@@ -44,11 +44,40 @@ export class AdBlocker {
   private trackerRules: NetworkFilterRule[] = [];
   private cosmeticRules: CosmeticFilterRule[] = [];
   private userAllowlist: Set<string> = new Set(); // domains the user explicitly allows
+  private blockedRequests: { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number }[] = [];
 
   enabled = true;
   trackerBlockingEnabled = true;
   cosmeticFilteringEnabled = true;
   httpsOnlyEnabled = false;
+  private preferencesLoaded = false;
+
+  loadPreferences(): void {
+    if (this.preferencesLoaded) return;
+    this.preferencesLoaded = true;
+    try {
+      const file = path.join(app.getPath('userData'), 'privacy-preferences.json');
+      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; userAllowlist: string[] }>;
+      if (typeof state.enabled === 'boolean') this.enabled = state.enabled;
+      if (typeof state.trackerBlockingEnabled === 'boolean') this.trackerBlockingEnabled = state.trackerBlockingEnabled;
+      if (typeof state.cosmeticFilteringEnabled === 'boolean') this.cosmeticFilteringEnabled = state.cosmeticFilteringEnabled;
+      if (typeof state.httpsOnlyEnabled === 'boolean') this.httpsOnlyEnabled = state.httpsOnlyEnabled;
+      if (Array.isArray(state.userAllowlist)) this.userAllowlist = new Set(state.userAllowlist.filter((item) => typeof item === 'string').map((item) => item.toLowerCase()));
+    } catch { /* First launch uses conservative defaults. */ }
+  }
+
+  private persistPreferences(): void {
+    try {
+      fs.mkdirSync(app.getPath('userData'), { recursive: true });
+      fs.writeFileSync(path.join(app.getPath('userData'), 'privacy-preferences.json'), JSON.stringify({
+        enabled: this.enabled,
+        trackerBlockingEnabled: this.trackerBlockingEnabled,
+        cosmeticFilteringEnabled: this.cosmeticFilteringEnabled,
+        httpsOnlyEnabled: this.httpsOnlyEnabled,
+        userAllowlist: [...this.userAllowlist],
+      }, null, 2));
+    } catch (error) { console.error('[Privacy] Could not persist preferences:', error); }
+  }
 
   async loadLists(sources: typeof FILTER_LIST_SOURCES = FILTER_LIST_SOURCES): Promise<void> {
     const networkRules: NetworkFilterRule[] = [];
@@ -147,11 +176,28 @@ export class AdBlocker {
     if (!this.enabled) return false;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
-      if ([...this.userAllowlist].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) return false;
+      const initiatorHost = context.initiatorUrl ? new URL(context.initiatorUrl).hostname.toLowerCase() : '';
+      if ([...this.userAllowlist].some((domain) => [hostname, initiatorHost].some((host) => host === domain || host.endsWith(`.${domain}`)))) return false;
       const rules = [...this.networkRules, ...(this.trackerBlockingEnabled ? this.trackerRules : [])];
-      return decideFilterAction(rules, url, context) === 'block';
+      if (decideFilterAction(rules, url, context) !== 'block') return false;
+      const matched = rules.find((rule) => rule.action === 'block' && matchesFilterRule(rule, url, context));
+      let request = `${new URL(url).origin}${new URL(url).pathname}`;
+      if (request.length > 180) request = `${request.slice(0, 177)}…`;
+      this.blockedRequests.unshift({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        request,
+        site: initiatorHost || hostname,
+        resourceType: context.resourceType,
+        rule: matched?.source || 'filter rule',
+        blockedAt: Date.now(),
+      });
+      this.blockedRequests = this.blockedRequests.slice(0, 500);
+      return true;
     } catch { return false; }
   }
+
+  getBlockedRequests() { return [...this.blockedRequests]; }
+  clearBlockedRequests(): void { this.blockedRequests = []; }
 
   // Check if an element should be hidden (cosmetic filtering)
   shouldHideElement(domain: string, selector: string): boolean {
@@ -179,11 +225,13 @@ export class AdBlocker {
   // Add a domain to the user allowlist
   addToAllowlist(domain: string): void {
     this.userAllowlist.add(domain.toLowerCase());
+    this.persistPreferences();
   }
 
   // Remove a domain from the user allowlist
   removeFromAllowlist(domain: string): void {
     this.userAllowlist.delete(domain.toLowerCase());
+    this.persistPreferences();
   }
 
   // Check if domain is allowlisted
@@ -198,18 +246,22 @@ export class AdBlocker {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
+    this.persistPreferences();
   }
 
   setTrackerBlocking(enabled: boolean): void {
     this.trackerBlockingEnabled = enabled;
+    this.persistPreferences();
   }
 
   setCosmeticFiltering(enabled: boolean): void {
     this.cosmeticFilteringEnabled = enabled;
+    this.persistPreferences();
   }
 
   setHttpsOnly(enabled: boolean): void {
     this.httpsOnlyEnabled = enabled;
+    this.persistPreferences();
   }
 
   isHttpsOnly(): boolean {
@@ -269,6 +321,7 @@ const initializedSessions = new WeakSet<Electron.Session>();
 let filterListsLoading: Promise<void> | null = null;
 
 export function initAdBlocker(ses: Electron.Session): void {
+  adBlocker.loadPreferences();
   if (initializedSessions.has(ses)) return;
   initializedSessions.add(ses);
 

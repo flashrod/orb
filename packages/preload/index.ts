@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('orbApi', {
     ipcRenderer.invoke('adblocker:set-enabled', enabled),
   getAdBlockerStatus: () =>
     ipcRenderer.invoke('adblocker:get-status'),
+  addAdBlockerAllowlist: (domain: string) => ipcRenderer.invoke('adblocker:allowlist-add', domain),
+  removeAdBlockerAllowlist: (domain: string) => ipcRenderer.invoke('adblocker:allowlist-remove', domain),
+  clearBlockedRequestLog: () => ipcRenderer.invoke('adblocker:blocked-log-clear'),
   importUblockList: (filePath: string) =>
     ipcRenderer.invoke('adblocker:import-ublock-list', filePath),
 
@@ -65,6 +68,13 @@ declare global {
       getAppVersion: () => Promise<string>;
       toggleAdBlocker: (enabled: boolean) => Promise<void>;
       getAdBlockerStatus: () => Promise<any>;
+      toggleTrackerBlocking: (enabled: boolean) => Promise<{ trackerBlockingEnabled: boolean; trackerRuleCount: number }>;
+      getTrackerBlockingStatus: () => Promise<{ trackerBlockingEnabled: boolean; trackerRuleCount: number }>;
+      toggleHttpsOnly: (enabled: boolean) => Promise<{ httpsOnlyEnabled: boolean }>;
+      getHttpsOnlyStatus: () => Promise<{ httpsOnlyEnabled: boolean }>;
+      addAdBlockerAllowlist: (domain: string) => Promise<string[]>;
+      removeAdBlockerAllowlist: (domain: string) => Promise<string[]>;
+      clearBlockedRequestLog: () => Promise<{ cleared: boolean }>;
       importUblockList: (filePath: string) => Promise<any>;
       getBoosts: () => Promise<BoostRecord[]>;
       saveBoost: (boost: NewBoost) => Promise<BoostRecord>;

@@ -1,0 +1,77 @@
+import React, { useEffect, useState } from 'react';
+import { Check, Shield, Trash, WarningCircle } from '@phosphor-icons/react';
+
+type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
+type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[] };
+
+function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: () => void; label: string; disabled?: boolean }) {
+  return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={onChange}
+    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-[var(--orb-accent)]' : 'bg-[var(--orb-border-strong)]'}`}>
+    <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+  </button>;
+}
+
+const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, allowlist: [], blockedRequests: [] };
+
+export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
+  const [status, setStatus] = useState<Status>(emptyStatus);
+  const [domain, setDomain] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const activeDomain = (() => { try { return new URL(activeUrl || '').hostname; } catch { return ''; } })();
+
+  const refresh = async () => {
+    try {
+      const next = await window.orbApi.getAdBlockerStatus();
+      setStatus({ ...emptyStatus, ...next, blockedRequests: next.blockedRequests || [] });
+      setError('');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not read privacy status.'); }
+  };
+  useEffect(() => { void refresh(); }, []);
+
+  const update = async (action: () => Promise<unknown>) => {
+    setBusy(true); setError(''); setNotice('');
+    try { await action(); await refresh(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update this protection.'); }
+    finally { setBusy(false); }
+  };
+  const saveDomain = async (value: string) => {
+    const clean = value.trim();
+    if (!clean) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const allowlist = await window.orbApi.addAdBlockerAllowlist(clean);
+      setStatus((current) => ({ ...current, allowlist }));
+      setDomain(''); setNotice(`Shield exception added for ${clean}.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not add this site exception.'); }
+    finally { setBusy(false); }
+  };
+
+  const rows = [
+    { label: 'Block ads and page trackers', description: `${status.ruleCount.toLocaleString()} advertising rules loaded`, checked: status.enabled, toggle: () => update(() => window.orbApi.toggleAdBlocker(!status.enabled)) },
+    { label: 'Block known trackers and cookie scripts', description: `${status.trackerRuleCount.toLocaleString()} privacy rules loaded`, checked: status.trackerBlockingEnabled, toggle: () => update(() => window.orbApi.toggleTrackerBlocking(!status.trackerBlockingEnabled)) },
+    { label: 'Prefer HTTPS connections', description: 'Upgrade HTTP requests; sites that reject HTTPS can be added as exceptions later.', checked: status.httpsOnlyEnabled, toggle: () => update(() => window.orbApi.toggleHttpsOnly(!status.httpsOnlyEnabled)) },
+  ];
+
+  return <div className="mx-auto max-w-[720px] space-y-7">
+    <section>
+      <div className="mb-4"><h2 className="orb-strong text-sm font-semibold">Shields</h2><p className="orb-muted mt-1 text-xs">These controls apply in Chromium sessions. Exceptions apply to the site you add and its subdomains.</p></div>
+      <div className="space-y-2">
+        {rows.map((row) => <div key={row.label} className="orb-elevated flex items-center justify-between gap-4 rounded-lg border orb-border p-4"><div className="flex min-w-0 items-center gap-3"><div className="orb-accent-soft orb-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-md"><Shield className="h-4 w-4" /></div><div><p className="orb-strong text-xs font-medium">{row.label}</p><p className="orb-muted mt-1 text-[11px]">{row.description}</p></div></div><Toggle checked={row.checked} onChange={row.toggle} label={row.label} disabled={busy} /></div>)}
+      </div>
+    </section>
+    <section className="border-t orb-border pt-5">
+      <h3 className="orb-strong text-xs font-semibold">Site exceptions</h3><p className="orb-muted mt-1 text-[11px]">Turn off network blocking for a site when a page needs it to work.</p>
+      {activeDomain && <button type="button" disabled={busy || status.allowlist.some((item) => item === activeDomain || activeDomain.endsWith(`.${item}`))} onClick={() => void saveDomain(activeDomain)} className="orb-control mt-3 rounded-md border orb-border px-3 py-2 text-xs disabled:opacity-50">{status.allowlist.some((item) => item === activeDomain || activeDomain.endsWith(`.${item}`)) ? `Shield exception active for ${activeDomain}` : `Allow this site · ${activeDomain}`}</button>}
+      <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void saveDomain(domain); }}><input value={domain} onChange={(event) => setDomain(event.target.value)} aria-label="Site to allow" placeholder="example.com" className="orb-strong orb-placeholder h-9 min-w-0 flex-1 rounded-md border orb-border bg-transparent px-3 text-xs outline-none focus:border-[var(--orb-accent)]" /><button type="submit" disabled={busy || !domain.trim()} className="orb-accent-bg rounded-md px-3 text-xs text-white disabled:opacity-50">Add exception</button></form>
+      {status.allowlist.length > 0 && <div className="mt-3 space-y-1">{status.allowlist.map((item) => <div key={item} className="orb-elevated flex items-center gap-3 rounded-md border orb-border px-3 py-2"><span className="orb-strong min-w-0 flex-1 truncate text-xs">{item}</span><Check className="orb-accent h-3.5 w-3.5" /><button type="button" aria-label={`Remove exception for ${item}`} onClick={() => void update(() => window.orbApi.removeAdBlockerAllowlist(item))} className="orb-control rounded px-2 py-1 text-[10px]">Remove</button></div>)}</div>}
+    </section>
+    <section className="border-t orb-border pt-5">
+      <div className="flex items-start justify-between gap-4"><div><h3 className="orb-strong text-xs font-semibold">Blocked requests</h3><p className="orb-muted mt-1 text-[11px]">Recent matches · up to 500 entries, with query strings removed.</p></div><button type="button" disabled={!status.blockedRequests.length || busy} onClick={() => void update(() => window.orbApi.clearBlockedRequestLog())} className="orb-control flex items-center gap-1 rounded-md border orb-border px-2.5 py-1.5 text-[10px] disabled:opacity-50"><Trash className="h-3 w-3" />Clear log</button></div>
+      {status.blockedRequests.length ? <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">{status.blockedRequests.map((entry) => <div key={entry.id} className="orb-elevated grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border orb-border px-3 py-2"><span className="min-w-0"><span className="orb-strong block truncate text-[11px]" title={entry.request}>{entry.request}</span><span className="orb-muted mt-1 block truncate text-[10px]">On {entry.site} · {entry.resourceType} · {entry.rule}</span></span><time className="orb-muted text-[9px]">{new Date(entry.blockedAt).toLocaleTimeString()}</time></div>)}</div> : <div className="orb-elevated orb-muted mt-3 flex items-center gap-2 rounded-md border orb-border px-3 py-4 text-[11px]"><WarningCircle className="h-4 w-4" />No blocked requests in this session yet.</div>}
+    </section>
+    {error && <p role="alert" className="rounded-md bg-red-100 px-3 py-2 text-xs text-red-800">{error}</p>}
+    {notice && <p role="status" className="orb-accent-soft rounded-md px-3 py-2 text-xs orb-strong">{notice}</p>}
+  </div>;
+}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ArrowCounterClockwise, BookmarkSimple, Check, Code, DotsSixVertical, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
-import { useAdBlockerStore } from '../stores/adBlocker';
 import { MotionPreference, PaletteToken, useAppearanceStore } from '../stores/appearance';
 import BoostsEditor from './BoostsEditor';
 import { TOOLBAR_ITEMS, ToolbarItemId, useToolbarStore } from '../stores/toolbar';
@@ -8,6 +7,7 @@ import ProfilesWorkspacesSettings from './ProfilesWorkspacesSettings';
 import { SEARCH_PROVIDERS } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 import BookmarksManager from './BookmarksManager';
+import PrivacySettings from './PrivacySettings';
 
 type SettingsSection = 'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles' | 'bookmarks';
 
@@ -64,9 +64,8 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
   );
 }
 
-export default function Settings({ onClose, onNavigate, initialSection = 'appearance' }: { onClose: () => void; onNavigate: (url: string) => void; initialSection?: SettingsSection }) {
+export default function Settings({ onClose, onNavigate, activeUrl, initialSection = 'appearance' }: { onClose: () => void; onNavigate: (url: string) => void; activeUrl?: string; initialSection?: SettingsSection }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
-  const { enabled, toggle } = useAdBlockerStore();
   const { searchProvider, setSearchProvider } = useBrowserPreferencesStore();
   const { order, hidden, move, toggleHidden, reset } = useToolbarStore();
   const {
@@ -217,16 +216,7 @@ export default function Settings({ onClose, onNavigate, initialSection = 'appear
               </div>
             )}
 
-            {section === 'privacy' && (
-              <div className="mx-auto max-w-[680px]">
-                <SectionHeading title="Shields" detail="Keep the protections you use most close at hand." />
-                <div className="orb-elevated flex items-center justify-between rounded-lg border orb-border p-4">
-                  <div className="flex items-center gap-3"><div className="orb-accent-soft orb-accent flex h-9 w-9 items-center justify-center rounded-md"><Shield className="h-4 w-4" /></div><div><p className="orb-strong text-xs font-medium">Ad and tracker blocking</p><p className="orb-muted mt-1 text-[11px]">{enabled ? 'Active for this browser' : 'Paused'}</p></div></div>
-                  <Toggle checked={enabled} onChange={toggle} label="Toggle ad and tracker blocking" />
-                </div>
-                <p className="orb-muted mt-4 text-xs leading-5">More detailed controls for filter lists, blocked requests, site exceptions, and fingerprinting are being added as their runtime behavior is completed.</p>
-              </div>
-            )}
+            {section === 'privacy' && <PrivacySettings activeUrl={activeUrl} />}
 
             {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor /></div>}
 

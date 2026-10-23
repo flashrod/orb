@@ -7,6 +7,7 @@ import { installExtension, listExtensions, removeExtension } from './extensions'
 import { profilePartition } from '../shared/profiles';
 
 export function registerIpcHandlers(): void {
+  adBlocker.loadPreferences();
   // Get window by webContents ID
   ipcMain.handle('window:get-by-id', (_, webContentsId: number) => {
     const win = windowManager.getWindow(webContentsId);
@@ -72,7 +73,31 @@ export function registerIpcHandlers(): void {
     return {
       enabled: adBlocker.enabled,
       ruleCount: adBlocker.getRuleCount(),
+      trackerBlockingEnabled: adBlocker.trackerBlockingEnabled,
+      trackerRuleCount: adBlocker.getTrackerRuleCount(),
+      httpsOnlyEnabled: adBlocker.isHttpsOnly(),
+      allowlist: adBlocker.getAllowlist(),
+      blockedRequests: adBlocker.getBlockedRequests(),
     };
+  });
+
+  ipcMain.handle('adblocker:allowlist-add', (_event, value: string) => {
+    if (typeof value !== 'string') throw new Error('Enter a valid site.');
+    let domain = value.trim().toLowerCase();
+    try { domain = new URL(domain.includes('://') ? domain : `https://${domain}`).hostname.toLowerCase(); }
+    catch { throw new Error('Enter a valid domain name.'); }
+    if (!domain || domain.includes('..') || domain === 'localhost') throw new Error('Enter a valid public site domain.');
+    adBlocker.addToAllowlist(domain);
+    return adBlocker.getAllowlist();
+  });
+  ipcMain.handle('adblocker:allowlist-remove', (_event, domain: string) => {
+    if (typeof domain !== 'string') return adBlocker.getAllowlist();
+    adBlocker.removeFromAllowlist(domain.toLowerCase());
+    return adBlocker.getAllowlist();
+  });
+  ipcMain.handle('adblocker:blocked-log-clear', () => {
+    adBlocker.clearBlockedRequests();
+    return { cleared: true };
   });
 
   // Tracker blocking: toggle
