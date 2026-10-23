@@ -20,6 +20,7 @@ export default forwardRef<WebViewHandle, {
   onTitleChange?: (title: string) => void;
   onFaviconChange?: (favicon: string) => void;
   onLoadingChange?: (loading: boolean) => void;
+  onGlanceLink?: (url: string) => void;
 }>(({
   tabId,
   url,
@@ -29,6 +30,7 @@ export default forwardRef<WebViewHandle, {
   onTitleChange,
   onFaviconChange,
   onLoadingChange,
+  onGlanceLink,
 }: {
   tabId: string;
   url: string;
@@ -38,6 +40,7 @@ export default forwardRef<WebViewHandle, {
   onTitleChange?: (title: string) => void;
   onFaviconChange?: (favicon: string) => void;
   onLoadingChange?: (loading: boolean) => void;
+  onGlanceLink?: (url: string) => void;
 }, ref) => {
   const webviewRef = useRef<HTMLWebViewElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,6 +120,20 @@ export default forwardRef<WebViewHandle, {
     const handleNewWindow = (e: any) => {
       e.preventDefault();
     };
+    const handleIpcMessage = (event: any) => {
+      if (event.channel === 'orb:glance-link' && typeof event.args?.[0] === 'string') onGlanceLink?.(event.args[0]);
+    };
+    const handleDomReady = () => {
+      void (webview as any).executeJavaScript(`(() => {
+        if (window.__orbGlanceLinkTracking) return;
+        window.__orbGlanceLinkTracking = true;
+        document.addEventListener('pointerover', (event) => {
+          const target = event.target;
+          const anchor = target instanceof Element ? target.closest('a[href]') : null;
+          if (anchor && window.orbPageApi?.suggestGlanceLink) window.orbPageApi.suggestGlanceLink(anchor.href);
+        }, true);
+      })()`);
+    };
 
     webview.addEventListener('did-start-loading', handleDidStartLoading);
     webview.addEventListener('did-navigate', handleNavigation);
@@ -124,6 +141,8 @@ export default forwardRef<WebViewHandle, {
     webview.addEventListener('did-stop-loading', handleDidStopLoading);
     webview.addEventListener('did-fail-load', handleDidFailLoad);
     webview.addEventListener('new-window', handleNewWindow);
+    webview.addEventListener('ipc-message', handleIpcMessage);
+    webview.addEventListener('dom-ready', handleDomReady);
 
     return () => {
       webview.removeEventListener('did-start-loading', handleDidStartLoading);
@@ -132,6 +151,8 @@ export default forwardRef<WebViewHandle, {
       webview.removeEventListener('did-stop-loading', handleDidStopLoading);
       webview.removeEventListener('did-fail-load', handleDidFailLoad);
       webview.removeEventListener('new-window', handleNewWindow);
+      webview.removeEventListener('ipc-message', handleIpcMessage);
+      webview.removeEventListener('dom-ready', handleDomReady);
     };
   }, [
     tabId,
@@ -141,6 +162,7 @@ export default forwardRef<WebViewHandle, {
     onTitleChange,
     onFaviconChange,
     onLoadingChange,
+    onGlanceLink,
     clearInsertedCSS,
   ]);
 
@@ -173,7 +195,6 @@ export default forwardRef<WebViewHandle, {
         className="w-full h-full"
         partition={profilePartition(profileId)}
         allowpopups
-        preload=""
       />
       {isLoading && (
         <div className="orb-frame absolute inset-0 z-10 flex items-center justify-center">

@@ -13,10 +13,12 @@ import VerticalTabPanel from './components/VerticalTabPanel';
 import Settings from './components/Settings';
 import { useAppearanceStore } from './stores/appearance';
 import StartPage from './components/StartPage';
+import GlanceView from './components/GlanceView';
 import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
+import { normalizeGlanceUrl } from './lib/glance';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -26,6 +28,8 @@ export default function App() {
   const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles'>('appearance');
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
+  const [glanceCandidate, setGlanceCandidate] = useState<{ url: string; tabId: string } | null>(null);
+  const [glanceUrl, setGlanceUrl] = useState<string | null>(null);
   const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
   const [resizingSplit, setResizingSplit] = useState(false);
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
@@ -303,10 +307,18 @@ export default function App() {
       url={tab.url}
       spaceId={tab.spaceId}
       profileId={pageProfile.id}
-      onUrlChange={(url) => updateTab(tab.id, { url })}
+      onUrlChange={(url) => {
+        updateTab(tab.id, { url });
+        setGlanceCandidate((current) => current?.tabId === tab.id ? null : current);
+        setGlanceUrl(null);
+      }}
       onTitleChange={(title) => updateTab(tab.id, { title })}
       onFaviconChange={(favicon) => updateTab(tab.id, { favicon })}
       onLoadingChange={() => {}}
+      onGlanceLink={(url) => {
+        const safeUrl = normalizeGlanceUrl(url);
+        if (safeUrl) setGlanceCandidate({ url: safeUrl, tabId: tab.id });
+      }}
     />;
   };
 
@@ -356,6 +368,8 @@ export default function App() {
           onReload={navigateReload}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
+          glanceUrl={glanceCandidate?.url || null}
+          onGlance={() => { if (glanceCandidate) setGlanceUrl(glanceCandidate.url); }}
         />}
         {bookmarksBarVisible && !compactMode && <BookmarksBar onNavigate={handleNavigate} />}
 
@@ -364,6 +378,18 @@ export default function App() {
           {!showNavigation && <button type="button" onClick={() => setShowNavigation(true)} aria-label="Show navigation toolbar" title="Show navigation toolbar" className="orb-elevated orb-control pointer-events-auto flex h-7 w-7 items-center justify-center rounded-md border orb-border shadow-sm"><NavigationArrow className="h-3.5 w-3.5" /></button>}
         </div>}
         {compactMode && <button type="button" onClick={() => setCompactMode(false)} aria-label="Restore browser controls" title="Restore browser controls · ⌘/Ctrl+Shift+M" className="orb-elevated orb-control fixed left-1/2 top-1 z-40 -translate-x-1/2 rounded-full border orb-border px-3 py-1 text-[10px] opacity-25 shadow-sm transition-opacity hover:opacity-100 focus:opacity-100">Show controls</button>}
+        {glanceUrl && glanceCandidate && (() => {
+          const candidateTab = tabs.find((tab) => tab.id === glanceCandidate.tabId);
+          if (!candidateTab) return null;
+          const candidateSpace = spaces.find((space) => space.id === candidateTab.spaceId);
+          const candidateProfile = resolveSpaceProfile(candidateSpace?.profileId, profiles);
+          return <GlanceView url={glanceUrl} profileId={candidateProfile.id} onClose={() => setGlanceUrl(null)} onOpen={(url) => {
+            setActiveTab(candidateTab.id);
+            updateTab(candidateTab.id, { url });
+            setGlanceUrl(null);
+            setGlanceCandidate(null);
+          }} />;
+        })()}
 
         {/* Web Content */}
         <div className="orb-frame relative flex-1 overflow-hidden">

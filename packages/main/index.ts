@@ -58,6 +58,7 @@ app.whenReady().then(async () => {
   app.on('web-contents-created', (_event, contents) => {
     contents.on('will-attach-webview', (_attachEvent, webPreferences) => {
       const partition = webPreferences.partition;
+      webPreferences.preload = path.join(__dirname, 'preload/webview.js');
       if (partition === 'persist:orb' || partition?.startsWith('persist:orb-profile-')) {
         initAdBlocker(session.fromPartition(partition, { cache: true }));
       }

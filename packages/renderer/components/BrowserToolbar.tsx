@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, CursorClick, DotsSixVertical, House, List, Plus, PuzzlePiece, Trash, X } from '@phosphor-icons/react';
+import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, CursorClick, DotsSixVertical, Eye, House, List, Plus, PuzzlePiece, Trash, X } from '@phosphor-icons/react';
 import AddressBar from './AddressBar';
 import { useBookmarkStore } from '../stores/bookmarks';
 import { ToolbarItemId, useToolbarStore } from '../stores/toolbar';
@@ -8,7 +8,7 @@ import { useAppearanceStore } from '../stores/appearance';
 type ExtensionInfo = { id: string; name: string; version: string };
 
 export default function BrowserToolbar({
-  activeTab, onNavigate, onBack, onForward, onReload, onPickElement, canPickElement,
+  activeTab, onNavigate, onBack, onForward, onReload, onPickElement, canPickElement, glanceUrl, onGlance,
 }: {
   activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate: (url: string) => void;
@@ -17,6 +17,8 @@ export default function BrowserToolbar({
   onReload: () => void;
   onPickElement: () => void;
   canPickElement: boolean;
+  glanceUrl: string | null;
+  onGlance: () => void;
 }) {
   const { order, hidden, move } = useToolbarStore();
   const { setTabLayout, tabLayout, bookmarksBarVisible, setBookmarksBarVisible } = useAppearanceStore();
@@ -56,6 +58,7 @@ export default function BrowserToolbar({
         <p className="orb-muted mt-2 text-[9px] leading-4">Extensions run with access to websites you visit. Load only extensions you trust.</p>
       </div>}</div>;
       case 'picker': return <button type="button" aria-label="Pick an element for a Boost" title="Pick an element for a Boost" onClick={onPickElement} disabled={!canPickElement} className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-35"><CursorClick className="h-4 w-4" /></button>;
+      case 'glance': return <button type="button" aria-label="Preview hovered link with Glance" title={glanceUrl ? 'Preview hovered link with Glance' : 'Hover a link on the page to preview it'} onClick={onGlance} disabled={!glanceUrl} className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-35"><Eye className="h-4 w-4" /></button>;
       case 'tabLayout': return <button type="button" aria-label={tabLayout === 'top' ? 'Use side tabs' : 'Use top tabs'} title={tabLayout === 'top' ? 'Use side tabs' : 'Use top tabs'} onClick={() => setTabLayout(tabLayout === 'top' ? 'split' : 'top')} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><List className="h-4 w-4" /></button>;
     }
   };

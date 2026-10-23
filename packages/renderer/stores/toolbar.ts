@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-export type ToolbarItemId = 'home' | 'back' | 'forward' | 'reload' | 'address' | 'bookmark' | 'bookmarks' | 'extensions' | 'picker' | 'tabLayout';
+export type ToolbarItemId = 'home' | 'back' | 'forward' | 'reload' | 'address' | 'bookmark' | 'bookmarks' | 'extensions' | 'picker' | 'glance' | 'tabLayout';
 
 export const TOOLBAR_ITEMS: { id: ToolbarItemId; label: string }[] = [
   { id: 'home', label: 'Home' },
@@ -13,6 +13,7 @@ export const TOOLBAR_ITEMS: { id: ToolbarItemId; label: string }[] = [
   { id: 'bookmarks', label: 'Show bookmarks bar' },
   { id: 'extensions', label: 'Extensions' },
   { id: 'picker', label: 'Pick page element for a Boost' },
+  { id: 'glance', label: 'Preview hovered link' },
   { id: 'tabLayout', label: 'Switch tab placement' },
 ];
 
@@ -37,4 +38,12 @@ export const useToolbarStore = create<ToolbarStore>()(persist((set) => ({
   }),
   toggleHidden: (id) => set((state) => ({ hidden: state.hidden.includes(id) ? state.hidden.filter((item) => item !== id) : [...state.hidden, id] })),
   reset: () => set({ order: defaultOrder, hidden: [] }),
-}), { name: 'orb-toolbar', storage: createJSONStorage(() => localStorage) }));
+}), {
+  name: 'orb-toolbar',
+  version: 1,
+  storage: createJSONStorage(() => localStorage),
+  migrate: (state: any) => ({
+    order: Array.isArray(state?.order) ? [...state.order.filter((id: ToolbarItemId) => TOOLBAR_ITEMS.some((item) => item.id === id)), ...(TOOLBAR_ITEMS.map((item) => item.id).filter((id) => !state.order.includes(id)))] : defaultOrder,
+    hidden: Array.isArray(state?.hidden) ? state.hidden.filter((id: ToolbarItemId) => TOOLBAR_ITEMS.some((item) => item.id === id)) : [],
+  }),
+}));
