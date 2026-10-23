@@ -244,6 +244,20 @@ export default function App() {
         isActive: true,
       });
     };
+    const handlePopupRequested = (url: string) => {
+      const spaceStore = useSpaceStore.getState();
+      const targetSpaceId = spaceStore.activeSpaceId || spaceStore.spaces[0]?.id;
+      if (!targetSpaceId) return;
+
+      useTabStore.getState().addTab({
+        spaceId: targetSpaceId,
+        url,
+        title: 'New Tab',
+        favicon: '',
+        isPinned: false,
+        isActive: true,
+      });
+    };
     const handleNewSpace = () => {
       useSpaceStore.getState().addSpace({
         name: 'New Space',
@@ -253,14 +267,20 @@ export default function App() {
       });
     };
     window.addEventListener('orb:navigate', handleNavigateEvent as EventListener);
+    const handlePopupRequestedEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ url: string }>;
+      handlePopupRequested(customEvent.detail.url);
+    };
     window.addEventListener('orb:new-tab', handleNewTab);
     window.addEventListener('orb:new-space', handleNewSpace);
+    window.addEventListener('orb:popup-requested', handlePopupRequestedEvent);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('orb:navigate', handleNavigateEvent as EventListener);
       window.removeEventListener('orb:new-tab', handleNewTab);
       window.removeEventListener('orb:new-space', handleNewSpace);
+      window.removeEventListener('orb:popup-requested', handlePopupRequestedEvent);
     };
   }, [spaces.length, commandBarOpen, handleNavigate]);
 

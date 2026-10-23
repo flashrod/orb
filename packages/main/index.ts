@@ -54,7 +54,20 @@ function createMainWindow() {
 }
 
 app.whenReady().then(async () => {
-  initAdBlocker(session.fromPartition('persist:orb', { cache: true }));
+  const orbSession = session.fromPartition('persist:orb', { cache: true });
+  initAdBlocker(orbSession);
+
+  // Popups: Electron 22+ removed the webview 'new-window' event. Intercept at the
+  // session level, deny the popup window, and ask the renderer to open in a new tab.
+  ;(orbSession as any).setWindowOpenHandler((details: any) => {
+    const { url, referringWebContents } = details;
+    const win = referringWebContents ? BrowserWindow.fromWebContents(referringWebContents) : null;
+    if (win && url && url.startsWith('http')) {
+      win.webContents.send('orb:popup-requested', url);
+    }
+    return { action: 'deny' };
+  });
+
   // Each workspace WebView uses a profile-specific persistent partition. Install
   // privacy hooks before Chromium attaches that WebView to its session.
   app.on('web-contents-created', (_event, contents) => {
