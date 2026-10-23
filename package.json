@@ -1,0 +1,41 @@
+{
+  "name": "orb",
+  "productName": "Orb",
+  "version": "0.1.0",
+  "description": "An Arc-inspired browser built with Electron and React",
+  "main": "packages/main/index.js",
+  "author": "flashrod",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron --dev packages/main/index.ts",
+    "build": "tsc && vite build",
+    "dist": "electron-builder",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "electron": "^30.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.2",
+    "better-sqlite3": "^11.0.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/electron": "^1.6.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vite-plugin-electron": "^0.28.0",
+    "tailwindcss": "^3.4.10",
+    "postcss": "^8.4.41",
+    "autoprefixer": "^10.4.20",
+    "electron-builder": "^25.1.0",
+    "eslint": "^9.9.0",
+    "eslint-plugin-react": "^7.35.0",
+    "eslint-plugin-react-hooks": "^5.1.0"
+  }
+}

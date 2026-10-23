@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) #0a0a0b;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0a0a0b;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  body {
+    @apply bg-orb-dark text-white;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+@layer components {
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors duration-150 cursor-pointer hover:bg-white/5;
+  }
+
+  .sidebar-item-active {
+    @apply bg-white/10 text-orb-accent border-r-2 border-orb-accent;
+  }
+
+  .tab-item {
+    @apply flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors duration-150 cursor-pointer hover:bg-white/5 min-w-[120px] truncate;
+  }
+
+  .tab-item-active {
+    @apply bg-white/10 border-b-2 border-orb-accent pb-1.5;
+  }
+
+  .command-item {
+    @apply flex items-center justify-between px-4 py-2 text-sm cursor-pointer hover:bg-white/5 transition-colors duration-100;
+  }
+
+  .input-base {
+    @apply bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orb-accent transition-all duration-150;
+  }
+
+  .card-base {
+    @apply bg-white/5 border border-white/10 rounded-xl p-4;
+  }
+}

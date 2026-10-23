@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["packages/renderer/src/*"],
+      "@main/*": ["packages/main/*"],
+      "@preload/*": ["packages/preload/*"],
+      "@boosts/*": ["packages/boosts-engine/*"],
+      "@adblock/*": ["packages/ad-blocker/*"],
+      "@importer/*": ["packages/data-importer/*"]
+    }
+  },
+  "include": ["packages/**/*.ts", "packages/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

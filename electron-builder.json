@@ -1,0 +1,23 @@
+{
+  "appId": "company.thebrowser.orb",
+  "productName": "Orb",
+  "mac": {
+    "target": ["dmg"],
+    "category": "public.app-category.productivity",
+    "gatekeeperAssess": false
+  },
+  "win": {
+    "target": ["nsis"]
+  },
+  "linux": {
+    "target": ["AppImage"]
+  },
+  "directories": {
+    "buildResources": "assets",
+    "output": "release"
+  },
+  "files": [
+    "packages/**/*",
+    "node_modules/**/*"
+  ]
+}
