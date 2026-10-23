@@ -1,11 +1,13 @@
 import React from 'react';
-import { ArrowLeft, ArrowRight, ArrowClockwise, List } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, ArrowClockwise, CursorClick, List } from '@phosphor-icons/react';
 
 export default function NavigationBar({
   onBack,
   onForward,
   onReload,
   onToggleVerticalTabs,
+  onPickElement,
+  canPickElement,
   canGoBack,
   canGoForward,
 }: {
@@ -13,6 +15,8 @@ export default function NavigationBar({
   onForward: () => void;
   onReload: () => void;
   onToggleVerticalTabs: () => void;
+  onPickElement: () => void;
+  canPickElement: boolean;
   canGoBack?: boolean;
   canGoForward?: boolean;
 }) {
@@ -40,6 +44,15 @@ export default function NavigationBar({
         title="Reload"
       >
         <ArrowClockwise className="w-4 h-4" />
+      </button>
+      <button
+        onClick={onPickElement}
+        disabled={!canPickElement}
+        className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-35"
+        title="Pick an element for a Boost"
+        aria-label="Pick an element for a Boost"
+      >
+        <CursorClick className="w-4 h-4" />
       </button>
       <button
         onClick={onToggleVerticalTabs}

@@ -11,11 +11,14 @@ import VerticalTabPanel from './components/VerticalTabPanel';
 import Settings from './components/Settings';
 import { useAppearanceStore } from './stores/appearance';
 import StartPage from './components/StartPage';
+import { useBoostStore } from './stores/boosts';
 
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [pickerNotice, setPickerNotice] = useState('');
   const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
   const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, customColors, setTabLayout } = useAppearanceStore();
@@ -143,6 +146,53 @@ export default function App() {
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
 
+  const handlePickElement = async () => {
+    if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
+    let hostname = '';
+    try {
+      const url = new URL(activeTab.url);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('This page does not support Boosts.');
+      hostname = url.hostname.toLowerCase();
+    } catch {
+      setPickerNotice('Open a website before starting the element picker.');
+      return;
+    }
+
+    setPickerBusy(true);
+    setPickerNotice('Move over an element and click to create a hide rule. Press Esc to cancel.');
+    try {
+      const selection = await webviewRef.current?.pickElement();
+      if (!selection) {
+        setPickerNotice('Element picker closed.');
+        return;
+      }
+      const boosts = useBoostStore.getState();
+      await boosts.loadBoosts();
+      const existing = useBoostStore.getState().getBoostForDomain(hostname);
+      const rule = `${selection.selector} {\n  display: none !important;\n}`;
+      if (existing) {
+        const css = existing.css.trim() ? `${existing.css.trimEnd()}\n\n${rule}` : rule;
+        await useBoostStore.getState().updateBoost(existing.id, { css });
+      } else {
+        await useBoostStore.getState().addBoost({ domain: hostname, css: rule, js: '', enabled: true });
+      }
+      const error = useBoostStore.getState().error;
+      if (error) throw new Error(error);
+      await webviewRef.current?.applyCSS(rule);
+      setPickerNotice(`Saved and hid “${selection.label || selection.selector}” on ${hostname}.`);
+    } catch (error) {
+      setPickerNotice(error instanceof Error ? error.message : 'Could not save this Boost.');
+    } finally {
+      setPickerBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!pickerNotice) return;
+    const timeout = window.setTimeout(() => setPickerNotice(''), 4500);
+    return () => window.clearTimeout(timeout);
+  }, [pickerNotice]);
+
   return (
     <div className="orb-frame flex h-screen w-screen overflow-hidden">
       {/* Sidebar */}
@@ -173,6 +223,8 @@ export default function App() {
             onForward={navigateForward}
             onReload={navigateReload}
             onToggleVerticalTabs={() => setTabLayout(tabLayout === 'top' ? 'split' : 'top')}
+            onPickElement={() => void handlePickElement()}
+            canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           />
         </div>
 
@@ -221,6 +273,7 @@ export default function App() {
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} />}
         {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+        {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
       </main>
     </div>
   );

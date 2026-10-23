@@ -6,6 +6,7 @@ type WebViewHandle = {
   navigateForward: () => void;
   navigateReload: () => void;
   loadUrl: (url: string) => void;
+  applyCSS: (css: string) => Promise<void>;
   pickElement: () => Promise<PickedElement | null>;
 };
 
@@ -38,6 +39,7 @@ export default forwardRef<WebViewHandle, {
   const [isLoading, setIsLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState('Loading...');
   const [favicon, setFavicon] = useState('');
+  const insertedCssKeys = useRef<string[]>([]);
 
   const navigateBack = useCallback(() => {
     const wv = webviewRef.current;
@@ -59,6 +61,20 @@ export default forwardRef<WebViewHandle, {
     if (wv) wv.src = newUrl;
   }, []);
 
+  const applyCSS = useCallback(async (css: string) => {
+    const webview = webviewRef.current as any;
+    if (!webview || !css.trim()) return;
+    const key = await webview.insertCSS(css);
+    insertedCssKeys.current.push(key);
+  }, []);
+
+  const clearInsertedCSS = useCallback(async () => {
+    const webview = webviewRef.current as any;
+    if (!webview) return;
+    const keys = insertedCssKeys.current.splice(0);
+    await Promise.all(keys.map((key) => webview.removeInsertedCSS(key).catch(() => undefined)));
+  }, []);
+
   useEffect(() => {
     if (!webviewRef.current) return;
 
@@ -71,6 +87,7 @@ export default forwardRef<WebViewHandle, {
 
     const handleNavigation = (event: any) => {
       const wv = webview as any;
+      void clearInsertedCSS();
       const currentUrl = event?.url || (wv.getURL ? wv.getURL() : '');
       onUrlChange?.(currentUrl);
     };
@@ -120,6 +137,7 @@ export default forwardRef<WebViewHandle, {
     onTitleChange,
     onFaviconChange,
     onLoadingChange,
+    clearInsertedCSS,
   ]);
 
   // Expose navigation methods to parent
@@ -128,12 +146,13 @@ export default forwardRef<WebViewHandle, {
     navigateForward,
     navigateReload,
     loadUrl,
+    applyCSS,
     pickElement: async () => {
       const webview = webviewRef.current;
       if (!webview || isLoading) return null;
       return pickPageElement(webview);
     },
-  }));
+  }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
 
   // Set webview src when url changes
   useEffect(() => {
