@@ -24,7 +24,6 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
     "@types/electron": "^1.6.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
