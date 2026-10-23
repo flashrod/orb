@@ -23,9 +23,10 @@ function createMainWindow() {
     trafficLightPosition: { x: 16, y: 16 },
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: path.join(__dirname, 'preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      webviewTag: true,
       spellcheck: false,
       backgroundThrottling: false,
     },
