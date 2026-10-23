@@ -106,9 +106,6 @@ export default forwardRef<WebViewHandle, {
       const title = wv.getTitle ? wv.getTitle() : '';
       setPageTitle(title);
       onTitleChange?.(title);
-      const fav = wv.getFavicon ? wv.getFavicon() : '';
-      setFavicon(fav);
-      onFaviconChange?.(fav);
     };
 
     const handleDidFailLoad = (event: any) => {
@@ -135,6 +132,14 @@ export default forwardRef<WebViewHandle, {
       })()`);
     };
 
+    const handleFaviconUpdated = (event: any, faviconUrls: string[]) => {
+      const fav = Array.isArray(faviconUrls) ? faviconUrls[0] : '';
+      if (fav) {
+        setFavicon(fav);
+        onFaviconChange?.(fav);
+      }
+    };
+
     webview.addEventListener('did-start-loading', handleDidStartLoading);
     webview.addEventListener('did-navigate', handleNavigation);
     webview.addEventListener('did-navigate-in-page', handleNavigation);
@@ -143,6 +148,7 @@ export default forwardRef<WebViewHandle, {
     webview.addEventListener('new-window', handleNewWindow);
     webview.addEventListener('ipc-message', handleIpcMessage);
     webview.addEventListener('dom-ready', handleDomReady);
+    ;(webview as any).addEventListener('page-favicon-updated', handleFaviconUpdated);
 
     return () => {
       webview.removeEventListener('did-start-loading', handleDidStartLoading);
@@ -153,6 +159,7 @@ export default forwardRef<WebViewHandle, {
       webview.removeEventListener('new-window', handleNewWindow);
       webview.removeEventListener('ipc-message', handleIpcMessage);
       webview.removeEventListener('dom-ready', handleDomReady);
+      ;(webview as any).removeEventListener('page-favicon-updated', handleFaviconUpdated);
     };
   }, [
     tabId,
