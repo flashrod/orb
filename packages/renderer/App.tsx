@@ -23,7 +23,7 @@ export default function App() {
   const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
   const { spaces, activeSpaceId, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
-  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, customColors, setTabLayout } = useAppearanceStore();
+  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, customColors, setTabLayout } = useAppearanceStore();
 
   const webviewRef = useRef<any>(null);
 
@@ -217,6 +217,7 @@ export default function App() {
             keyboardRevealed={tabRailKeyboardRevealed}
             onToggleKeyboardReveal={() => setTabRailKeyboardRevealed((revealed) => !revealed)}
             onClose={() => setTabLayout('top')}
+            onReload={navigateReload}
             spaceId={activeSpaceId || ''}
           />
         ) : null}
@@ -226,6 +227,7 @@ export default function App() {
           activeTabId={activeTabId}
           activeSpaceId={activeSpaceId || ''}
           setActiveTab={setActiveTab}
+          onReload={navigateReload}
         /> : null}
         <BrowserToolbar
           activeTab={activeTab}
@@ -241,12 +243,12 @@ export default function App() {
         {/* Web Content */}
         <div className="orb-frame relative flex-1 overflow-hidden">
           {!activeTab || activeTab.url === 'about:blank' ? (
-            <StartPage
+            showStartPage ? <StartPage
               spaceName={activeSpace?.name || 'Personal'}
               spaceId={activeSpaceId || activeSpace?.id || ''}
               tabCount={spaceTabs.length}
               onNavigate={handleNavigate}
-            />
+            /> : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />
           ) : activeTabId ? (
             <WebView
               ref={webviewRef}

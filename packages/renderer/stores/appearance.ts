@@ -16,6 +16,7 @@ interface AppearanceStore {
   sidebarWidth: number;
   sidebarAutoHide: boolean;
   bookmarksBarVisible: boolean;
+  showStartPage: boolean;
   compactSideTabs: boolean;
   motion: MotionPreference;
   customColors: Partial<Record<PaletteToken, string>>;
@@ -26,6 +27,7 @@ interface AppearanceStore {
   setSidebarWidth: (width: number) => void;
   setSidebarAutoHide: (enabled: boolean) => void;
   setBookmarksBarVisible: (enabled: boolean) => void;
+  setShowStartPage: (enabled: boolean) => void;
   setCompactSideTabs: (enabled: boolean) => void;
   setMotion: (motion: MotionPreference) => void;
   setCustomColor: (token: PaletteToken, color: string) => void;
@@ -42,6 +44,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       sidebarWidth: 72,
       sidebarAutoHide: false,
       bookmarksBarVisible: false,
+      showStartPage: false,
       compactSideTabs: false,
       motion: 'gentle',
       customColors: {},
@@ -52,6 +55,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
       setSidebarAutoHide: (sidebarAutoHide) => set({ sidebarAutoHide }),
       setBookmarksBarVisible: (bookmarksBarVisible) => set({ bookmarksBarVisible }),
+      setShowStartPage: (showStartPage) => set({ showStartPage }),
       setCompactSideTabs: (compactSideTabs) => set({ compactSideTabs }),
       setMotion: (motion) => set({ motion }),
       setCustomColor: (token, color) => set((state) => {
@@ -64,10 +68,12 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
-      version: 2,
-      migrate: (persistedState: any, version) => version < 2
-        ? { ...persistedState, bookmarksBarVisible: false }
-        : persistedState,
+      version: 3,
+      migrate: (persistedState: any, version) => ({
+        ...persistedState,
+        ...(version < 2 ? { bookmarksBarVisible: false } : {}),
+        ...(version < 3 ? { showStartPage: false } : {}),
+      }),
       storage: createJSONStorage(() => localStorage),
     }
   )
