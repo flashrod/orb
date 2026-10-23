@@ -36,11 +36,11 @@ export default function Sidebar({
     tabs.filter((t: { spaceId: string }) => t.spaceId === spaceId).length;
 
   return (
-    <aside className="w-16 bg-orb-sidebar border-r border-white/5 flex flex-col z-20">
+    <aside className="w-16 bg-white border-r border-zinc-200 flex flex-col z-20">
       <div className="flex flex-col items-center justify-between p-4 h-full">
         <div className="flex flex-col items-center gap-4">
           {/* App Logo */}
-          <div className="w-8 h-8 rounded-lg bg-orb-accent flex items-center justify-center text-orb-dark font-bold text-lg">
+          <div className="w-8 h-8 rounded-md bg-zinc-900 flex items-center justify-center text-white font-medium text-lg">
             O
           </div>
 
@@ -50,18 +50,22 @@ export default function Sidebar({
               <button
                 key={space.id}
                 onClick={() => setActiveSpace(space.id)}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                className={`w-10 h-10 rounded-md flex items-center justify-center transition-all duration-150 ${
                   activeSpaceId === space.id
-                    ? 'bg-white/10 ring-1 ring-orb-accent'
-                    : 'hover:bg-white/5'
+                    ? 'bg-zinc-900 text-white'
+                    : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
                 }`}
                 title={space.name}
               >
                 <div className="relative flex items-center justify-center">
-                  {getSpaceIcon(space.icon)}
+                  <span
+                    className={`w-5 h-5 ${activeSpaceId === space.id ? 'text-white' : 'text-zinc-400'}`}
+                  >
+                    {getSpaceIcon(space.icon)}
+                  </span>
                   {spaceTabCount(space.id) > 0 && (
-                    <span className="absolute -right-1 -top-1 bg-orb-accent text-orb-dark text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                      {spaceTabCount(space.id)}
+                    <span className="absolute -right-1 -top-1 bg-zinc-900 text-white text-[10px] font-bold rounded-full w-3 h-3 flex items-center justify-center">
+                      {Math.min(spaceTabCount(space.id), 9)}
                     </span>
                   )}
                 </div>
@@ -69,10 +73,10 @@ export default function Sidebar({
             ))}
             <button
               onClick={handleNewSpace}
-              className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors"
+              className="w-10 h-10 rounded-md border border-zinc-200 flex items-center justify-center hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
               title="New Space"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-zinc-500" />
             </button>
           </div>
         </div>
@@ -80,16 +84,16 @@ export default function Sidebar({
         {/* Bottom controls */}
         <div className="flex flex-col items-center gap-2 pt-4">
           <button
-            className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-md hover:bg-zinc-50 flex items-center justify-center transition-colors"
             title="Boosts"
           >
-            <Shield className="w-4 h-4" />
+            <Shield className="w-4 h-4 text-zinc-500" />
           </button>
           <button
-            className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-md hover:bg-zinc-50 flex items-center justify-center transition-colors"
             title="Settings"
           >
-            <Bot className="w-4 h-4" />
+            <Bot className="w-4 h-4 text-zinc-500" />
           </button>
         </div>
       </div>
