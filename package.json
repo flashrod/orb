@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "dev:main": "concurrently \"esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --external:sql.js --watch\" \"esbuild packages/preload/webview.ts --bundle --platform=node --format=cjs --outfile=dist/preload/webview.js --external:electron --watch\" \"esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron --watch\"",
-    "dev": "concurrently \"vite --config vite.config.ts\" \"npm run dev:main\" \"wait-on http://localhost:5173 && electron dist/main.js\"",
+    "dev": "concurrently \"vite --config vite.config.mts\" \"npm run dev:main\" \"wait-on http://localhost:5173 && electron dist/main.js\"",
     "build": "esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --external:sql.js && esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron && esbuild packages/preload/webview.ts --bundle --platform=node --format=cjs --outfile=dist/preload/webview.js --external:electron && vite build",
     "dist": "electron-builder",
     "lint": "eslint .",
@@ -27,6 +27,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/electron": "^1.6.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
