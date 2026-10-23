@@ -94,11 +94,14 @@ export default function Features() {
   return (
     <section id="features" className="section-padding border-t border-orb-border">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
-        <div className="text-center mb-8">
-          <h2 className="text-4xl md:text-5xl mb-3">Built for focus</h2>
-          <p className="text-orb-text max-w-2xl mx-auto">
-            Everything Orb does, it does transparently. No hidden telemetry, no dark patterns.
-          </p>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <div className="section-number">[ 01 ]</div>
+            <h2 className="section-title">Built for focus</h2>
+            <p className="text-orb-text max-w-2xl">
+              Everything Orb does, it does transparently. No hidden telemetry, no dark patterns.
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {features.map((feature, i) => {

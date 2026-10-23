@@ -70,10 +70,10 @@ export default function Navbar() {
               Privacy
             </Link>
             <Link
-              href="#waitlist"
+              href="#faq"
               className="text-xs font-medium text-orb-text-muted uppercase tracking-widest hover:text-orb-accent transition-colors"
             >
-              Waitlist
+              FAQ
             </Link>
             <Link
               href="https://github.com/flashrod/orb/issues/new/choose"
@@ -95,7 +95,7 @@ export default function Navbar() {
               {stars !== null ? stars.toLocaleString() : 'Star'}
             </Link>
             <Link href="#waitlist" className="btn-primary">
-              Join waitlist
+              Download
             </Link>
           </div>
         </div>

@@ -67,7 +67,7 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-orb-text-strong text-white px-7 py-3 rounded-md text-sm font-medium transition-all duration-200;
+    @apply bg-orb-text-strong text-white px-8 py-4 rounded-md text-sm font-medium transition-all duration-200;
     box-shadow: none;
   }
 
@@ -80,7 +80,7 @@
   }
 
   .btn-secondary {
-    @apply bg-transparent border border-orb-border text-orb-text-strong px-7 py-3 rounded-md text-sm font-medium transition-all duration-200;
+    @apply bg-transparent border border-orb-border text-orb-text-strong px-8 py-4 rounded-md text-sm font-medium transition-all duration-200;
     box-shadow: none;
   }
 
@@ -89,7 +89,7 @@
   }
 
   .card {
-    @apply border border-orb-border bg-orb-surface rounded-lg p-6 transition-all duration-200;
+    @apply border border-orb-border bg-orb-surface rounded-lg p-8 transition-all duration-200;
     box-shadow: 0 0 0 rgba(0, 0, 0, 0);
   }
 
@@ -98,14 +98,22 @@
   }
 
   .section-padding {
-    padding-top: 48px;
-    padding-bottom: 48px;
+    padding-top: 64px;
+    padding-bottom: 64px;
   }
 
   .container-max {
     max-width: 80rem;
     margin-left: auto;
     margin-right: auto;
+  }
+
+  .section-number {
+    @apply text-[10px] text-orb-accent font-mono font-bold uppercase tracking-widest mb-2;
+  }
+
+  .section-title {
+    @apply text-4xl md:text-5xl mb-6;
   }
 
   .reveal {

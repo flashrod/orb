@@ -33,7 +33,7 @@ export default function Waitlist() {
           Join the waitlist
         </h2>
         <p className="text-white/80 text-lg mb-10 max-w-lg mx-auto leading-relaxed">
-          macOS public beta is coming soon. Enter your email and we&rsquo;ll let you know when it&rsquo;s ready.
+          Public beta coming soon for macOS, Windows, and Linux. Enter your email and we&rsquo;ll let you know when it&rsquo;s ready.
         </p>
         <form onSubmit={handleSubmit} className="max-w-md mx-auto flex flex-col sm:flex-row gap-3">
           <input
@@ -56,7 +56,7 @@ export default function Waitlist() {
           <p className="mt-4 text-sm text-white/70">Thanks&mdash;we&rsquo;ll email you when the beta opens.</p>
         )}
         {status === 'error' && (
-          <p className="mt-4 text-sm text-sm text-white/70">Something went wrong. Try again.</p>
+          <p className="mt-4 text-sm text-white/70">Something went wrong. Try again.</p>
         )}
         <div className="mt-8 text-[10px] text-white/40 uppercase tracking-widest">
           Orb is open source. No tracking, no telemetry, no accounts.

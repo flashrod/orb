@@ -66,11 +66,14 @@ export default function Privacy() {
   return (
     <section id="privacy" className="bg-orb-canvas section-padding border-t border-orb-border">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
-        <div className="text-center mb-6">
-          <h2 className="text-4xl md:text-5xl mb-3">Privacy that isn't slop</h2>
-          <p className="text-orb-text max-w-2xl mx-auto">
-            Most browsers treat privacy as a toggle. Orb treats it as the default.
-          </p>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <div className="section-number">[ 02 ]</div>
+            <h2 className="section-title">Privacy that isn't slop</h2>
+            <p className="text-orb-text max-w-2xl">
+              Most browsers treat privacy as a toggle. Orb treats it as the default.
+            </p>
+          </div>
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           {privacyItems.map((item, i) => {
