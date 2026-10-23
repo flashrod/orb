@@ -73,7 +73,7 @@ export default function App() {
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
 
   return (
-    <div className="flex h-screen w-screen bg-orb-dark">
+    <div className="flex h-screen w-screen overflow-hidden bg-stone-100 text-stone-700">
       {/* Sidebar */}
       <Sidebar
         spaces={spaces}
@@ -84,7 +84,7 @@ export default function App() {
       {/* Main content area */}
       <div className="flex flex-col flex-1 relative overflow-hidden">
         {/* Navigation controls */}
-        <div className="h-10 border-b border-white/5 bg-white/5 flex items-center px-2">
+        <div className="flex h-10 items-center border-b border-stone-200 bg-stone-100 px-2">
           <NavigationBar
             onBack={navigateBack}
             onForward={navigateForward}
@@ -99,8 +99,15 @@ export default function App() {
           onNavigate={handleNavigate}
         />
 
+        <TabBar
+          tabs={spaceTabs}
+          activeTabId={activeTabId}
+          activeSpaceId={activeSpaceId || ''}
+          setActiveTab={setActiveTab}
+        />
+
         {/* Web Content */}
-        <div className="flex-1 relative overflow-hidden bg-black">
+        <div className="relative flex-1 overflow-hidden bg-stone-100">
           {activeTabId ? (
             <WebView
               ref={webviewRef}
@@ -113,9 +120,9 @@ export default function App() {
               onLoadingChange={() => {}}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/30">
-              <div className="text-2xl font-medium mb-2">Orb</div>
-              <div className="text-sm">Open a new tab to start browsing</div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-400">
+              <div className="mb-2 text-2xl font-medium tracking-tight text-stone-700">Orb</div>
+              <div className="text-sm">Open a tab or press ⌘K to find a space</div>
             </div>
           )}
         </div>
