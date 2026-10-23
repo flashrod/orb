@@ -5,6 +5,8 @@ import { MotionPreference, PaletteToken, useAppearanceStore } from '../stores/ap
 import BoostsEditor from './BoostsEditor';
 import { TOOLBAR_ITEMS, ToolbarItemId, useToolbarStore } from '../stores/toolbar';
 import ProfilesWorkspacesSettings from './ProfilesWorkspacesSettings';
+import { SEARCH_PROVIDERS } from '../lib/navigation';
+import { useBrowserPreferencesStore } from '../stores/preferences';
 
 type SettingsSection = 'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles';
 
@@ -63,10 +65,11 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () =
 export default function Settings({ onClose, initialSection = 'appearance' }: { onClose: () => void; initialSection?: SettingsSection }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const { enabled, toggle } = useAdBlockerStore();
+  const { searchProvider, setSearchProvider } = useBrowserPreferencesStore();
   const { order, hidden, move, toggleHidden, reset } = useToolbarStore();
   const {
-    theme, accent, density, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, motion,
-    setTheme, setAccent, setDensity, setTabLayout, setBookmarksBarVisible, setCompactSideTabs, setShowStartPage, setMotion,
+    theme, accent, density, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, motion,
+    setTheme, setAccent, setDensity, setTabLayout, setBookmarksBarVisible, setCompactSideTabs, setShowStartPage, setShowTabStrip, setShowNavigation, setCompactMode, setMotion,
     customColors, setCustomColor, resetCustomColors,
   } = useAppearanceStore();
   const selected = sections.find((item) => item.id === section) || sections[0];
@@ -179,6 +182,15 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
                 </section>
 
                 <section className="border-t orb-border pt-5">
+                  <SectionHeading title="Browser chrome" detail="Hide the parts you do not need. Orb keeps a small restore control and keyboard access." />
+                  <div className="space-y-2">
+                    <div className="orb-elevated flex items-center justify-between rounded-md border orb-border px-3 py-2.5"><span><span className="orb-strong block text-xs font-medium">Show tab strip or side rail</span><span className="orb-muted mt-1 block text-[10px]">Turn this off to give the page more room.</span></span><Toggle checked={showTabStrip} onChange={() => setShowTabStrip(!showTabStrip)} label="Show tab strip or side rail" /></div>
+                    <div className="orb-elevated flex items-center justify-between rounded-md border orb-border px-3 py-2.5"><span><span className="orb-strong block text-xs font-medium">Show navigation toolbar</span><span className="orb-muted mt-1 block text-[10px]">Includes back, forward, reload, and address/search.</span></span><Toggle checked={showNavigation} onChange={() => setShowNavigation(!showNavigation)} label="Show navigation toolbar" /></div>
+                    <div className="orb-elevated flex items-center justify-between rounded-md border orb-border px-3 py-2.5"><span><span className="orb-strong block text-xs font-medium">Compact mode</span><span className="orb-muted mt-1 block text-[10px]">Hide browser chrome with ⌘/Ctrl + Shift + M. Press ⌘/Ctrl + L to restore the address toolbar.</span></span><Toggle checked={compactMode} onChange={() => setCompactMode(!compactMode)} label="Compact mode" /></div>
+                  </div>
+                </section>
+
+                <section className="border-t orb-border pt-5">
                   <div className="orb-elevated rounded-md border orb-border px-3 py-3">
                     <div className="mb-3"><span className="orb-strong block text-xs font-medium">New tab page</span><span className="orb-muted mt-1 block text-[10px]">Choose what opens whenever you create a tab. Essentials is the default.</span></div>
                     <div role="radiogroup" aria-label="New tab page" className="grid grid-cols-2 gap-2">
@@ -189,6 +201,15 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
                         <span className="block font-medium">Blank page</span><span className="orb-muted mt-1 block text-[10px]">Just the page and address bar</span>
                       </button>
                     </div>
+                  </div>
+                </section>
+
+                <section className="border-t orb-border pt-5">
+                  <div className="flex items-center justify-between gap-6">
+                    <span><span className="orb-strong block text-xs font-medium">Default search provider</span><span className="orb-muted mt-1 block text-[10px]">Used by the address bar, command bar, and Essentials page.</span></span>
+                    <select aria-label="Default search provider" value={searchProvider} onChange={(event) => setSearchProvider(event.target.value as typeof searchProvider)} className="orb-strong h-9 min-w-40 rounded-md border orb-border bg-[var(--orb-elevated)] px-3 text-xs outline-none focus:border-[var(--orb-accent)]">
+                      {SEARCH_PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
+                    </select>
                   </div>
                 </section>
               </div>

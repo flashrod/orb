@@ -16,6 +16,7 @@ export function migrateAppearanceSettings(persistedState: unknown, version: numb
     ...state,
     ...(version < 2 ? { bookmarksBarVisible: false } : {}),
     ...(version < 4 ? { showStartPage: true } : {}),
+    ...(version < 5 ? { showTabStrip: true, showNavigation: true, compactMode: false } : {}),
   };
 }
 
@@ -28,6 +29,9 @@ interface AppearanceStore {
   sidebarAutoHide: boolean;
   bookmarksBarVisible: boolean;
   showStartPage: boolean;
+  showTabStrip: boolean;
+  showNavigation: boolean;
+  compactMode: boolean;
   compactSideTabs: boolean;
   motion: MotionPreference;
   customColors: Partial<Record<PaletteToken, string>>;
@@ -39,6 +43,9 @@ interface AppearanceStore {
   setSidebarAutoHide: (enabled: boolean) => void;
   setBookmarksBarVisible: (enabled: boolean) => void;
   setShowStartPage: (enabled: boolean) => void;
+  setShowTabStrip: (enabled: boolean) => void;
+  setShowNavigation: (enabled: boolean) => void;
+  setCompactMode: (enabled: boolean) => void;
   setCompactSideTabs: (enabled: boolean) => void;
   setMotion: (motion: MotionPreference) => void;
   setCustomColor: (token: PaletteToken, color: string) => void;
@@ -56,6 +63,9 @@ export const useAppearanceStore = create<AppearanceStore>()(
       sidebarAutoHide: false,
       bookmarksBarVisible: false,
       showStartPage: true,
+      showTabStrip: true,
+      showNavigation: true,
+      compactMode: false,
       compactSideTabs: false,
       motion: 'gentle',
       customColors: {},
@@ -67,6 +77,9 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setSidebarAutoHide: (sidebarAutoHide) => set({ sidebarAutoHide }),
       setBookmarksBarVisible: (bookmarksBarVisible) => set({ bookmarksBarVisible }),
       setShowStartPage: (showStartPage) => set({ showStartPage }),
+      setShowTabStrip: (showTabStrip) => set({ showTabStrip }),
+      setShowNavigation: (showNavigation) => set({ showNavigation }),
+      setCompactMode: (compactMode) => set({ compactMode }),
       setCompactSideTabs: (compactSideTabs) => set({ compactSideTabs }),
       setMotion: (motion) => set({ motion }),
       setCustomColor: (token, color) => set((state) => {
@@ -79,7 +92,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
-      version: 4,
+      version: 5,
       migrate: migrateAppearanceSettings,
       storage: createJSONStorage(() => localStorage),
     }

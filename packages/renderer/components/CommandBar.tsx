@@ -3,6 +3,7 @@ import { MagnifyingGlass, X, SignIn, Globe, SquaresFour, Plus } from '@phosphor-
 import { useTabStore } from '../stores/tabs';
 import { useSpaceStore } from '../stores/spaces';
 import { useProfileStore } from '../stores/profiles';
+import { useBrowserPreferencesStore } from '../stores/preferences';
 import { resolveAddressOrSearch } from '../lib/navigation';
 
 interface CommandResult {
@@ -43,12 +44,13 @@ export default function CommandBar({
   const { tabs, activeTabId } = useTabStore();
   const { spaces, activeSpaceId } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
+  const searchProvider = useBrowserPreferencesStore((state) => state.searchProvider);
 
   useEffect(() => {
     inputRef.current?.focus();
     setResults(buildResults(query));
     setSelectedIndex(-1);
-  }, [query, tabs, spaces, profiles, activeTabId, activeSpaceId]);
+  }, [query, tabs, spaces, profiles, activeTabId, activeSpaceId, searchProvider]);
 
   const buildResults = (q: string): CommandResult[] => {
     const lower = q.toLowerCase().trim();
@@ -128,7 +130,7 @@ export default function CommandBar({
       );
     } else {
       // URL navigation - treat query as URL/search
-      const url = resolveAddressOrSearch(q);
+      const url = resolveAddressOrSearch(q, searchProvider);
       if (url) results.push({
         id: 'cmd-navigate',
         type: 'url',

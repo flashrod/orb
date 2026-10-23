@@ -16,7 +16,7 @@ import StartPage from './components/StartPage';
 import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
-import { ArrowsLeftRight, X } from '@phosphor-icons/react';
+import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -39,7 +39,7 @@ export default function App() {
   const setSplitRatio = useSplitViewStore((state) => state.setRatio);
   const closeSplit = useSplitViewStore((state) => state.close);
   const swapSplit = useSplitViewStore((state) => state.swap);
-  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, customColors, setTabLayout } = useAppearanceStore();
+  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, customColors, setTabLayout, setCompactMode, setShowTabStrip, setShowNavigation } = useAppearanceStore();
 
   const webviewRefs = useRef<Record<string, any>>({});
   const splitAreaRef = useRef<HTMLDivElement | null>(null);
@@ -178,7 +178,13 @@ export default function App() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
         e.preventDefault();
-        document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus();
+        useAppearanceStore.getState().setCompactMode(false);
+        useAppearanceStore.getState().setShowNavigation(true);
+        requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
       }
       if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split' && useAppearanceStore.getState().compactSideTabs) {
         e.preventDefault();
@@ -237,6 +243,8 @@ export default function App() {
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
   const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, tabRailKeyboardRevealed, false);
+  const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
+  const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
 
   const handlePickElement = async () => {
     if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
@@ -319,7 +327,7 @@ export default function App() {
     <div className="orb-frame flex h-screen w-screen overflow-hidden">
       {/* Main content area */}
       <main className="relative flex min-w-0 flex-1 overflow-hidden">
-        {!tabPresentation.horizontalTabsVisible ? (
+        {showSideTabs ? (
           <VerticalTabPanel
             isOpen
             embedded
@@ -332,15 +340,15 @@ export default function App() {
           />
         ) : null}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        {tabPresentation.horizontalTabsVisible ? <TabBar
+        {showTopTabs ? <TabBar
           tabs={spaceTabs}
           activeTabId={activeTabId}
           activeSpaceId={activeSpaceId || ''}
           setActiveTab={setActiveTab}
           onReload={navigateReload}
         /> : null}
-        {!tabPresentation.horizontalTabsVisible && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
-        <BrowserToolbar
+        {!showTopTabs && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
+        {showNavigation && !compactMode && <BrowserToolbar
           activeTab={activeTab}
           onNavigate={handleNavigate}
           onBack={navigateBack}
@@ -348,8 +356,14 @@ export default function App() {
           onReload={navigateReload}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
-        />
-        {bookmarksBarVisible && <BookmarksBar onNavigate={handleNavigate} />}
+        />}
+        {bookmarksBarVisible && !compactMode && <BookmarksBar onNavigate={handleNavigate} />}
+
+        {!compactMode && (!showTabStrip || !showNavigation) && <div className="pointer-events-none absolute left-2 top-[58px] z-30 flex gap-1">
+          {!showTabStrip && <button type="button" onClick={() => setShowTabStrip(true)} aria-label="Show tabs" title="Show tabs" className="orb-elevated orb-control pointer-events-auto flex h-7 w-7 items-center justify-center rounded-md border orb-border shadow-sm"><List className="h-3.5 w-3.5" /></button>}
+          {!showNavigation && <button type="button" onClick={() => setShowNavigation(true)} aria-label="Show navigation toolbar" title="Show navigation toolbar" className="orb-elevated orb-control pointer-events-auto flex h-7 w-7 items-center justify-center rounded-md border orb-border shadow-sm"><NavigationArrow className="h-3.5 w-3.5" /></button>}
+        </div>}
+        {compactMode && <button type="button" onClick={() => setCompactMode(false)} aria-label="Restore browser controls" title="Restore browser controls · ⌘/Ctrl+Shift+M" className="orb-elevated orb-control fixed left-1/2 top-1 z-40 -translate-x-1/2 rounded-full border orb-border px-3 py-1 text-[10px] opacity-25 shadow-sm transition-opacity hover:opacity-100 focus:opacity-100">Show controls</button>}
 
         {/* Web Content */}
         <div className="orb-frame relative flex-1 overflow-hidden">

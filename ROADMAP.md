@@ -43,12 +43,12 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [ ] **Tab organization** — group tabs into named folders, collapse groups, pin tabs, and search hundreds of tabs quickly. Drag reordering is shipped.
 - [ ] **Bookmark editing** — add a richer organizer for managing larger collections.
 - [x] **Bookmarks bar** — optional row below the address controls; drag to reorder/nest bookmarks and folders; hide/show from Settings.
-- [ ] **Compact mode** — hide all selected browser chrome for more page space, with a reliable keyboard shortcut and discoverable controls to restore it. Compact side tabs are shipped.
-- [ ] **Show/hide controls** — independent toggles for sidebar, tab strip, bookmarks bar, and other browser chrome, with sensible minimum navigation access.
+- [x] **Compact mode** — hide all selected browser chrome for more page space, with a reliable keyboard shortcut and a discoverable restore control. Compact side tabs are shipped.
+- [x] **Show/hide controls** — independently toggle the tab rail, navigation toolbar, and bookmarks bar, with visible restore controls and Cmd/Ctrl+L address access.
 
 ### Contextual browsing
 
-- [ ] **Search preferences** — let users choose a default search provider and keep address/search interpretation consistent across the omnibox, command bar, and new-tab page.
+- [x] **Search preferences** — choose a default provider and use it consistently across the omnibox, command bar, and new-tab page.
 - [ ] **Glance link preview** — open a temporary, isolated preview from a link without replacing the current page; support pin/open/close and keyboard control.
 - [ ] **Compare sources** — send links into either split-view pane and keep the current reading position.
 - [ ] **Keyboard-first navigation** — complete shortcut map, command bar actions for profiles/spaces/bookmarks, and accessible focus handling.

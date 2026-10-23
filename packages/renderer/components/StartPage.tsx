@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, Command, Globe, SquaresFour, Plus, MagnifyingGlass, Sparkle, X } from '@phosphor-icons/react';
 import { useEssentialsStore } from '../stores/essentials';
 import { resolveAddressOrSearch, resolveWebsiteAddress } from '../lib/navigation';
+import { useBrowserPreferencesStore } from '../stores/preferences';
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
@@ -27,10 +28,11 @@ export default function StartPage({
   const addSite = useEssentialsStore((state) => state.addSite);
   const removeSite = useEssentialsStore((state) => state.removeSite);
   const date = useMemo(() => formatDate(new Date()), []);
+  const searchProvider = useBrowserPreferencesStore((state) => state.searchProvider);
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
-    const destination = resolveAddressOrSearch(query);
+    const destination = resolveAddressOrSearch(query, searchProvider);
     if (destination) onNavigate(destination);
   };
 

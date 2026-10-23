@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import { resolveAddressOrSearch } from '../lib/navigation';
+import { useBrowserPreferencesStore } from '../stores/preferences';
 
 
 export default function AddressBar({
@@ -15,6 +16,7 @@ export default function AddressBar({
   const [url, setUrl] = React.useState(activeTab?.url === 'about:blank' ? '' : activeTab?.url || '');
   const [focused, setFocused] = React.useState(false);
   const [suggestionAnchor, setSuggestionAnchor] = React.useState<{ left: number; top: number; width: number } | null>(null);
+  const searchProvider = useBrowserPreferencesStore((state) => state.searchProvider);
 
   const updateSuggestionAnchor = React.useCallback(() => {
     const rect = inputRef.current?.getBoundingClientRect();
@@ -41,7 +43,7 @@ export default function AddressBar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const destination = resolveAddressOrSearch(url);
+    const destination = resolveAddressOrSearch(url, searchProvider);
     if (!destination) return;
     onNavigate?.(destination);
     setFocused(false);

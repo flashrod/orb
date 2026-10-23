@@ -10,6 +10,11 @@ describe('appearance migrations', () => {
   });
 
   it('preserves a homepage choice on the current schema', () => {
-    expect(migrateAppearanceSettings({ showStartPage: false }, 4).showStartPage).toBe(false);
+    expect(migrateAppearanceSettings({ showStartPage: false }, 4)).toMatchObject({
+      showStartPage: false,
+      showTabStrip: true,
+      showNavigation: true,
+      compactMode: false,
+    });
   });
 });
