@@ -415,51 +415,32 @@ export class AdBlocker {
 }
 
 export const adBlocker = new AdBlocker();
+const initializedSessions = new WeakSet<Electron.Session>();
+let filterListsLoading: Promise<void> | null = null;
 
 export function initAdBlocker(ses: Electron.Session): void {
-  // Load filter lists on startup
-  adBlocker.loadLists();
+  if (initializedSessions.has(ses)) return;
+  initializedSessions.add(ses);
 
-  // Intercept web requests for ad blocking
+  // All profile sessions share the same rule data but retain separate browser storage.
+  filterListsLoading ||= adBlocker.loadLists();
+
+  // Electron keeps only one listener for each webRequest event. Combine policy
+  // decisions here so tracker and HTTPS controls cannot overwrite each other.
   ses.webRequest.onBeforeRequest(
     {
       urls: ['<all_urls>'],
     },
     (details, callback) => {
-      if (adBlocker.shouldBlock(details.url)) {
+      if (adBlocker.shouldBlock(details.url) || adBlocker.shouldBlockTracker(details.url)) {
         callback({ cancel: true });
-      } else {
-        callback({});
-      }
-    }
-  );
-
-  // Intercept web requests for tracker blocking
-  ses.webRequest.onBeforeRequest(
-    {
-      urls: ['<all_urls>'],
-    },
-    (details, callback) => {
-      if (adBlocker.shouldBlockTracker(details.url)) {
-        callback({ cancel: true });
-      } else {
-        callback({});
-      }
-    }
-  );
-
-  // HTTPS-only mode: upgrade http:// to https://
-  ses.webRequest.onBeforeRequest(
-    {
-      urls: ['http://*/*'],
-    },
-    (details, callback) => {
-      if (!adBlocker.httpsOnlyEnabled) {
-        callback({});
         return;
       }
-      const httpsUrl = details.url.replace('http://', 'https://');
-      callback({ redirectURL: httpsUrl });
+      if (adBlocker.httpsOnlyEnabled && details.url.startsWith('http://')) {
+        callback({ redirectURL: details.url.replace(/^http:/, 'https:') });
+        return;
+      }
+      callback({});
     }
   );
 
