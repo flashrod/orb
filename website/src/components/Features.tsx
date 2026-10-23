@@ -1,7 +1,8 @@
 'use client';
 
 import { useScrollReveal } from '@/lib/useScrollReveal';
-import { Layout, Globe, Shield } from '@phosphor-icons/react';
+import { Carousel, CarouselSlide } from '@/components/Carousel';
+import { Layout, Globe, Shield, Eye, Clock } from '@phosphor-icons/react';
 
 function SplitViewIcon() {
   return (
@@ -26,7 +27,6 @@ type Feature = {
   icon: React.ElementType;
   title: string;
   description: string;
-  colSpan?: number;
 };
 
 const features: Feature[] = [
@@ -34,31 +34,26 @@ const features: Feature[] = [
     icon: Layout,
     title: 'Spaces',
     description: 'Named spaces keep your tabs, bookmarks, and history separate by context.',
-    colSpan: 2,
   },
   {
     icon: Globe,
     title: 'Boosts',
     description: 'Custom CSS and JS for any site. Hide cookie banners, reshape layouts, dark-mode the web.',
-    colSpan: 2,
   },
   {
     icon: Shield,
     title: 'Ad + tracker blocking',
     description: 'Real EasyList and uBlock rules. Third-party cookies blocked by default.',
-    colSpan: 1,
   },
   {
     icon: SplitViewIcon,
     title: 'Split view',
     description: 'Two tabs side by side with a draggable divider.',
-    colSpan: 1,
   },
   {
     icon: TabGroupsIcon,
     title: 'Tab groups',
-    description: 'Collapse, rename, and reorder tab groups that persist across restarts.',
-    colSpan: 1,
+    description: 'Collapse, rename, and reorder tab groups that persist across restart.',
   },
 ];
 
@@ -68,7 +63,7 @@ export default function Features() {
   return (
     <section id="features" className="section-padding border-t border-orb-border">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start justify-between mb-10">
           <div>
             <div className="section-number">[ 01 ]</div>
             <h2 className="section-title">Built for focus</h2>
@@ -77,26 +72,31 @@ export default function Features() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {features.map((feature, i) => {
+        <Carousel>
+          {features.map((feature) => {
             const Icon = feature.icon;
             return (
-              <div
-                key={feature.title}
-                className={`card col-span-${feature.colSpan} reveal`}
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
-                    <Icon size={20} weight="bold" />
+              <CarouselSlide key={feature.title}>
+                <div className="flex items-start justify-between p-8">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
+                        <Icon size={18} weight="bold" />
+                      </div>
+                      <h3 className="text-lg font-semibold">{feature.title}</h3>
+                    </div>
+                    <p className="text-sm text-orb-text leading-relaxed">{feature.description}</p>
                   </div>
-                  <h3 className="text-lg font-semibold">{feature.title}</h3>
+                  <div className="ml-8 flex items-center justify-end">
+                    <div className="w-12 h-12 rounded-lg border border-orb-border bg-orb-surface flex items-center justify-center">
+                      <Icon size={14} weight="regular" className="opacity-50" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-orb-text leading-relaxed">{feature.description}</p>
-              </div>
+              </CarouselSlide>
             );
           })}
-        </div>
+        </Carousel>
       </div>
     </section>
   );
