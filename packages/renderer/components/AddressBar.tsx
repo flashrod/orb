@@ -3,8 +3,10 @@ import React from 'react';
 
 export default function AddressBar({
   activeTab,
+  onNavigate,
 }: {
   activeTab: { url: string; title: string } | undefined;
+  onNavigate?: (url: string) => void;
 }) {
   const [url, setUrl] = React.useState(activeTab?.url || '');
   const [focused, setFocused] = React.useState(false);
@@ -15,8 +17,7 @@ export default function AddressBar({
     if (!input) return;
 
     const finalUrl = input.includes('://') ? input : `https://www.google.com/search?q=${encodeURIComponent(input)}`;
-    // In a real implementation, this would update the active tab's URL via IPC
-    console.log('Navigate to:', finalUrl);
+    onNavigate?.(finalUrl);
   };
 
   return (

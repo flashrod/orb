@@ -1,16 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSpaceStore } from './stores/spaces';
 import { useTabStore } from './stores/tabs';
 import Sidebar from './components/Sidebar';
 import TabBar from './components/TabBar';
 import CommandBar from './components/CommandBar';
 import AddressBar from './components/AddressBar';
+import NavigationBar from './components/NavigationBar';
 import WebView from './components/WebView';
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const { spaces, activeSpaceId, setActiveSpace } = useSpaceStore();
-  const { activeTabId, tabs, setActiveTab } = useTabStore();
+  const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
+
+  const webviewRef = useRef<any>(null);
+
+  const navigateBack = useCallback(() => webviewRef.current?.navigateBack(), []);
+  const navigateForward = useCallback(() => webviewRef.current?.navigateForward(), []);
+  const navigateReload = useCallback(() => webviewRef.current?.navigateReload(), []);
+
+  const handleNavigate = useCallback((url: string) => {
+    if (activeTabId) {
+      updateTab(activeTabId, { url });
+    }
+  }, [activeTabId, updateTab]);
 
   useEffect(() => {
     // Initialize default space if none exist
@@ -41,6 +54,7 @@ export default function App() {
   const spaceTabs = activeSpaceId
     ? tabs.filter((t: { spaceId: string }) => t.spaceId === activeSpaceId)
     : [];
+  const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
 
   return (
     <div className="flex h-screen w-screen bg-orb-dark">
@@ -53,23 +67,28 @@ export default function App() {
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 relative overflow-hidden">
-        {/* Tab Bar */}
-        <TabBar
-          tabs={spaceTabs}
-          activeTabId={activeTabId}
-          activeSpaceId={activeSpaceId || ''}
-          setActiveTab={setActiveTab}
-        />
+        {/* Navigation controls */}
+        <div className="h-10 border-b border-white/5 bg-white/5 flex items-center px-2">
+          <NavigationBar
+            onBack={navigateBack}
+            onForward={navigateForward}
+            onReload={navigateReload}
+          />
+        </div>
 
         {/* Address Bar */}
-        <AddressBar activeTab={tabs.find((t: { id: string }) => t.id === activeTabId)} />
+        <AddressBar
+          activeTab={activeTab}
+          onNavigate={handleNavigate}
+        />
 
         {/* Web Content */}
         <div className="flex-1 relative overflow-hidden bg-black">
           {activeTabId ? (
             <WebView
+              ref={webviewRef}
               tabId={activeTabId}
-              url={tabs.find((t: { id: string }) => t.id === activeTabId)?.url || ''}
+              url={activeTab?.url || ''}
               spaceId={activeSpaceId || ''}
             />
           ) : (

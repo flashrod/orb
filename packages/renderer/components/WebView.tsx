@@ -1,6 +1,21 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { forwardRef, useEffect, useRef, useState, useCallback, useImperativeHandle } from 'react';
 
-export default function WebView({
+type WebViewHandle = {
+  navigateBack: () => void;
+  navigateForward: () => void;
+  navigateReload: () => void;
+  loadUrl: (url: string) => void;
+};
+
+export default forwardRef<WebViewHandle, {
+  tabId: string;
+  url: string;
+  spaceId: string;
+  onUrlChange?: (url: string) => void;
+  onTitleChange?: (title: string) => void;
+  onFaviconChange?: (favicon: string) => void;
+  onLoadingChange?: (loading: boolean) => void;
+}>(({
   tabId,
   url,
   spaceId,
@@ -16,7 +31,7 @@ export default function WebView({
   onTitleChange?: (title: string) => void;
   onFaviconChange?: (favicon: string) => void;
   onLoadingChange?: (loading: boolean) => void;
-}) {
+}, ref) => {
   const webviewRef = useRef<HTMLWebViewElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageTitle, setPageTitle] = useState('Loading...');
@@ -101,6 +116,14 @@ export default function WebView({
     onLoadingChange,
   ]);
 
+  // Expose navigation methods to parent
+  useImperativeHandle(ref, () => ({
+    navigateBack,
+    navigateForward,
+    navigateReload,
+    loadUrl,
+  }));
+
   // Set webview src when url changes
   useEffect(() => {
     const wv = webviewRef.current as any;
@@ -127,4 +150,4 @@ export default function WebView({
       )}
     </div>
   );
-}
+});
