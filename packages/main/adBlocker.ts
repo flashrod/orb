@@ -1,4 +1,6 @@
-import { session } from 'electron';
+import { session, dialog } from 'electron';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Filter list sources (from Arc's manifest.json reverse engineering)
 const FILTER_LIST_SOURCES = [
@@ -36,7 +38,7 @@ interface FilterRule {
 
 export class AdBlocker {
   private rules: FilterRule[] = [];
-  private enabled = true;
+  enabled = true;
 
   async loadLists(urls: string[] = FILTER_LIST_SOURCES.map((s) => s.url)): Promise<void> {
     const rules: FilterRule[] = [];
@@ -127,6 +129,20 @@ export class AdBlocker {
 
   getRuleCount(): number {
     return this.rules.length;
+  }
+
+  // Import uBlock Origin filter list from a local file path
+  async importUblockList(filePath: string): Promise<number> {
+    try {
+      const text = fs.readFileSync(filePath, 'utf-8');
+      const parsed = this.parseList(text);
+      this.rules = [...this.rules, ...parsed];
+      console.log(`[AdBlocker] Imported ${parsed.length} uBlock rules from ${filePath}`);
+      return parsed.length;
+    } catch (err) {
+      console.error(`[AdBlocker] Failed to import uBlock list from ${filePath}:`, err);
+      return 0;
+    }
   }
 }
 

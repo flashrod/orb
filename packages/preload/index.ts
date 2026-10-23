@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('orbApi', {
   // Ad blocker
   toggleAdBlocker: (enabled: boolean) =>
     ipcRenderer.invoke('adblocker:set-enabled', enabled),
+  getAdBlockerStatus: () =>
+    ipcRenderer.invoke('adblocker:get-status'),
+  importUblockList: (filePath: string) =>
+    ipcRenderer.invoke('adblocker:import-ublock-list', filePath),
 
   // Boosts
   getBoosts: () => ipcRenderer.invoke('boosts:get-all'),
@@ -38,6 +42,8 @@ declare global {
       openDialog: (options: any) => Promise<any>;
       getAppVersion: () => Promise<string>;
       toggleAdBlocker: (enabled: boolean) => Promise<void>;
+      getAdBlockerStatus: () => Promise<any>;
+      importUblockList: (filePath: string) => Promise<any>;
       getBoosts: () => Promise<any[]>;
       saveBoost: (boost: any) => Promise<void>;
       deleteBoost: (id: string) => Promise<void>;

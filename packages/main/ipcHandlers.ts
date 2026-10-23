@@ -1,5 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { windowManager } from './windowManager';
+import { adBlocker } from './adBlocker';
 
 export function registerIpcHandlers(): void {
   // Get window by webContents ID
@@ -43,5 +44,25 @@ export function registerIpcHandlers(): void {
     if (win) {
       win.focus();
     }
+  });
+
+  // Ad blocker: toggle enabled state
+  ipcMain.handle('adblocker:set-enabled', (_, enabled: boolean) => {
+    adBlocker.setEnabled(enabled);
+    return { enabled: adBlocker.enabled };
+  });
+
+  // Ad blocker: get status
+  ipcMain.handle('adblocker:get-status', () => {
+    return {
+      enabled: adBlocker.enabled,
+      ruleCount: adBlocker.getRuleCount(),
+    };
+  });
+
+  // Ad blocker: import uBlock Origin filter list from file
+  ipcMain.handle('adblocker:import-ublock-list', async (_, filePath: string) => {
+    const count = await adBlocker.importUblockList(filePath);
+    return { imported: count, total: adBlocker.getRuleCount() };
   });
 }

@@ -7,6 +7,8 @@ export interface ExposedApi {
   openDialog: (options: any) => Promise<any>;
   getAppVersion: () => Promise<string>;
   toggleAdBlocker: (enabled: boolean) => Promise<void>;
+  getAdBlockerStatus: () => Promise<any>;
+  importUblockList: (filePath: string) => Promise<any>;
   getBoosts: () => Promise<any[]>;
   saveBoost: (boost: any) => Promise<void>;
   deleteBoost: (id: string) => Promise<void>;
@@ -23,6 +25,8 @@ export const exposedApi: ExposedApi = {
   openDialog: async () => Promise.resolve({}),
   getAppVersion: async () => '0.1.0',
   toggleAdBlocker: async () => {},
+  getAdBlockerStatus: async () => ({ enabled: true, ruleCount: 0 }),
+  importUblockList: async () => ({ imported: 0, total: 0 }),
   getBoosts: async () => [],
   saveBoost: async () => {},
   deleteBoost: async () => {},
