@@ -4,7 +4,7 @@ import { useProfileStore } from '../stores/profiles';
 import { useSpaceStore } from '../stores/spaces';
 import { useTabStore } from '../stores/tabs';
 import { useEssentialsStore } from '../stores/essentials';
-import { DEFAULT_PROFILE } from '../lib/profiles';
+import { DEFAULT_PROFILE } from '../../shared/profiles';
 
 export default function ProfilesWorkspacesSettings() {
   const profiles = useProfileStore((state) => state.profiles);
@@ -55,12 +55,22 @@ export default function ProfilesWorkspacesSettings() {
     setNotice(`Workspace and its tabs were moved to “${spaces.find((space) => space.id === destinationId)?.name || 'the selected workspace'}”.`);
   };
 
-  const confirmDeleteProfile = () => {
+  const confirmDeleteProfile = async () => {
     if (!activeProfileDelete || !defaultProfile || activeProfileDelete.id === defaultProfile.id) return;
+    try {
+      const result = await window.orbApi?.clearProfileData(activeProfileDelete.id);
+      if (!result?.cleared) {
+        setNotice('Could not remove profile site data. The profile was kept.');
+        return;
+      }
+    } catch {
+      setNotice('Could not remove profile site data. The profile was kept.');
+      return;
+    }
     spaces.filter((space) => space.profileId === activeProfileDelete.id).forEach((space) => updateSpace(space.id, { profileId: defaultProfile.id }));
     removeProfile(activeProfileDelete.id);
     setPendingProfileDelete(null);
-    setNotice(`Workspaces were moved to ${defaultProfile.name}; profile data remains on disk but is no longer used.`);
+    setNotice(`Workspaces were moved to ${defaultProfile.name}; profile cookies, cache, and site storage were cleared.`);
   };
 
   return (
@@ -120,7 +130,7 @@ export default function ProfilesWorkspacesSettings() {
       {activeProfileDelete && defaultProfile && <div role="dialog" aria-modal="true" aria-label="Confirm profile deletion" className="orb-elevated fixed inset-0 z-[60] flex items-center justify-center bg-stone-950/25 p-6">
         <div className="orb-surface w-full max-w-sm rounded-xl border orb-border p-5 shadow-xl">
           <h3 className="orb-strong text-sm font-semibold">Delete {activeProfileDelete.name}?</h3>
-          <p className="orb-muted mt-2 text-xs leading-5">Move its {spaces.filter((space) => space.profileId === activeProfileDelete.id).length} assigned workspaces to {defaultProfile.name}. Profile site data is not erased.</p>
+          <p className="orb-muted mt-2 text-xs leading-5">Move its {spaces.filter((space) => space.profileId === activeProfileDelete.id).length} assigned workspaces to {defaultProfile.name}, then permanently clear this profile’s cookies, cache, and site storage.</p>
           <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setPendingProfileDelete(null)} className="orb-control rounded-md px-3 py-2 text-xs">Cancel</button><button type="button" onClick={confirmDeleteProfile} className="orb-accent-bg flex items-center gap-1 rounded-md px-3 py-2 text-xs text-white"><Check className="h-3.5 w-3.5" /> Move workspaces & delete</button></div>
         </div>
       </div>}

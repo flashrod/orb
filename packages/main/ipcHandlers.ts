@@ -1,9 +1,10 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow, session } from 'electron';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
+import { profilePartition } from '../shared/profiles';
 
 export function registerIpcHandlers(): void {
   // Get window by webContents ID
@@ -40,6 +41,16 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('window:minimize-current', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.minimize();
+  });
+
+  ipcMain.handle('profile:clear-data', async (_event, profileId: string) => {
+    if (typeof profileId !== 'string' || profileId === 'default' || !/^[a-z0-9_-]{1,96}$/i.test(profileId)) {
+      return { cleared: false };
+    }
+    const profileSession = session.fromPartition(profilePartition(profileId));
+    await profileSession.clearStorageData();
+    await profileSession.clearCache();
+    return { cleared: true };
   });
 
   // Focus window

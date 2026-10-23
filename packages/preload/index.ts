@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('orbApi', {
   toggleDevTools: () => ipcRenderer.invoke('window:toggle-devtools'),
   minimizeCurrentWindow: () => ipcRenderer.invoke('window:minimize-current'),
   focusWindow: (webContentsId: number) => ipcRenderer.invoke('window:focus', webContentsId),
+  clearProfileData: (profileId: string) => ipcRenderer.invoke('profile:clear-data', profileId),
 
   // Dialogs
   saveDialog: (options: any) => ipcRenderer.invoke('dialog:save', options),
@@ -58,6 +59,7 @@ declare global {
       toggleDevTools: () => Promise<void>;
       minimizeCurrentWindow: () => Promise<void>;
       focusWindow: (webContentsId: number) => Promise<void>;
+      clearProfileData: (profileId: string) => Promise<{ cleared: boolean }>;
       saveDialog: (options: any) => Promise<any>;
       openDialog: (options: any) => Promise<any>;
       getAppVersion: () => Promise<string>;

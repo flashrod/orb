@@ -9,6 +9,7 @@ export interface ExposedApi {
   toggleDevTools: () => Promise<void>;
   minimizeCurrentWindow: () => Promise<void>;
   focusWindow: (webContentsId: number) => Promise<void>;
+  clearProfileData: (profileId: string) => Promise<{ cleared: boolean }>;
   saveDialog: (options: any) => Promise<any>;
   openDialog: (options: any) => Promise<any>;
   getAppVersion: () => Promise<string>;
@@ -35,6 +36,7 @@ export const exposedApi: ExposedApi = {
   toggleDevTools: async () => {},
   minimizeCurrentWindow: async () => {},
   focusWindow: async () => {},
+  clearProfileData: async () => ({ cleared: true }),
   saveDialog: async () => Promise.resolve({}),
   openDialog: async () => Promise.resolve({}),
   getAppVersion: async () => '0.1.0',
