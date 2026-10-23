@@ -1,7 +1,6 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "rootDirectory": "website",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "devCommand": "npm run dev"
