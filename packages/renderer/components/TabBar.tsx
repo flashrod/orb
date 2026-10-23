@@ -3,6 +3,8 @@ import { Globe, Plus, X } from '@phosphor-icons/react';
 import { useTabStore } from '../stores/tabs';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
+import { chooseSplitPair } from '../lib/splitView';
+import { useSplitViewStore } from '../stores/splitView';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -86,10 +88,15 @@ export default function TabBar({
           title={tab.title || getHostname(tab.url)}
           isPinned={tab.isPinned}
           canReload={activeTabId === tab.id}
+          canSplit={displayTabs.length > 1}
           canCloseOthers={closeOthers.length > 0}
           canCloseToRight={closeRight.length > 0}
           onNewTab={() => handleNewTab(tab.id)}
           onReload={onReload}
+          onSplitView={() => {
+            const pair = activeTabId ? chooseSplitPair(activeTabId, tab.id, displayTabs.map((item) => item.id)) : null;
+            if (pair) useSplitViewStore.getState().open(pair);
+          }}
           onDuplicate={() => addTab({ spaceId: activeSpaceId, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: tab.isPinned, isActive: true })}
           onTogglePinned={() => updateTab(tab.id, { isPinned: !tab.isPinned })}
           onCloseTab={() => closeTab(tab.id)}

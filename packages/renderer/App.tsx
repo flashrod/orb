@@ -3,6 +3,8 @@ import { useSpaceStore } from './stores/spaces';
 import { useProfileStore } from './stores/profiles';
 import { resolveSpaceProfile } from './lib/profiles';
 import { useTabStore } from './stores/tabs';
+import type { Tab } from './stores/tabs';
+import { useSplitViewStore } from './stores/splitView';
 import TabBar from './components/TabBar';
 import CommandBar from './components/CommandBar';
 import BrowserToolbar from './components/BrowserToolbar';
@@ -14,6 +16,7 @@ import StartPage from './components/StartPage';
 import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
+import { ArrowsLeftRight, X } from '@phosphor-icons/react';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -24,16 +27,30 @@ export default function App() {
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
   const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
+  const [resizingSplit, setResizingSplit] = useState(false);
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
+  const splitTabIds = useSplitViewStore((state) => state.tabIds);
+  const splitRatio = useSplitViewStore((state) => state.ratio);
+  const activePane = useSplitViewStore((state) => state.activePane);
+  const focusSplitPane = useSplitViewStore((state) => state.focusPane);
+  const replaceSplitTab = useSplitViewStore((state) => state.replaceActiveTab);
+  const setSplitRatio = useSplitViewStore((state) => state.setRatio);
+  const closeSplit = useSplitViewStore((state) => state.close);
+  const swapSplit = useSplitViewStore((state) => state.swap);
   const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, customColors, setTabLayout } = useAppearanceStore();
 
-  const webviewRef = useRef<any>(null);
+  const webviewRefs = useRef<Record<string, any>>({});
+  const splitAreaRef = useRef<HTMLDivElement | null>(null);
+  const getActiveWebView = useCallback(() => {
+    const selectedId = useTabStore.getState().activeTabId;
+    return selectedId ? webviewRefs.current[selectedId] : null;
+  }, []);
 
-  const navigateBack = useCallback(() => webviewRef.current?.navigateBack(), []);
-  const navigateForward = useCallback(() => webviewRef.current?.navigateForward(), []);
-  const navigateReload = useCallback(() => webviewRef.current?.navigateReload(), []);
+  const navigateBack = useCallback(() => getActiveWebView()?.navigateBack(), [getActiveWebView]);
+  const navigateForward = useCallback(() => getActiveWebView()?.navigateForward(), [getActiveWebView]);
+  const navigateReload = useCallback(() => getActiveWebView()?.navigateReload(), [getActiveWebView]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -79,6 +96,35 @@ export default function App() {
       setActiveTab(tabsInSpace[tabsInSpace.length - 1].id);
     }
   }, [activeSpaceId, tabs, activeTabId, setActiveTab]);
+
+  useEffect(() => {
+    if (!splitTabIds) return;
+    if (splitTabIds[0] === splitTabIds[1] || splitTabIds.some((id) => !tabs.some((tab) => tab.id === id))) {
+      closeSplit();
+      return;
+    }
+    if (activeTabId && splitTabIds.includes(activeTabId)) {
+      focusSplitPane(splitTabIds[0] === activeTabId ? 0 : 1);
+    } else if (activeTabId) {
+      replaceSplitTab(activeTabId);
+    }
+  }, [splitTabIds, tabs, activeTabId, closeSplit, focusSplitPane, replaceSplitTab]);
+
+  useEffect(() => {
+    if (!resizingSplit) return;
+    const moveDivider = (event: PointerEvent) => {
+      const bounds = splitAreaRef.current?.getBoundingClientRect();
+      if (!bounds || bounds.width <= 0) return;
+      setSplitRatio((event.clientX - bounds.left) / bounds.width);
+    };
+    const stopDivider = () => setResizingSplit(false);
+    window.addEventListener('pointermove', moveDivider);
+    window.addEventListener('pointerup', stopDivider, { once: true });
+    return () => {
+      window.removeEventListener('pointermove', moveDivider);
+      window.removeEventListener('pointerup', stopDivider);
+    };
+  }, [resizingSplit, setSplitRatio]);
 
   // Closing the final tab minimizes the window. Recreate the next tab when the
   // user brings Orb back, matching the macOS browser workflow without quitting.
@@ -207,7 +253,7 @@ export default function App() {
     setPickerBusy(true);
     setPickerNotice('Move over an element and click to create a hide rule. Press Esc to cancel.');
     try {
-      const selection = await webviewRef.current?.pickElement();
+      const selection = await getActiveWebView()?.pickElement();
       if (!selection) {
         setPickerNotice('Element picker closed.');
         return;
@@ -224,13 +270,43 @@ export default function App() {
       }
       const error = useBoostStore.getState().error;
       if (error) throw new Error(error);
-      await webviewRef.current?.applyCSS(rule);
+      await getActiveWebView()?.applyCSS(rule);
       setPickerNotice(`Saved and hid “${selection.label || selection.selector}” on ${hostname}.`);
     } catch (error) {
       setPickerNotice(error instanceof Error ? error.message : 'Could not save this Boost.');
     } finally {
       setPickerBusy(false);
     }
+  };
+
+  const renderTabPage = (tab: Tab) => {
+    const pageSpace = spaces.find((space) => space.id === tab.spaceId);
+    const pageProfile = resolveSpaceProfile(pageSpace?.profileId, profiles);
+    const pageTabCount = tabs.filter((item) => item.spaceId === tab.spaceId).length;
+    if (tab.url === 'about:blank') {
+      return showStartPage
+        ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} tabCount={pageTabCount} onNavigate={handleNavigate} />
+        : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />;
+    }
+    return <WebView
+      key={`${tab.id}:${pageProfile.id}`}
+      ref={(instance) => { if (instance) webviewRefs.current[tab.id] = instance; else delete webviewRefs.current[tab.id]; }}
+      tabId={tab.id}
+      url={tab.url}
+      spaceId={tab.spaceId}
+      profileId={pageProfile.id}
+      onUrlChange={(url) => updateTab(tab.id, { url })}
+      onTitleChange={(title) => updateTab(tab.id, { title })}
+      onFaviconChange={(favicon) => updateTab(tab.id, { favicon })}
+      onLoadingChange={() => {}}
+    />;
+  };
+
+  const splitTabs = splitTabIds?.map((id) => tabs.find((tab) => tab.id === id) || null) || null;
+  const focusPane = (pane: 0 | 1) => {
+    const tabId = splitTabIds?.[pane];
+    focusSplitPane(pane);
+    if (tabId) setActiveTab(tabId);
   };
 
   useEffect(() => {
@@ -277,27 +353,30 @@ export default function App() {
 
         {/* Web Content */}
         <div className="orb-frame relative flex-1 overflow-hidden">
-          {!activeTab || activeTab.url === 'about:blank' ? (
-            showStartPage ? <StartPage
-              spaceName={activeSpace?.name || 'Personal'}
-              spaceId={activeSpaceId || activeSpace?.id || ''}
-              tabCount={spaceTabs.length}
-              onNavigate={handleNavigate}
-            /> : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />
-          ) : activeTabId ? (
-            <WebView
-              key={`${activeTabId}:${activeProfile.id}`}
-              ref={webviewRef}
-              tabId={activeTabId}
-              url={activeTab?.url || ''}
-              spaceId={activeSpaceId || ''}
-              profileId={activeProfile.id}
-              onUrlChange={(url) => updateTab(activeTabId, { url })}
-              onTitleChange={(title) => updateTab(activeTabId, { title })}
-              onFaviconChange={(favicon) => updateTab(activeTabId, { favicon })}
-              onLoadingChange={() => {}}
-            />
-          ) : (
+          {splitTabs?.[0] && splitTabs[1] ? <>
+            <div ref={splitAreaRef} className="absolute inset-0 grid" style={{ gridTemplateColumns: `minmax(0, ${splitRatio}fr) 8px minmax(0, ${1 - splitRatio}fr)` }}>
+              {[0, 1].map((pane) => {
+                const tab = splitTabs[pane];
+                if (!tab) return null;
+                return <React.Fragment key={pane}>
+                  {pane === 1 && <div role="separator" aria-label="Resize split view" aria-orientation="vertical" tabIndex={0}
+                    onPointerDown={(event) => { event.preventDefault(); setResizingSplit(true); }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                      event.preventDefault(); setSplitRatio(splitRatio + (event.key === 'ArrowLeft' ? -0.025 : 0.025));
+                    }}
+                    className={`orb-border relative z-10 cursor-col-resize border-x ${resizingSplit ? 'bg-[var(--orb-accent-soft)]' : 'bg-[var(--orb-border)] hover:bg-[var(--orb-accent)]'}`} />}
+                  <div onPointerDownCapture={() => focusPane(pane as 0 | 1)} className={`relative min-w-0 overflow-hidden ${activePane === pane ? 'ring-1 ring-inset ring-[var(--orb-accent)]' : ''}`}>
+                    {renderTabPage(tab)}
+                  </div>
+                </React.Fragment>;
+              })}
+            </div>
+            <div className="orb-elevated orb-shadow absolute right-3 top-3 z-20 flex items-center gap-1 rounded-lg border orb-border p-1">
+              <button type="button" aria-label="Swap split panes" title="Swap panes" onClick={swapSplit} className="orb-control flex h-7 w-7 items-center justify-center rounded"><ArrowsLeftRight className="h-3.5 w-3.5" /></button>
+              <button type="button" aria-label="Close split view" title="Close split view" onClick={closeSplit} className="orb-control flex h-7 w-7 items-center justify-center rounded"><X className="h-3.5 w-3.5" /></button>
+            </div>
+          </> : activeTab ? renderTabPage(activeTab) : (
             <div className="orb-muted absolute inset-0 flex flex-col items-center justify-center">
               <div className="orb-strong mb-2 text-2xl font-medium tracking-tight">Orb</div>
               <div className="text-sm">Open a tab or press ⌘K to find a space</div>

@@ -4,6 +4,8 @@ import { Globe, List, Plus, X } from '@phosphor-icons/react';
 import { getTabRailPresentation } from '../lib/tabRail';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
+import { chooseSplitPair } from '../lib/splitView';
+import { useSplitViewStore } from '../stores/splitView';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -121,10 +123,15 @@ export default function VerticalTabPanel({
       title={contextTab.title || getHostname(contextTab.url)}
       isPinned={contextTab.isPinned}
       canReload={activeTabId === contextTab.id}
+      canSplit={spaceTabs.length > 1}
       canCloseOthers={closeOthers.length > 0}
       canCloseToRight={closeRight.length > 0}
       onNewTab={() => handleNewTab(contextTab.id)}
       onReload={onReload}
+      onSplitView={() => {
+        const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, spaceTabs.map((item) => item.id)) : null;
+        if (pair) useSplitViewStore.getState().open(pair);
+      }}
       onDuplicate={() => addTab({ spaceId: contextTab.spaceId, url: contextTab.url, title: contextTab.title, favicon: contextTab.favicon, isPinned: contextTab.isPinned, isActive: true })}
       onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
       onCloseTab={() => closeTab(contextTab.id)}

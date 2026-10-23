@@ -39,7 +39,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 
 ### Tabs, folders, and bookmarks
 
-- [ ] **Real split view** — render two independent pages side by side, choose/swap either pane, resize the divider, and close a pane without losing its tab.
+- [x] **Real split view** — render two independent pages side by side, choose either pane, swap pages, resize the divider, and close the split without losing either tab.
 - [ ] **Tab organization** — group tabs into named folders, collapse groups, pin tabs, and search hundreds of tabs quickly. Drag reordering is shipped.
 - [ ] **Bookmark editing** — add a richer organizer for managing larger collections.
 - [x] **Bookmarks bar** — optional row below the address controls; drag to reorder/nest bookmarks and folders; hide/show from Settings.
