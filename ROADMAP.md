@@ -33,7 +33,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [x] **Profile model** — create, rename, switch, and delete profiles with separate persistent Chromium sessions for cookies, cache, and site storage. Permission isolation still needs its own settings/validation pass.
 - [x] **Space-to-profile assignment** — each workspace belongs to one profile; switching workspaces selects the corresponding profile session.
 - [x] **Workspace restore** — persist open tabs, their order, pinned state, selected tab, and restore them on restart.
-- [ ] **Essentials scope** — make pin scope explicit (profile-wide or workspace-specific), with migration from the current per-Space pins.
+- [x] **Essentials scope** — choose profile-wide or workspace-specific pins; existing per-workspace pins remain in their original workspace.
 - [x] **Workspace management** — rename, recolor, reorder, duplicate with tabs and Essentials, and move contents safely before deleting; keep changes across restarts.
 - [ ] **Sidebar context switcher** — quick profile/workspace switching, clear active state, keyboard access, and smooth show/hide behavior.
 

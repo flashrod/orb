@@ -293,7 +293,7 @@ export default function App() {
     const pageTabCount = tabs.filter((item) => item.spaceId === tab.spaceId).length;
     if (tab.url === 'about:blank') {
       return showStartPage
-        ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} tabCount={pageTabCount} onNavigate={handleNavigate} />
+        ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} profileId={pageProfile.id} tabCount={pageTabCount} onNavigate={handleNavigate} />
         : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />;
     }
     return <WebView

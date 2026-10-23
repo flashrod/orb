@@ -5,14 +5,17 @@ import { useSpaceStore } from '../stores/spaces';
 import { useTabStore } from '../stores/tabs';
 import { useEssentialsStore } from '../stores/essentials';
 import { DEFAULT_PROFILE } from '../../shared/profiles';
+import { useBrowserPreferencesStore } from '../stores/preferences';
 
 export default function ProfilesWorkspacesSettings() {
   const profiles = useProfileStore((state) => state.profiles);
   const { addProfile, renameProfile, recolorProfile, removeProfile } = useProfileStore();
   const { spaces, addSpace, updateSpace, removeSpace, reorderSpace } = useSpaceStore();
   const { tabs, addTab, moveTab } = useTabStore();
-  const { sites, addSite, moveSpaceSites } = useEssentialsStore();
+  const { sites, addSite, moveSpaceSites, moveProfileSites } = useEssentialsStore();
   const [profileName, setProfileName] = useState('');
+  const essentialsScope = useBrowserPreferencesStore((state) => state.essentialsScope);
+  const setEssentialsScope = useBrowserPreferencesStore((state) => state.setEssentialsScope);
   const [notice, setNotice] = useState('');
   const [pendingProfileDelete, setPendingProfileDelete] = useState<string | null>(null);
   const [profileNameDrafts, setProfileNameDrafts] = useState<Record<string, string>>({});
@@ -39,7 +42,7 @@ export default function ProfilesWorkspacesSettings() {
     if (!copy) return;
     const sourceTabs = useTabStore.getState().tabs.filter((tab) => tab.spaceId === source.id);
     sourceTabs.forEach((tab) => addTab({ spaceId: copy.id, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: tab.isPinned, isActive: false }));
-    useEssentialsStore.getState().sites.filter((site) => site.spaceId === source.id).forEach((site) => addSite({ ...site, spaceId: copy.id }));
+    useEssentialsStore.getState().sites.filter((site) => site.spaceId === source.id && site.scope !== 'profile').forEach((site) => addSite({ ...site, spaceId: copy.id }));
     setNotice(`“${source.name}” was duplicated with its tabs and Essentials.`);
   };
 
@@ -68,6 +71,7 @@ export default function ProfilesWorkspacesSettings() {
       return;
     }
     spaces.filter((space) => space.profileId === activeProfileDelete.id).forEach((space) => updateSpace(space.id, { profileId: defaultProfile.id }));
+    moveProfileSites(activeProfileDelete.id, defaultProfile.id);
     removeProfile(activeProfileDelete.id);
     setPendingProfileDelete(null);
     setNotice(`Workspaces were moved to ${defaultProfile.name}; profile cookies, cache, and site storage were cleared.`);
@@ -97,6 +101,13 @@ export default function ProfilesWorkspacesSettings() {
               {profile.id === defaultProfile?.id ? <span className="orb-muted rounded border orb-border px-2 py-1 text-[10px]">Default</span> : <button type="button" aria-label={`Delete ${profile.name} profile`} onClick={() => setPendingProfileDelete(profile.id)} className="orb-control flex h-7 w-7 items-center justify-center rounded"><Trash className="h-3.5 w-3.5" /></button>}
             </div>;
           })}
+        </div>
+      </section>
+
+      <section className="border-t orb-border pt-6">
+        <div className="mb-4"><h2 className="orb-strong text-sm font-semibold">Essentials scope</h2><p className="orb-muted mt-1 text-xs">Choose whether new Essentials stay with one workspace or appear in every workspace using the same profile. Existing pins remain workspace-scoped.</p></div>
+        <div role="radiogroup" aria-label="Essentials scope" className="grid grid-cols-2 gap-2">
+          {(['workspace', 'profile'] as const).map((scope) => <button key={scope} type="button" role="radio" aria-checked={scope === essentialsScope} onClick={() => setEssentialsScope(scope)} className={`rounded-md border px-3 py-2 text-left text-xs ${scope === essentialsScope ? 'orb-accent-soft orb-accent border-[var(--orb-accent)]' : 'orb-control orb-border'}`}>{scope === 'workspace' ? 'This workspace' : 'All workspaces in profile'}</button>)}
         </div>
       </section>
 

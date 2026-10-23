@@ -3,6 +3,7 @@ import { ArrowUpRight, Command, Globe, SquaresFour, Plus, MagnifyingGlass, Spark
 import { useEssentialsStore } from '../stores/essentials';
 import { resolveAddressOrSearch, resolveWebsiteAddress } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
+import { filterEssentialsForContext } from '../lib/essentials';
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
@@ -11,11 +12,13 @@ function formatDate(date: Date): string {
 export default function StartPage({
   spaceName,
   spaceId,
+  profileId,
   tabCount,
   onNavigate,
 }: {
   spaceName: string;
   spaceId: string;
+  profileId: string;
   tabCount: number;
   onNavigate: (url: string) => void;
 }) {
@@ -24,11 +27,12 @@ export default function StartPage({
   const [siteName, setSiteName] = useState('');
   const [siteUrl, setSiteUrl] = useState('');
   const [siteError, setSiteError] = useState('');
-  const sites = useEssentialsStore((state) => state.sites.filter((site) => site.spaceId === spaceId));
+  const allSites = useEssentialsStore((state) => state.sites);
   const addSite = useEssentialsStore((state) => state.addSite);
   const removeSite = useEssentialsStore((state) => state.removeSite);
   const date = useMemo(() => formatDate(new Date()), []);
-  const searchProvider = useBrowserPreferencesStore((state) => state.searchProvider);
+  const { searchProvider, essentialsScope } = useBrowserPreferencesStore();
+  const sites = filterEssentialsForContext(allSites, essentialsScope, spaceId, profileId);
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
@@ -44,7 +48,7 @@ export default function StartPage({
       return;
     }
     const title = siteName.trim() || new URL(url).hostname;
-    addSite({ spaceId, title, url });
+    addSite({ spaceId, profileId, scope: essentialsScope, title, url });
     setSiteName('');
     setSiteUrl('');
     setSiteError('');
