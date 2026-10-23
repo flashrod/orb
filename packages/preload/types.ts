@@ -9,6 +9,8 @@ export interface ExposedApi {
   toggleAdBlocker: (enabled: boolean) => Promise<void>;
   getAdBlockerStatus: () => Promise<any>;
   importUblockList: (filePath: string) => Promise<any>;
+  toggleTrackerBlocking: (enabled: boolean) => Promise<void>;
+  getTrackerBlockingStatus: () => Promise<any>;
   getBoosts: () => Promise<any[]>;
   saveBoost: (boost: any) => Promise<void>;
   deleteBoost: (id: string) => Promise<void>;
@@ -27,6 +29,11 @@ export const exposedApi: ExposedApi = {
   toggleAdBlocker: async () => {},
   getAdBlockerStatus: async () => ({ enabled: true, ruleCount: 0 }),
   importUblockList: async () => ({ imported: 0, total: 0 }),
+  toggleTrackerBlocking: async () => {},
+  getTrackerBlockingStatus: async () => ({
+    trackerBlockingEnabled: true,
+    trackerRuleCount: 0,
+  }),
   getBoosts: async () => [],
   saveBoost: async () => {},
   deleteBoost: async () => {},

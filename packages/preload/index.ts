@@ -25,6 +25,12 @@ contextBridge.exposeInMainWorld('orbApi', {
   importUblockList: (filePath: string) =>
     ipcRenderer.invoke('adblocker:import-ublock-list', filePath),
 
+  // Tracker blocking
+  toggleTrackerBlocking: (enabled: boolean) =>
+    ipcRenderer.invoke('adblocker:set-tracker-blocking', enabled),
+  getTrackerBlockingStatus: () =>
+    ipcRenderer.invoke('adblocker:get-tracker-status'),
+
   // Boosts
   getBoosts: () => ipcRenderer.invoke('boosts:get-all'),
   saveBoost: (boost: any) => ipcRenderer.invoke('boosts:save', boost),

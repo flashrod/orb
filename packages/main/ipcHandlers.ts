@@ -60,6 +60,20 @@ export function registerIpcHandlers(): void {
     };
   });
 
+  // Tracker blocking: toggle
+  ipcMain.handle('adblocker:set-tracker-blocking', (_, enabled: boolean) => {
+    adBlocker.setTrackerBlocking(enabled);
+    return { trackerBlockingEnabled: adBlocker.trackerBlockingEnabled };
+  });
+
+  // Tracker blocking: get status
+  ipcMain.handle('adblocker:get-tracker-status', () => {
+    return {
+      trackerBlockingEnabled: adBlocker.trackerBlockingEnabled,
+      trackerRuleCount: adBlocker.getTrackerRuleCount(),
+    };
+  });
+
   // Ad blocker: import uBlock Origin filter list from file
   ipcMain.handle('adblocker:import-ublock-list', async (_, filePath: string) => {
     const count = await adBlocker.importUblockList(filePath);

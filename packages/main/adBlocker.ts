@@ -38,24 +38,34 @@ interface FilterRule {
 
 export class AdBlocker {
   private rules: FilterRule[] = [];
+  private trackerRules: FilterRule[] = [];
   enabled = true;
+  trackerBlockingEnabled = true;
 
-  async loadLists(urls: string[] = FILTER_LIST_SOURCES.map((s) => s.url)): Promise<void> {
-    const rules: FilterRule[] = [];
+  async loadLists(sources: typeof FILTER_LIST_SOURCES = FILTER_LIST_SOURCES): Promise<void> {
+    const adRules: FilterRule[] = [];
+    const trackerRules: FilterRule[] = [];
 
-    for (const url of urls) {
+    for (const source of sources) {
       try {
-        const response = await fetch(url);
+        const response = await fetch(source.url);
         const text = await response.text();
         const parsed = this.parseList(text);
-        rules.push(...parsed);
+        if (source.type === 'privacy' || source.type === 'cookies') {
+          trackerRules.push(...parsed);
+        } else {
+          adRules.push(...parsed);
+        }
       } catch (err) {
-        console.error(`[AdBlocker] Failed to load ${url}:`, err);
+        console.error(`[AdBlocker] Failed to load ${source.url}:`, err);
       }
     }
 
-    this.rules = rules;
-    console.log(`[AdBlocker] Loaded ${this.rules.length} filter rules`);
+    this.rules = adRules;
+    this.trackerRules = trackerRules;
+    console.log(
+      `[AdBlocker] Loaded ${this.rules.length} ad rules, ${this.trackerRules.length} tracker rules`
+    );
   }
 
   private parseList(text: string): FilterRule[] {
@@ -102,18 +112,35 @@ export class AdBlocker {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname;
-      const pathname = urlObj.pathname;
 
       for (const rule of this.rules) {
         if (rule.domain && hostname.includes(rule.domain)) {
           return true;
         }
-        if (!rule.domain) {
-          // Simple substring or regex match
-          const fullUrl = url;
-          if (fullUrl.includes(rule.pattern)) {
-            return true;
-          }
+        if (!rule.domain && url.includes(rule.pattern)) {
+          return true;
+        }
+      }
+    } catch {
+      // If URL parsing fails, don't block
+    }
+
+    return false;
+  }
+
+  shouldBlockTracker(url: string): boolean {
+    if (!this.trackerBlockingEnabled) return false;
+
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+
+      for (const rule of this.trackerRules) {
+        if (rule.domain && hostname.includes(rule.domain)) {
+          return true;
+        }
+        if (!rule.domain && url.includes(rule.pattern)) {
+          return true;
         }
       }
     } catch {
@@ -127,8 +154,16 @@ export class AdBlocker {
     this.enabled = enabled;
   }
 
+  setTrackerBlocking(enabled: boolean): void {
+    this.trackerBlockingEnabled = enabled;
+  }
+
   getRuleCount(): number {
     return this.rules.length;
+  }
+
+  getTrackerRuleCount(): number {
+    return this.trackerRules.length;
   }
 
   // Import uBlock Origin filter list from a local file path
@@ -152,7 +187,7 @@ export function initAdBlocker(ses: Electron.Session): void {
   // Load filter lists on startup
   adBlocker.loadLists();
 
-  // Intercept web requests
+  // Intercept web requests for ad blocking
   ses.webRequest.onBeforeRequest(
     {
       urls: ['<all_urls>'],
@@ -163,6 +198,49 @@ export function initAdBlocker(ses: Electron.Session): void {
       } else {
         callback({});
       }
+    }
+  );
+
+  // Intercept web requests for tracker blocking
+  ses.webRequest.onBeforeRequest(
+    {
+      urls: ['<all_urls>'],
+    },
+    (details, callback) => {
+      if (adBlocker.shouldBlockTracker(details.url)) {
+        callback({ cancel: true });
+      } else {
+        callback({});
+      }
+    }
+  );
+
+  // Fingerprinting protection: strip/modify identifying headers
+  ses.webRequest.onBeforeSendHeaders(
+    {
+      urls: ['<all_urls>'],
+    },
+    (details, callback) => {
+      const headers = { ...(details.requestHeaders || {}) };
+
+      // Remove or neutralize fingerprinting headers
+      delete headers['Sec-CH-UA'];
+      delete headers['Sec-CH-UA-Platform'];
+      delete headers['Sec-CH-UA-Mobile'];
+      delete headers['Sec-CH-UA-Model'];
+      delete headers['Sec-CH-UA-Full-Version'];
+      delete headers['Sec-CH-UA-Arch'];
+      delete headers['Sec-CH-UA-Bitness'];
+      delete headers['Sec-CH-UA-Full-Version-List'];
+      delete headers['X-Client-Data'];
+      delete headers['X-Requested-With'];
+
+      // Reduce Accept-Language granularity
+      if (headers['Accept-Language']) {
+        headers['Accept-Language'] = headers['Accept-Language'].toString().split(',')[0];
+      }
+
+      callback({ requestHeaders: headers });
     }
   );
 }
