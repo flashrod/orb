@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 
 export default function Waitlist() {
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -24,9 +23,13 @@ export default function Waitlist() {
   };
 
   return (
-    <section id="waitlist" className="bg-orb-accent section-padding">
+    <section id="waitlist" className="bg-orb-accent section-padding border-t border-[var(--orb-accent)]">
       <div className="container-max reveal text-center">
-        <h2 className="text-4xl md:text-5xl font-serif font-semibold text-white mb-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-white/10 text-white text-[10px] font-medium mb-6">
+          <span className="w-1.5 h-1.5 rounded bg-current animate-pulse"></span>
+          Limited beta spots
+        </div>
+        <h2 className="text-4xl md:text-5xl font-serif font-semibold text-white mb-4">
           Join the waitlist
         </h2>
         <p className="text-white/80 text-lg mb-10 max-w-lg mx-auto leading-relaxed">
@@ -53,8 +56,11 @@ export default function Waitlist() {
           <p className="mt-4 text-sm text-white/70">Thanks&mdash;we&rsquo;ll email you when the beta opens.</p>
         )}
         {status === 'error' && (
-          <p className="mt-4 text-sm text-white/70">Something went wrong. Try again.</p>
+          <p className="mt-4 text-sm text-sm text-white/70">Something went wrong. Try again.</p>
         )}
+        <div className="mt-8 text-[10px] text-white/40 uppercase tracking-widest">
+          Orb is open source. No tracking, no telemetry, no accounts.
+        </div>
       </div>
     </section>
   );

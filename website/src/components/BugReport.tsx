@@ -6,7 +6,7 @@ export default function BugReport() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section className="section-padding">
+    <section className="section-padding border-t border-orb-border">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
         <div className="flex flex-col md:flex-row items-center gap-8">
           <div className="md:w-1/2">
@@ -26,24 +26,24 @@ export default function BugReport() {
             </a>
           </div>
           <div className="md:w-1/2 p-8 rounded-lg border border-orb-border bg-orb-surface">
-            <h4 className="text-sm font-semibold text-orb-text-strong mb-4 uppercase tracking-widest">
+            <h4 className="text-sm font-semibold text-orb-text-strong mb-3 uppercase tracking-widest">
               What to include
             </h4>
             <ul className="space-y-3 text-sm text-orb-text">
               <li className="flex items-start gap-2">
-                <span className="text-orb-accent">&bull;</span> Steps to reproduce
+                <span className="text-orb-accent">•</span> Steps to reproduce
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-orb-accent">&bull;</span> What you expected vs what happened
+                <span className="text-orb-accent">•</span> What you expected vs what happened
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-orb-accent">&bull;</span> macOS version and Orb build
+                <span className="text-orb-accent">•</span> macOS version and Orb build
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-orb-accent">&bull;</span> Screenshot or screen recording
+                <span className="text-orb-accent">•</span> Screenshot or screen recording
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-orb-accent">&bull;</span> Whether it happens in a specific Space or profile
+                <span className="text-orb-accent">•</span> Whether it happens in a specific Space or profile
               </li>
             </ul>
           </div>

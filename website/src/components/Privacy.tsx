@@ -1,12 +1,13 @@
 'use client';
 
 import { useScrollReveal } from '@/lib/useScrollReveal';
-import { Eye, Link as LinkIcon, Globe, Shield } from '@phosphor-icons/react';
+import { Eye, Link as LinkIcon, Globe, Shield, Lock, Bug } from '@phosphor-icons/react';
 
 type PrivacyItem = {
   icon: React.ElementType;
   title: string;
   description: string;
+  details?: string[];
 };
 
 const privacyItems: PrivacyItem[] = [
@@ -14,25 +15,48 @@ const privacyItems: PrivacyItem[] = [
     icon: Eye,
     title: 'Ad + tracker blocking',
     description:
-      'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch. Blocked requests are logged so you can see what was stopped.',
+      'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch. 60k+ network rules, 56k+ tracker rules, 28k+ cosmetic rules.',
+    details: [
+      'Network rules: `||domain.com^` with `$options`, `$domain=`, and `~domain=` modifiers',
+      'Cosmetic rules: `##selector` and `##+regex` element hiding',
+      'Allowlist: `@@` exceptions per domain',
+      'Blocked-request audit log with reason and rule match',
+    ],
   },
   {
-    icon: LinkIcon,
+    icon: Lock,
     title: 'Third-party cookies',
     description:
-      'Blocked by default. Built-in exceptions for common login and payment providers, plus a one-click toggle per site.',
+      'Blocked by default with built-in exceptions for common login and payment providers.',
+    details: [
+      'Default-deny for third-party Cookie and Set-Cookie headers',
+      'Built-in exceptions for SSO and payment providers',
+      'One-click "this site is broken" toggle remembers per site',
+      'Permission handler prompts before granting sensitive access',
+    ],
+  },
+  {
+    icon: Bug,
+    title: 'Fingerprinting protection',
+    description:
+      'Client-hint headers stripped or normalized to low-entropy values.',
+    details: [
+      'Strips Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version',
+      'Strips X-Client-Data, X-Requested-With',
+      'Accept-Language trimmed to first entry',
+      'Consistent fingerprint across sessions — no randomized entropy',
+    ],
   },
   {
     icon: Globe,
-    title: 'Fingerprinting protection',
-    description:
-      'Client-hint headers stripped. Consistent low-entropy values keep your browser fingerprint generic.',
-  },
-  {
-    icon: Shield,
     title: 'HTTPS-only mode',
     description:
-      'HTTP is upgraded to HTTPS automatically, with clean fallbacks and per-site exceptions.',
+      'HTTP is upgraded to HTTPS automatically with clean fallbacks.',
+    details: [
+      'HTTP → HTTPS redirect via redirectURL on all navigations',
+      'Per-site exceptions for legacy HTTP-only sites',
+      'Clear insecure indicator in address bar',
+    ],
   },
 ];
 
@@ -40,29 +64,48 @@ export default function Privacy() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section id="privacy" className="section-padding">
+    <section id="privacy" className="bg-orb-canvas section-padding border-t border-orb-border">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl mb-4">Privacy that isn't slop</h2>
+        <div className="text-center mb-6">
+          <h2 className="text-4xl md:text-5xl mb-3">Privacy that isn't slop</h2>
           <p className="text-orb-text max-w-2xl mx-auto">
             Most browsers treat privacy as a toggle. Orb treats it as the default.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4">
           {privacyItems.map((item, i) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="card reveal" style={{ animationDelay: `${i * 80}ms` }}>
-                <div className="flex items-center gap-2 mb-4">
+              <div key={item.title} className="card reveal" style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
                     <Icon size={20} weight="bold" />
                   </div>
-                  <h4 className="text-sm font-semibold text-orb-text-strong">{item.title}</h4>
+                  <h4 className="text-lg font-semibold">{item.title}</h4>
                 </div>
-                <p className="text-sm text-orb-text">{item.description}</p>
+                <p className="text-sm text-orb-text mb-3 leading-relaxed">{item.description}</p>
+                {item.details && (
+                  <ul className="text-[11px] text-orb-text-muted space-y-1.5">
+                    {item.details.map((d, j) => (
+                      <li key={j} className="flex items-start gap-1.5">
+                        <span className="text-orb-accent">•</span> {d}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             );
           })}
+        </div>
+        <div className="mt-8 pt-8 border-t border-orb-border">
+          <h4 className="text-sm font-semibold text-orb-text-strong mb-3 uppercase tracking-widest">
+            The rule
+          </h4>
+          <p className="text-sm text-orb-text leading-relaxed">
+            We never claim a privacy feature until it changes runtime behavior. No hardcoded slop,
+            no marketing toggles that do nothing. If a rule is in the list, it is enforced on every
+            request.
+          </p>
         </div>
       </div>
     </section>
