@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 
 
 export default function AddressBar({
@@ -9,11 +9,11 @@ export default function AddressBar({
   activeTab: { url: string; title: string } | undefined;
   onNavigate?: (url: string) => void;
 }) {
-  const [url, setUrl] = React.useState(activeTab?.url || '');
+  const [url, setUrl] = React.useState(activeTab?.url === 'about:blank' ? '' : activeTab?.url || '');
   const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
-    setUrl(activeTab?.url || '');
+    setUrl(activeTab?.url === 'about:blank' ? '' : activeTab?.url || '');
   }, [activeTab?.url]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ export default function AddressBar({
     const input = url.trim();
     if (!input) return;
 
-    const looksLikeAddress = /^(localhost|[\w-]+\.)+[a-z]{2,}(:\d+)?([/?#].*)?$/i.test(input);
+    const looksLikeAddress = /^(localhost(:\d+)?|([\w-]+\.)+[a-z]{2,}(:\d+)?)([/?#].*)?$/i.test(input);
     const finalUrl = input.includes('://')
       ? input
       : looksLikeAddress
@@ -32,9 +32,9 @@ export default function AddressBar({
   };
 
   return (
-    <div className="flex h-10 items-center border-b border-stone-200 bg-stone-100/80 px-3">
+    <div className="orb-address orb-surface flex shrink-0 items-center border-b orb-border px-3">
       <div className="relative flex-1">
-        <Search aria-hidden="true" className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
+        <MagnifyingGlass aria-hidden="true" className="orb-muted absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
         <form
           onSubmit={handleSubmit}
           className="w-full"
@@ -47,14 +47,14 @@ export default function AddressBar({
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="Search or type address"
-            className="w-full rounded-md border border-transparent bg-transparent py-1.5 pl-9 pr-4 text-[13px] text-stone-800 outline-none transition-colors placeholder:text-stone-400 focus:border-stone-300 focus:bg-white focus:shadow-sm"
+            className="orb-strong orb-placeholder w-full rounded-md border border-transparent bg-transparent py-1.5 pl-9 pr-4 text-[13px] outline-none transition-colors focus:border-[var(--orb-border-strong)] focus:bg-[var(--orb-elevated)] focus:shadow-sm"
             autoComplete="off"
           />
         </form>
         {focused && (
-          <div className="absolute left-0 right-0 top-full mt-1 rounded-md border border-stone-200 bg-white py-2 shadow-sm">
-            <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-stone-500">
-              <Search aria-hidden="true" className="h-3.5 w-3.5" />
+          <div className="orb-elevated orb-shadow orb-strong absolute left-0 right-0 top-full mt-1 rounded-lg border orb-border py-2">
+            <div className="orb-muted flex items-center gap-2 px-3 py-1.5 text-xs">
+              <MagnifyingGlass aria-hidden="true" className="h-3.5 w-3.5" />
               <span>Search the web or enter a website</span>
             </div>
           </div>

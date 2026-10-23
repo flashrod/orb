@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Search, X, LogIn, Globe, LayoutDashboard, Plus } from 'lucide-react';
+import { MagnifyingGlass, X, SignIn, Globe, SquaresFour, Plus } from '@phosphor-icons/react';
 import { useTabStore } from '../stores/tabs';
 import { useSpaceStore } from '../stores/spaces';
 
@@ -16,8 +16,8 @@ interface CommandResult {
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   globe: Globe,
-  dashboard: LayoutDashboard,
-  search: Search,
+  dashboard: SquaresFour,
+  search: MagnifyingGlass,
   plus: Plus,
 };
 
@@ -72,11 +72,11 @@ export default function CommandBar({
           },
         },
         {
-          id: 'cmd-new-space',
+        id: 'cmd-new-space',
           type: 'command',
           title: 'New Space',
           subtitle: 'Create a new browsing space',
-          icon: getIcon('dashboard', 'w-4 h-4'),
+        icon: getIcon('dashboard', 'w-4 h-4'),
           action: () => {
             window.dispatchEvent(new CustomEvent('orb:new-space'));
             onClose();
@@ -188,19 +188,19 @@ export default function CommandBar({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-stone-900/20 px-4 pt-[14vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-stone-950/20 px-4 pt-[14vh] backdrop-blur-[3px]"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Orb command bar"
-        className="relative w-full max-w-xl overflow-hidden rounded-lg border border-stone-200 bg-stone-50 shadow-[0_16px_48px_rgba(41,37,36,0.16)]"
+        className="orb-command-enter orb-elevated orb-strong orb-shadow relative w-full max-w-xl overflow-hidden rounded-xl border orb-border"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-3">
-          <div className="relative mb-2 border-b border-stone-200 pb-2">
-            <Search aria-hidden="true" className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+          <div className="relative mb-2 border-b orb-border pb-2">
+            <MagnifyingGlass aria-hidden="true" className="orb-muted absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
             <input
               ref={inputRef}
               aria-label="Search tabs, spaces, or enter a URL"
@@ -209,14 +209,14 @@ export default function CommandBar({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search tabs, spaces, or type a URL..."
-              className="w-full bg-transparent py-2 pl-9 pr-9 text-sm text-stone-800 outline-none placeholder:text-stone-400"
+              className="orb-strong orb-placeholder w-full bg-transparent py-2 pl-9 pr-9 text-sm outline-none"
               autoComplete="off"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-stone-400 transition-colors hover:bg-stone-200 hover:text-stone-800"
+                className="orb-control absolute right-2 top-1/2 -translate-y-1/2 rounded p-1"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -225,7 +225,7 @@ export default function CommandBar({
 
           <div className="max-h-80 overflow-y-auto" role="listbox" aria-label="Command results">
             {results.length === 0 ? (
-              <div className="px-3 py-5 text-center text-sm text-stone-500">No matching tabs or spaces</div>
+              <div className="orb-muted px-3 py-5 text-center text-sm">No matching tabs or spaces</div>
             ) : (
               results.map((result, index) => (
                 <div
@@ -234,23 +234,23 @@ export default function CommandBar({
                   aria-selected={selectedIndex === index}
                   onClick={result.action}
                   className={`flex cursor-pointer items-center rounded-md px-3 py-2 transition-colors ${
-                    selectedIndex === index ? 'bg-stone-200/80' : 'hover:bg-stone-100'
+                    selectedIndex === index ? 'orb-accent-soft' : 'orb-control'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-stone-200/70 text-stone-600">
+                    <div className="orb-accent-soft orb-accent flex h-8 w-8 items-center justify-center rounded-md">
                       {result.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="truncate text-sm font-medium text-stone-800">
+                      <div className="orb-strong truncate text-sm font-medium">
                         {result.title}
                       </div>
-                      <div className="truncate text-xs text-stone-500">
+                      <div className="orb-muted truncate text-xs">
                         {result.subtitle}
                       </div>
                     </div>
-                    <div className="ml-auto pl-3 text-stone-400">
-                      {index === 0 && <LogIn aria-hidden="true" className="h-3.5 w-3.5" />}
+                    <div className="orb-muted ml-auto pl-3">
+                      {index === 0 && <SignIn aria-hidden="true" className="h-3.5 w-3.5" />}
                     </div>
                   </div>
                 </div>
@@ -258,10 +258,10 @@ export default function CommandBar({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-4 border-t border-stone-200 px-4 py-2 text-[11px] text-stone-400">
-          <span><kbd className="font-medium text-stone-500">↑ ↓</kbd> Navigate</span>
-          <span><kbd className="font-medium text-stone-500">↵</kbd> Open</span>
-          <span><kbd className="font-medium text-stone-500">Esc</kbd> Close</span>
+        <div className="orb-muted flex items-center gap-4 border-t orb-border px-4 py-2 text-[11px]">
+          <span><kbd className="orb-strong font-medium">↑ ↓</kbd> Navigate</span>
+          <span><kbd className="orb-strong font-medium">↵</kbd> Open</span>
+          <span><kbd className="orb-strong font-medium">Esc</kbd> Close</span>
         </div>
       </div>
     </div>

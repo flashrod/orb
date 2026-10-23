@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, Code } from 'lucide-react';
+import { Plus, Trash, Code } from '@phosphor-icons/react';
 import { useBoostStore } from '../stores/boosts';
 
 
@@ -61,7 +61,7 @@ export default function BoostsEditor() {
                     onClick={() => removeBoost(boost.id)}
                     className="text-white/40 hover:text-white"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash className="w-4 h-4" />
                   </button>
                 </div>
                 <button

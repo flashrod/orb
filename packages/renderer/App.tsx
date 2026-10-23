@@ -8,13 +8,17 @@ import AddressBar from './components/AddressBar';
 import NavigationBar from './components/NavigationBar';
 import WebView from './components/WebView';
 import VerticalTabPanel from './components/VerticalTabPanel';
+import Settings from './components/Settings';
+import { useAppearanceStore } from './stores/appearance';
+import StartPage from './components/StartPage';
 
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
-  const [verticalTabsOpen, setVerticalTabsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
+  const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, customColors, setTabLayout } = useAppearanceStore();
 
   const webviewRef = useRef<any>(null);
 
@@ -23,16 +27,49 @@ export default function App() {
   const navigateReload = useCallback(() => webviewRef.current?.navigateReload(), []);
 
   useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    root.dataset.accent = accent;
+    root.dataset.density = density;
+    root.dataset.motion = motion;
+    for (const token of ['canvas', 'surface', 'elevated', 'sidebar', 'border', 'text', 'text-strong', 'text-muted', 'accent', 'accent-soft']) {
+      root.style.removeProperty(`--orb-${token}`);
+    }
+    for (const [token, color] of Object.entries(customColors)) {
+      if (color) root.style.setProperty(`--orb-${token}`, color);
+    }
+    if (customColors.accent) {
+      root.style.setProperty('--orb-accent-soft', `color-mix(in srgb, ${customColors.accent} 14%, var(--orb-canvas))`);
+    }
+  }, [theme, accent, density, motion, customColors]);
+
+  useEffect(() => {
     if (useSpaceStore.getState().spaces.length === 0) {
       addSpace({ name: 'Personal', icon: 'globe', color: '#a0522d', tabIds: [] });
+    }
+    const defaultSpaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
+    if (useTabStore.getState().tabs.length === 0 && defaultSpaceId) {
+      useTabStore.getState().addTab({
+        spaceId: defaultSpaceId,
+        url: 'about:blank',
+        title: 'New Tab',
+        favicon: '',
+        isPinned: false,
+        isActive: true,
+      });
     }
   }, [addSpace]);
 
   const handleNavigate = useCallback((url: string) => {
-    if (activeTabId) {
-      updateTab(activeTabId, { url });
+    let targetTabId = useTabStore.getState().activeTabId;
+    if (!targetTabId) {
+      const spaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
+      if (!spaceId) return;
+      useTabStore.getState().addTab({ spaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
+      targetTabId = useTabStore.getState().activeTabId;
     }
-  }, [activeTabId, updateTab]);
+    if (targetTabId) useTabStore.getState().updateTab(targetTabId, { url });
+  }, []);
 
   useEffect(() => {
     // Initialize default space if none exist
@@ -44,11 +81,15 @@ export default function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 't') {
         e.preventDefault();
-        setCommandBarOpen(true);
+        window.dispatchEvent(new CustomEvent('orb:new-tab'));
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandBarOpen(!commandBarOpen);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus();
       }
       if (e.key === 'Escape') {
         setCommandBarOpen(false);
@@ -60,9 +101,7 @@ export default function App() {
     // Handle navigate events from CommandBar / AddressBar
     const handleNavigateEvent = (e: CustomEvent) => {
       const { url } = e.detail as { url: string };
-      if (activeTabId) {
-        updateTab(activeTabId, { url });
-      }
+      handleNavigate(url);
     };
     const handleNewTab = () => {
       const spaceStore = useSpaceStore.getState();
@@ -96,32 +135,44 @@ export default function App() {
       window.removeEventListener('orb:new-tab', handleNewTab);
       window.removeEventListener('orb:new-space', handleNewSpace);
     };
-  }, [spaces.length, commandBarOpen, activeTabId, updateTab]);
+  }, [spaces.length, commandBarOpen, handleNavigate]);
 
-  const activeSpace = spaces.find((s: { id: string }) => s.id === activeSpaceId);
   const spaceTabs = activeSpaceId
     ? tabs.filter((t: { spaceId: string }) => t.spaceId === activeSpaceId)
     : [];
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
+  const activeSpace = spaces.find((space) => space.id === activeSpaceId);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-stone-100 text-stone-700">
+    <div className="orb-frame flex h-screen w-screen overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         spaces={spaces}
         activeSpaceId={activeSpaceId}
         setActiveSpace={setActiveSpace}
+        width={sidebarWidth}
+        autoHide={sidebarAutoHide}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       {/* Main content area */}
-      <div className="flex flex-col flex-1 relative overflow-hidden">
+      <main className="relative flex min-w-0 flex-1 overflow-hidden">
+        {tabLayout === 'split' && (
+          <VerticalTabPanel
+            isOpen
+            embedded
+            onClose={() => setTabLayout('top')}
+            spaceId={activeSpaceId || ''}
+          />
+        )}
+        <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Navigation controls */}
-        <div className="flex h-10 items-center border-b border-stone-200 bg-stone-100 px-2">
+        <div className="orb-surface flex h-11 shrink-0 items-center border-b orb-border px-2">
           <NavigationBar
             onBack={navigateBack}
             onForward={navigateForward}
             onReload={navigateReload}
-            onToggleVerticalTabs={() => setVerticalTabsOpen(!verticalTabsOpen)}
+            onToggleVerticalTabs={() => setTabLayout(tabLayout === 'top' ? 'split' : 'top')}
           />
         </div>
 
@@ -131,16 +182,23 @@ export default function App() {
           onNavigate={handleNavigate}
         />
 
-        <TabBar
+        {tabLayout === 'top' && <TabBar
           tabs={spaceTabs}
           activeTabId={activeTabId}
           activeSpaceId={activeSpaceId || ''}
           setActiveTab={setActiveTab}
-        />
+        />}
 
         {/* Web Content */}
-        <div className="relative flex-1 overflow-hidden bg-stone-100">
-          {activeTabId ? (
+        <div className="orb-frame relative flex-1 overflow-hidden">
+          {!activeTab || activeTab.url === 'about:blank' ? (
+            <StartPage
+              spaceName={activeSpace?.name || 'Personal'}
+              spaceId={activeSpaceId || activeSpace?.id || ''}
+              tabCount={spaceTabs.length}
+              onNavigate={handleNavigate}
+            />
+          ) : activeTabId ? (
             <WebView
               ref={webviewRef}
               tabId={activeTabId}
@@ -152,25 +210,18 @@ export default function App() {
               onLoadingChange={() => {}}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-stone-400">
-              <div className="mb-2 text-2xl font-medium tracking-tight text-stone-700">Orb</div>
+            <div className="orb-muted absolute inset-0 flex flex-col items-center justify-center">
+              <div className="orb-strong mb-2 text-2xl font-medium tracking-tight">Orb</div>
               <div className="text-sm">Open a tab or press ⌘K to find a space</div>
             </div>
           )}
         </div>
-
-        {/* Vertical Tabs Panel */}
-        {verticalTabsOpen && (
-          <VerticalTabPanel
-            isOpen={verticalTabsOpen}
-            onClose={() => setVerticalTabsOpen(false)}
-            spaceId={activeSpaceId || ''}
-          />
-        )}
+        </div>
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} />}
-      </div>
+        {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+      </main>
     </div>
   );
 }
