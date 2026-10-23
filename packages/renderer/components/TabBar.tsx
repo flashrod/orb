@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Globe, Plus, X } from '@phosphor-icons/react';
-import { useTabStore } from '../stores/tabs';
+import { CaretDown, Globe, Plus, X, FolderSimple } from '@phosphor-icons/react';
+import { useTabStore, Tab, TabGroup } from '../stores/tabs';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
+import { partitionTabsByGroup } from '../lib/tabGroups';
 import TabContextMenu from './TabContextMenu';
 import { chooseSplitPair } from '../lib/splitView';
 import { useSplitViewStore } from '../stores/splitView';
@@ -19,17 +20,21 @@ export default function TabBar({
   setActiveTab,
   onReload,
 }: {
-  tabs: { id: string; url: string; title: string; favicon: string; isPinned: boolean }[];
+  tabs: Tab[];
   activeTabId: string | null;
   activeSpaceId: string;
   setActiveTab: (id: string | null) => void;
   onReload: () => void;
 }) {
-  const { removeTab, addTab, moveTab, updateTab } = useTabStore();
+  const { removeTab, addTab, moveTab, updateTab, groups, createGroup, setTabGroup, updateGroup } = useTabStore();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
   const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [groupDraft, setGroupDraft] = useState('');
   const displayTabs = orderPinnedTabsFirst(tabs);
+  const partition = partitionTabsByGroup(displayTabs, groups, activeSpaceId);
+  const scopedGroups = partition.groups;
 
   const handleNewTab = (afterTabId?: string) => {
     addTab({ spaceId: activeSpaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
@@ -48,63 +53,74 @@ export default function TabBar({
     if (isLastTabToClose(allTabs, id)) void window.orbApi?.minimizeCurrentWindow();
   };
 
-  return (
-    <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights ? 'pl-[112px] pr-3' : 'px-3'}`}>
-      {displayTabs.map((tab) => {
-        const hostname = getHostname(tab.url);
-        const isActive = activeTabId === tab.id;
-        return (
-          <div key={tab.id} draggable onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggingId; if (!id || id === tab.id) return; const allTabs = useTabStore.getState().tabs; const targetIndex = allTabs.findIndex((item) => item.id === tab.id); const sourceIndex = allTabs.findIndex((item) => item.id === id); moveTab(id, activeSpaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0)); }} onAuxClick={(event) => { if (event.button === 1) closeTab(tab.id); }} onContextMenu={(event) => { event.preventDefault(); setContextTabId(tab.id); setContextPosition({ x: event.clientX, y: event.clientY }); }} className={`group relative flex h-full shrink-0 items-end ${draggingId === tab.id ? 'opacity-40' : ''}`}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-label={tab.isPinned ? `Pinned tab: ${tab.title || hostname}` : tab.title || hostname}
-              title={`${tab.title || hostname} · ${hostname}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={`orb-tab relative flex h-[37px] items-center rounded-t-[9px] border border-b-0 text-left transition-colors ${tab.isPinned ? 'w-9 justify-center px-0' : 'min-w-[128px] max-w-[210px] gap-2 px-3 pr-8'} ${isActive ? 'orb-tab-active orb-border' : 'border-transparent'}`}
-            >
-              {tab.favicon ? (
-                <img src={tab.favicon} alt="" className="h-4 w-4 shrink-0 rounded-sm" onError={(event) => (event.currentTarget.style.visibility = 'hidden')} />
-              ) : (
-                <span className="orb-accent-soft orb-accent flex h-5 w-5 shrink-0 items-center justify-center rounded-md"><Globe aria-hidden="true" className="h-3 w-3" /></span>
-              )}
-              {!tab.isPinned && <span className="orb-strong min-w-0 flex-1 truncate text-[12px] font-medium">{tab.title || hostname}</span>}
-            </button>
-            <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={() => closeTab(tab.id)} className={`orb-control absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${tab.isPinned ? 'right-0' : 'right-1'}`}>
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        );
-      })}
-      <button type="button" onClick={() => handleNewTab()} aria-label="New tab" title="New tab" className="orb-control mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"><Plus className="h-4 w-4" /></button>
-      {contextTabId && contextPosition && (() => {
-        const tab = displayTabs.find((item) => item.id === contextTabId);
-        if (!tab) return null;
-        const closeOthers = getTabsToClose(displayTabs, tab.id, 'others');
-        const closeRight = getTabsToClose(displayTabs, tab.id, 'right');
-        return <TabContextMenu
-          {...contextPosition}
-          title={tab.title || getHostname(tab.url)}
-          isPinned={tab.isPinned}
-          canReload={activeTabId === tab.id}
-          canSplit={displayTabs.length > 1}
-          canCloseOthers={closeOthers.length > 0}
-          canCloseToRight={closeRight.length > 0}
-          onNewTab={() => handleNewTab(tab.id)}
-          onReload={onReload}
-          onSplitView={() => {
-            const pair = activeTabId ? chooseSplitPair(activeTabId, tab.id, displayTabs.map((item) => item.id)) : null;
-            if (pair) useSplitViewStore.getState().open(pair);
-          }}
-          onDuplicate={() => addTab({ spaceId: activeSpaceId, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: tab.isPinned, isActive: true })}
-          onTogglePinned={() => updateTab(tab.id, { isPinned: !tab.isPinned })}
-          onCloseTab={() => closeTab(tab.id)}
-          onCloseOthers={() => handleCloseMany(closeOthers)}
-          onCloseToRight={() => handleCloseMany(closeRight)}
-          onDismiss={() => { setContextTabId(null); setContextPosition(null); }}
-        />;
-      })()}
-    </div>
-  );
+  const renderTab = (tab: Tab) => {
+    const hostname = getHostname(tab.url);
+    const isActive = activeTabId === tab.id;
+    return <div key={tab.id} draggable onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+      event.preventDefault();
+      const id = event.dataTransfer.getData('text/plain') || draggingId;
+      if (!id || id === tab.id) return;
+      const allTabs = useTabStore.getState().tabs;
+      const targetIndex = allTabs.findIndex((item) => item.id === tab.id);
+      const sourceIndex = allTabs.findIndex((item) => item.id === id);
+      moveTab(id, activeSpaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0));
+    }} onAuxClick={(event) => { if (event.button === 1) closeTab(tab.id); }} onContextMenu={(event) => { event.preventDefault(); setContextTabId(tab.id); setContextPosition({ x: event.clientX, y: event.clientY }); }} className={`group relative flex h-full shrink-0 items-end ${draggingId === tab.id ? 'opacity-40' : ''}`}>
+      <button type="button" role="tab" aria-selected={isActive} aria-label={tab.isPinned ? `Pinned tab: ${tab.title || hostname}` : tab.title || hostname} title={`${tab.title || hostname} · ${hostname}`} onClick={() => setActiveTab(tab.id)} className={`orb-tab relative flex h-[37px] items-center rounded-t-[9px] border border-b-0 text-left transition-colors ${tab.isPinned ? 'w-9 justify-center px-0' : 'min-w-[128px] max-w-[210px] gap-2 px-3 pr-8'} ${isActive ? 'orb-tab-active orb-border' : 'border-transparent'}`}>
+        {tab.favicon ? <img src={tab.favicon} alt="" className="h-4 w-4 shrink-0 rounded-sm" onError={(event) => (event.currentTarget.style.visibility = 'hidden')} /> : <span className="orb-accent-soft orb-accent flex h-5 w-5 shrink-0 items-center justify-center rounded-md"><Globe aria-hidden="true" className="h-3 w-3" /></span>}
+        {!tab.isPinned && <span className="orb-strong min-w-0 flex-1 truncate text-[12px] font-medium">{tab.title || hostname}</span>}
+      </button>
+      <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={() => closeTab(tab.id)} className={`orb-control absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${tab.isPinned ? 'right-0' : 'right-1'}`}><X className="h-3 w-3" /></button>
+    </div>;
+  };
+
+  const startGroupRename = (group: TabGroup) => { setEditingGroupId(group.id); setGroupDraft(group.name); };
+  const groupHeader = (group: TabGroup, count: number) => <div key={group.id} onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+    event.preventDefault();
+    const id = event.dataTransfer.getData('text/plain') || draggingId;
+    if (id) setTabGroup(id, group.id);
+  }} className="mb-0.5 flex h-9 shrink-0 items-center">
+    {editingGroupId === group.id ? <input autoFocus aria-label={`Rename ${group.name} tab group`} value={groupDraft} onChange={(event) => setGroupDraft(event.target.value)} onBlur={() => { updateGroup(group.id, { name: groupDraft }); setEditingGroupId(null); }} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') setEditingGroupId(null); }} className="orb-strong h-7 w-28 rounded-md border orb-border bg-[var(--orb-elevated)] px-2 text-[10px] outline-none" /> : <button type="button" aria-expanded={!group.collapsed} title="Double-click to rename · drag a tab here to add it" onClick={() => updateGroup(group.id, { collapsed: !group.collapsed })} onDoubleClick={() => startGroupRename(group)} className="orb-control flex h-7 items-center gap-1 rounded-md px-2 text-[10px] font-medium" style={{ color: group.color }}><FolderSimple className="h-3 w-3" /><span className="max-w-24 truncate">{group.name}</span><span className="orb-muted">{count}</span><CaretDown className={`h-3 w-3 transition-transform ${group.collapsed ? '-rotate-90' : ''}`} /></button>}
+  </div>;
+
+  const contextTab = contextTabId ? displayTabs.find((item) => item.id === contextTabId) : undefined;
+  const closeOthers = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'others') : [];
+  const closeRight = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'right') : [];
+  const contextGroup = contextTab?.groupId ? groups.find((group) => group.id === contextTab.groupId)?.name || null : null;
+
+  return <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights ? 'pl-[112px] pr-3' : 'px-3'}`}>
+    {partition.pinned.map(renderTab)}
+    {scopedGroups.map(({ group, tabs: groupTabs }) => <div key={group.id} role="group" aria-label={`${group.name} tab group`} className="flex shrink-0 items-end gap-1 rounded-t-md px-0.5" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+      const id = event.dataTransfer.getData('text/plain') || draggingId;
+      if (id) setTabGroup(id, group.id);
+    }}>
+      {groupHeader(group, groupTabs.length)}
+      {!group.collapsed && groupTabs.map(renderTab)}
+    </div>)}
+    {partition.loose.map(renderTab)}
+    <button type="button" onClick={() => handleNewTab()} aria-label="New tab" title="New tab" className="orb-control mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"><Plus className="h-4 w-4" /></button>
+    {contextTab && contextPosition && <TabContextMenu
+      {...contextPosition}
+      title={contextTab.title || getHostname(contextTab.url)}
+      isPinned={contextTab.isPinned}
+      groupName={contextGroup}
+      canToggleGroup={!contextTab.isPinned || Boolean(contextGroup)}
+      canReload={activeTabId === contextTab.id}
+      canSplit={displayTabs.length > 1}
+      canCloseOthers={closeOthers.length > 0}
+      canCloseToRight={closeRight.length > 0}
+      onNewTab={() => handleNewTab(contextTab.id)}
+      onReload={onReload}
+      onSplitView={() => {
+        const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, displayTabs.map((item) => item.id)) : null;
+        if (pair) useSplitViewStore.getState().open(pair);
+      }}
+      onToggleGroup={() => contextTab.groupId ? setTabGroup(contextTab.id, null) : createGroup(activeSpaceId, contextTab.id)}
+      onDuplicate={() => addTab({ spaceId: activeSpaceId, url: contextTab.url, title: contextTab.title, favicon: contextTab.favicon, isPinned: contextTab.isPinned, isActive: true })}
+      onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
+      onCloseTab={() => closeTab(contextTab.id)}
+      onCloseOthers={() => handleCloseMany(closeOthers)}
+      onCloseToRight={() => handleCloseMany(closeRight)}
+      onDismiss={() => { setContextTabId(null); setContextPosition(null); }}
+    />}
+  </div>;
 }

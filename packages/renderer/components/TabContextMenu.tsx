@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowBendDownRight, Copy, PushPin, Plus, ArrowClockwise, X, Columns } from '@phosphor-icons/react';
+import { ArrowBendDownRight, Copy, PushPin, Plus, ArrowClockwise, X, Columns, FolderSimple } from '@phosphor-icons/react';
 
 export interface TabContextMenuProps {
   x: number;
@@ -9,11 +9,14 @@ export interface TabContextMenuProps {
   isPinned: boolean;
   canReload: boolean;
   canSplit: boolean;
+  groupName: string | null;
+  canToggleGroup: boolean;
   canCloseOthers: boolean;
   canCloseToRight: boolean;
   onNewTab: () => void;
   onReload: () => void;
   onSplitView: () => void;
+  onToggleGroup: () => void;
   onDuplicate: () => void;
   onTogglePinned: () => void;
   onCloseTab: () => void;
@@ -53,6 +56,7 @@ export default function TabContextMenu(props: TabContextMenuProps) {
   return createPortal(<div ref={menuRef} role="menu" aria-label={`Actions for ${props.title}`} style={{ left, top, backgroundColor: 'var(--orb-elevated)' }} className="fixed z-[10000] w-[238px] rounded-lg border orb-border p-1.5 shadow-[0_12px_32px_rgba(41,37,36,0.2)]">
     {action('New tab to the right', ArrowBendDownRight, props.onNewTab)}
     {action('Open in split view', Columns, props.onSplitView, !props.canSplit)}
+    {action(props.groupName ? 'Remove from tab group' : 'Add to new tab group', FolderSimple, props.onToggleGroup, !props.canToggleGroup)}
     {action('Duplicate', Copy, props.onDuplicate)}
     {action('Reload', ArrowClockwise, props.onReload, !props.canReload)}
     <div className="my-1 border-t orb-border" />

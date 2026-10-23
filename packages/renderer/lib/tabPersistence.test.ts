@@ -16,6 +16,19 @@ describe('tab session restore', () => {
   });
 
   it('returns an empty session for malformed persisted tab data', () => {
-    expect(restoreTabSnapshot({ tabs: 'not-tabs', activeTabId: 4 })).toEqual({ tabs: [], activeTabId: null });
+    expect(restoreTabSnapshot({ tabs: 'not-tabs', activeTabId: 4 })).toEqual({ tabs: [], activeTabId: null, groups: [] });
+  });
+
+  it('restores tab groups and clears references to groups that no longer exist', () => {
+    const restored = restoreTabSnapshot({
+      tabs: [
+        { id: 'grouped', spaceId: 'work', url: 'about:blank', title: 'One', isPinned: false, isActive: true, groupId: 'g1' },
+        { id: 'orphaned', spaceId: 'work', url: 'about:blank', title: 'Two', isPinned: false, isActive: false, groupId: 'missing' },
+      ],
+      groups: [{ id: 'g1', spaceId: 'work', name: 'Research', color: '#657a60', collapsed: true, createdAt: 1 }],
+      activeTabId: 'grouped',
+    });
+    expect(restored.tabs.map((tab) => tab.groupId)).toEqual(['g1', null]);
+    expect(restored.groups[0]).toMatchObject({ id: 'g1', collapsed: true });
   });
 });

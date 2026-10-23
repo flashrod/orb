@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useTabStore } from '../stores/tabs';
-import { Globe, List, Plus, X } from '@phosphor-icons/react';
+import { CaretDown, FolderSimple, Globe, List, Plus, X } from '@phosphor-icons/react';
 import { getTabRailPresentation } from '../lib/tabRail';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
 import { chooseSplitPair } from '../lib/splitView';
 import { useSplitViewStore } from '../stores/splitView';
+import { partitionTabsByGroup } from '../lib/tabGroups';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -32,15 +33,16 @@ export default function VerticalTabPanel({
   onReload: () => void;
   spaceId: string;
 }) {
-  const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, createGroup, setTabGroup, updateGroup } = useTabStore();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hovered, setHovered] = useState(false);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
   const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [groupDraft, setGroupDraft] = useState('');
   const presentation = getTabRailPresentation('split', compact, keyboardRevealed, hovered);
   const spaceTabs = orderPinnedTabsFirst(tabs.filter((tab) => tab.spaceId === spaceId));
-  const pinnedTabs = spaceTabs.filter((tab) => tab.isPinned);
-  const regularTabs = spaceTabs.filter((tab) => !tab.isPinned);
+  const groupedTabs = partitionTabsByGroup(spaceTabs, groups, spaceId);
 
   const handleNewTab = (afterTabId?: string) => {
     addTab({ spaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
@@ -112,8 +114,15 @@ export default function VerticalTabPanel({
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           {spaceTabs.length === 0 ? <div className="orb-muted px-4 py-10 text-center text-xs">No tabs in this space</div> : <>
-            {pinnedTabs.length > 0 && <div aria-label="Pinned tabs" className="mb-2 flex flex-wrap gap-1">{pinnedTabs.map((tab) => renderTab(tab, true))}</div>}
-            <div className="space-y-1">{regularTabs.map((tab) => renderTab(tab, false))}</div>
+            {groupedTabs.pinned.length > 0 && <div aria-label="Pinned tabs" className="mb-2 flex flex-wrap gap-1">{groupedTabs.pinned.map((tab) => renderTab(tab, true))}</div>}
+            {groupedTabs.groups.map(({ group, tabs: groupTabs }) => <section key={group.id} aria-label={`${group.name} tab group`} className="mb-2 rounded-lg border orb-border p-1.5">
+              <div className="mb-1 flex h-7 items-center gap-1.5 px-2 text-[11px] font-medium" style={{ color: group.color }}>
+                <FolderSimple className="h-3.5 w-3.5" />
+                {editingGroupId === group.id ? <input autoFocus aria-label={`Rename ${group.name} tab group`} value={groupDraft} onChange={(event) => setGroupDraft(event.target.value)} onBlur={() => { updateGroup(group.id, { name: groupDraft }); setEditingGroupId(null); }} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); if (event.key === 'Escape') setEditingGroupId(null); }} className="orb-strong min-w-0 flex-1 rounded border orb-border bg-[var(--orb-elevated)] px-1 text-[10px] outline-none" /> : <button type="button" aria-expanded={!group.collapsed} title="Click to collapse · double-click to rename" onClick={() => updateGroup(group.id, { collapsed: !group.collapsed })} onDoubleClick={() => { setEditingGroupId(group.id); setGroupDraft(group.name); }} className="orb-control flex min-w-0 flex-1 items-center gap-1 rounded text-left"><span className="min-w-0 flex-1 truncate">{group.name}</span><span className="orb-muted">{groupTabs.length}</span><CaretDown className={`h-3 w-3 transition-transform ${group.collapsed ? '-rotate-90' : ''}`} /></button>}
+              </div>
+              {!group.collapsed && <div className="space-y-1" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { const id = event.dataTransfer.getData('text/plain') || draggingId; if (id) setTabGroup(id, group.id); }}>{groupTabs.map((tab) => renderTab(tab, false))}</div>}
+            </section>)}
+            <div className="space-y-1">{groupedTabs.loose.map((tab) => renderTab(tab, false))}</div>
           </>}
         </div>
       </aside>
@@ -122,6 +131,8 @@ export default function VerticalTabPanel({
       {...contextPosition}
       title={contextTab.title || getHostname(contextTab.url)}
       isPinned={contextTab.isPinned}
+      groupName={contextTab.groupId ? groups.find((group) => group.id === contextTab.groupId)?.name || null : null}
+      canToggleGroup={!contextTab.isPinned || Boolean(contextTab.groupId)}
       canReload={activeTabId === contextTab.id}
       canSplit={spaceTabs.length > 1}
       canCloseOthers={closeOthers.length > 0}
@@ -132,6 +143,7 @@ export default function VerticalTabPanel({
         const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, spaceTabs.map((item) => item.id)) : null;
         if (pair) useSplitViewStore.getState().open(pair);
       }}
+      onToggleGroup={() => contextTab.groupId ? setTabGroup(contextTab.id, null) : createGroup(spaceId, contextTab.id)}
       onDuplicate={() => addTab({ spaceId: contextTab.spaceId, url: contextTab.url, title: contextTab.title, favicon: contextTab.favicon, isPinned: contextTab.isPinned, isActive: true })}
       onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
       onCloseTab={() => closeTab(contextTab.id)}
