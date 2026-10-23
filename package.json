@@ -7,7 +7,7 @@
   "author": "flashrod",
   "license": "MIT",
   "scripts": {
-    "dev": "electron --dev packages/main/index.ts",
+    "dev": "concurrently \"vite --config vite.config.ts\" \"wait-on http://localhost:5173 && electron packages/main/index.js\"",
     "build": "tsc && vite build",
     "dist": "electron-builder",
     "lint": "eslint .",
@@ -26,7 +26,9 @@
     "@types/electron": "^1.6.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^10.0.6",
     "electron-builder": "^25.1.0",
     "eslint": "^9.9.0",
     "eslint-plugin-react": "^7.35.0",
@@ -35,7 +37,8 @@
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
-    "vite-plugin-electron": "^0.28.0"
+    "vite-plugin-electron": "^0.28.0",
+    "wait-on": "^9.5.1"
   },
   "allowScripts": {
     "electron@30.5.1": true
