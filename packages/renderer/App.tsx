@@ -32,6 +32,9 @@ export default function App() {
   const [glanceUrl, setGlanceUrl] = useState<string | null>(null);
   const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
   const [resizingSplit, setResizingSplit] = useState(false);
+  // Tracks which tabs have a WebView mounted. Once mounted, a tab stays mounted
+  // even when inactive so switching tabs never reloads the page.
+  const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
@@ -100,6 +103,25 @@ export default function App() {
       setActiveTab(tabsInSpace[tabsInSpace.length - 1].id);
     }
   }, [activeSpaceId, tabs, activeTabId, setActiveTab]);
+
+  // Lazily mount the active tab's WebView on first visit; keep it mounted
+  // thereafter so switching tabs never reloads the page.
+  useEffect(() => {
+    if (!activeTabId) return;
+    setMountedTabIds((prev) => {
+      if (prev.has(activeTabId)) return prev;
+      return new Set([...prev, activeTabId]);
+    });
+  }, [activeTabId]);
+
+  // Clean up mounted set when a tab is removed
+  useEffect(() => {
+    setMountedTabIds((prev) => {
+      const next = new Set(prev);
+      tabs.forEach((tab) => { if (!next.has(tab.id)) next.delete(tab.id); });
+      return next;
+    });
+  }, [tabs]);
 
   useEffect(() => {
     if (!splitTabIds) return;
@@ -243,6 +265,7 @@ export default function App() {
   const spaceTabs = activeSpaceId
     ? tabs.filter((t: { spaceId: string }) => t.spaceId === activeSpaceId)
     : [];
+  const mountedTabs = spaceTabs.filter((tab) => mountedTabIds.has(tab.id));
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
   const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
@@ -291,7 +314,7 @@ export default function App() {
     }
   };
 
-  const renderTabPage = (tab: Tab) => {
+  const renderTabPage = (tab: Tab, isActive = false) => {
     const pageSpace = spaces.find((space) => space.id === tab.spaceId);
     const pageProfile = resolveSpaceProfile(pageSpace?.profileId, profiles);
     const pageTabCount = tabs.filter((item) => item.spaceId === tab.spaceId).length;
@@ -300,26 +323,33 @@ export default function App() {
         ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} profileId={pageProfile.id} tabCount={pageTabCount} onNavigate={handleNavigate} />
         : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />;
     }
-    return <WebView
-      key={`${tab.id}:${pageProfile.id}`}
-      ref={(instance) => { if (instance) webviewRefs.current[tab.id] = instance; else delete webviewRefs.current[tab.id]; }}
-      tabId={tab.id}
-      url={tab.url}
-      spaceId={tab.spaceId}
-      profileId={pageProfile.id}
-      onUrlChange={(url) => {
-        updateTab(tab.id, { url });
-        setGlanceCandidate((current) => current?.tabId === tab.id ? null : current);
-        setGlanceUrl(null);
-      }}
-      onTitleChange={(title) => updateTab(tab.id, { title })}
-      onFaviconChange={(favicon) => updateTab(tab.id, { favicon })}
-      onLoadingChange={() => {}}
-      onGlanceLink={(url) => {
-        const safeUrl = normalizeGlanceUrl(url);
-        if (safeUrl) setGlanceCandidate({ url: safeUrl, tabId: tab.id });
-      }}
-    />;
+    return (
+      <div
+        className="absolute inset-0 flex-1 overflow-hidden"
+        style={!isActive ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+      >
+        <WebView
+          key={tab.id}
+          ref={(instance) => { if (instance) webviewRefs.current[tab.id] = instance; else delete webviewRefs.current[tab.id]; }}
+          tabId={tab.id}
+          url={tab.url}
+          spaceId={tab.spaceId}
+          profileId={pageProfile.id}
+          onUrlChange={(url) => {
+            updateTab(tab.id, { url });
+            setGlanceCandidate((current) => current?.tabId === tab.id ? null : current);
+            setGlanceUrl(null);
+          }}
+          onTitleChange={(title) => updateTab(tab.id, { title })}
+          onFaviconChange={(favicon) => updateTab(tab.id, { favicon })}
+          onLoadingChange={() => {}}
+          onGlanceLink={(url) => {
+            const safeUrl = normalizeGlanceUrl(url);
+            if (safeUrl) setGlanceCandidate({ url: safeUrl, tabId: tab.id });
+          }}
+        />
+      </div>
+    );
   };
 
   const splitTabs = splitTabIds?.map((id) => tabs.find((tab) => tab.id === id) || null) || null;
@@ -416,11 +446,17 @@ export default function App() {
               <button type="button" aria-label="Swap split panes" title="Swap panes" onClick={swapSplit} className="orb-control flex h-7 w-7 items-center justify-center rounded"><ArrowsLeftRight className="h-3.5 w-3.5" /></button>
               <button type="button" aria-label="Close split view" title="Close split view" onClick={closeSplit} className="orb-control flex h-7 w-7 items-center justify-center rounded"><X className="h-3.5 w-3.5" /></button>
             </div>
-          </> : activeTab ? renderTabPage(activeTab) : (
-            <div className="orb-muted absolute inset-0 flex flex-col items-center justify-center">
-              <div className="orb-strong mb-2 text-2xl font-medium tracking-tight">Orb</div>
-              <div className="text-sm">Open a tab or press ⌘K to find a space</div>
-            </div>
+          </> : (
+            <>
+              {mountedTabs.length > 0
+                ? mountedTabs.map((tab) => renderTabPage(tab, tab.id === activeTabId))
+                : (
+                  <div className="orb-muted absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="orb-strong mb-2 text-2xl font-medium tracking-tight">Orb</div>
+                    <div className="text-sm">Open a tab or press ⌘K to find a space</div>
+                  </div>
+                )}
+            </>
           )}
         </div>
         </div>
