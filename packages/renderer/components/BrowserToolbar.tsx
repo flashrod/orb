@@ -8,13 +8,14 @@ import { useAppearanceStore } from '../stores/appearance';
 type ExtensionInfo = { id: string; name: string; version: string };
 
 export default function BrowserToolbar({
-  activeTab, onNavigate, onBack, onForward, onReload, onPickElement, canPickElement, glanceUrl, onGlance,
+  activeTab, onNavigate, onBack, onForward, onReload, loadingProgress, onPickElement, canPickElement, glanceUrl, onGlance,
 }: {
   activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate: (url: string) => void;
   onBack: () => void;
   onForward: () => void;
   onReload: () => void;
+  loadingProgress: number;
   onPickElement: () => void;
   canPickElement: boolean;
   glanceUrl: string | null;
@@ -63,7 +64,12 @@ export default function BrowserToolbar({
     }
   };
 
-  return <div aria-label="Browser toolbar" className="orb-surface flex h-[52px] shrink-0 items-center gap-0.5 border-b orb-border px-2">
+  return <div aria-label="Browser toolbar" className="orb-surface flex h-[52px] shrink-0 items-center gap-0.5 border-b orb-border px-2 relative">
+    {loadingProgress > 0 && (
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-[var(--orb-accent)]">
+        <div className="h-full w-[var(--progress-width)] bg-[var(--orb-accent-soft)] transition-all duration-300" style={{ width: `${Math.min(loadingProgress * 100, 100)}%` }} />
+      </div>
+    )}
     {order.filter((id) => !hidden.includes(id)).map((id) => <div key={id} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const source = (event.dataTransfer.getData('text/plain') || dragId) as ToolbarItemId | null; if (source && source !== id) move(source, id); setDragId(null); }} className={`group flex min-w-0 shrink-0 items-center ${id === 'address' ? 'min-w-[160px] flex-1' : ''} ${dragId === id ? 'opacity-40' : ''}`}>
       <button type="button" draggable aria-label={`Drag ${id} toolbar item`} title="Drag to reorder" onDragStart={(event) => { setDragId(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', id); }} onDragEnd={() => setDragId(null)} className="orb-muted flex h-6 w-3 cursor-grab items-center justify-center opacity-0 transition-opacity group-hover:opacity-60 active:cursor-grabbing"><DotsSixVertical className="h-3.5 w-3.5" /></button>
       <div className={`min-w-0 ${id === 'address' ? 'flex-1' : ''}`}>{renderControl(id)}</div>

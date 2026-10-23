@@ -35,6 +35,8 @@ export default function App() {
   // Tracks which tabs have a WebView mounted. Once mounted, a tab stays mounted
   // even when inactive so switching tabs never reloads the page.
   const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
+  // Per-tab loading state, used for the thin progress bar in the toolbar
+  const [tabLoadingStates, setTabLoadingStates] = useState<Record<string, boolean>>({});
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
@@ -267,6 +269,7 @@ export default function App() {
     : [];
   const mountedTabs = spaceTabs.filter((tab) => mountedTabIds.has(tab.id));
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
+  const activeTabLoading = activeTab ? tabLoadingStates[activeTab.id] || false : false;
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
   const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, tabRailKeyboardRevealed, false);
@@ -342,7 +345,7 @@ export default function App() {
           }}
           onTitleChange={(title) => updateTab(tab.id, { title })}
           onFaviconChange={(favicon) => updateTab(tab.id, { favicon })}
-          onLoadingChange={() => {}}
+          onLoadingChange={(loading) => setTabLoadingStates((prev) => ({ ...prev, [tab.id]: loading }))}
           onGlanceLink={(url) => {
             const safeUrl = normalizeGlanceUrl(url);
             if (safeUrl) setGlanceCandidate({ url: safeUrl, tabId: tab.id });
@@ -396,6 +399,7 @@ export default function App() {
           onBack={navigateBack}
           onForward={navigateForward}
           onReload={navigateReload}
+          loadingProgress={activeTabLoading ? 1 : 0}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}

@@ -173,6 +173,7 @@ export default forwardRef<WebViewHandle, {
     navigateReload,
     loadUrl,
     applyCSS,
+    isLoading,
     pickElement: async () => {
       const webview = webviewRef.current;
       if (!webview || isLoading) return null;
@@ -189,21 +190,13 @@ export default forwardRef<WebViewHandle, {
   }, [url]);
 
   return (
-    <div className="orb-frame absolute inset-0 h-full w-full">
+    <div className="orb-frame absolute inset-0 h-full w-full overflow-hidden">
       <webview
         ref={webviewRef}
         className="w-full h-full"
         partition={profilePartition(profileId)}
         allowpopups
       />
-      {isLoading && (
-        <div className="orb-frame absolute inset-0 z-10 flex items-center justify-center">
-          <div className="flex items-center gap-3">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 orb-border" style={{ borderTopColor: 'var(--orb-accent)' }} />
-            <span className="orb-muted text-sm">Opening page</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 });
