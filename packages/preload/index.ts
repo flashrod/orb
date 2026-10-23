@@ -62,6 +62,14 @@ contextBridge.exposeInMainWorld('orbApi', {
   getPermissions: () => ipcRenderer.invoke('permission:get-all'),
   setPermission: (host: string, permission: string, state: string) => ipcRenderer.invoke('permission:set', { host, permission, state }),
   removePermission: (host: string, permission: string) => ipcRenderer.invoke('permission:remove', { host, permission }),
+
+  // Downloads
+  getDownloads: () => ipcRenderer.invoke('downloads:get-all'),
+  cancelDownload: (id: string) => ipcRenderer.invoke('downloads:cancel', id),
+  removeDownload: (id: string) => ipcRenderer.invoke('downloads:remove', id),
+  clearCompletedDownloads: () => ipcRenderer.invoke('downloads:clear-completed'),
+  setDownloadPath: (p: string) => ipcRenderer.invoke('downloads:set-path', p),
+  getDownloadPath: () => ipcRenderer.invoke('downloads:get-path'),
 });
 
 declare global {
@@ -104,6 +112,13 @@ declare global {
       getPermissions: () => Promise<Array<{ host: string; permission: string; state: string; updatedAt: number }>>;
       setPermission: (host: string, permission: string, state: string) => Promise<{ ok: boolean }>;
       removePermission: (host: string, permission: string) => Promise<{ ok: boolean }>;
+      // Downloads
+      getDownloads: () => Promise<Array<{ id: string; url: string; filePath: string | null; totalBytes: number; receivedBytes: number; state: string; startedAt: number; completedAt: number | null }>>;
+      cancelDownload: (id: string) => Promise<{ ok: boolean }>;
+      removeDownload: (id: string) => Promise<{ ok: boolean }>;
+      clearCompletedDownloads: () => Promise<{ ok: boolean }>;
+      setDownloadPath: (p: string) => Promise<{ ok: boolean; path: string }>;
+      getDownloadPath: () => Promise<string>;
     };
   }
 }

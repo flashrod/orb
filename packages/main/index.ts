@@ -5,7 +5,9 @@ import { windowManager } from './windowManager';
 import { registerIpcHandlers } from './ipcHandlers';
 import { adBlocker, initAdBlocker } from './adBlocker';
 import { restoreExtensions } from './extensions';
+import { createMenu } from './menu';
 import { PermissionStore, PermissionName, PermissionState } from './permissions';
+import { DownloadStore, DownloadState } from './downloads';
 
 app.setAppUserModelId('company.thebrowser.orb');
 
@@ -133,7 +135,94 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
-  // Each workspace WebView uses a profile-specific persistent partition. Install
+  // Download path: configurable from settings, defaults to system Downloads folder
+  let downloadPath = path.join(app.getPath('downloads'));
+
+  // Download store
+  const downloadStore = new DownloadStore();
+  await downloadStore.load();
+
+  // Downloads: intercept will-download, track progress, expose to renderer
+  orbSession.on('will-download', (event, item, webContents) => {
+    event.preventDefault();
+    const url = item.getURL() || '';
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const filePath = path.join(downloadPath, item.getFilename() || 'download');
+
+    downloadStore.add({
+      id,
+      url,
+      filePath,
+      totalBytes: 0,
+      receivedBytes: 0,
+      state: 'progressing',
+      startedAt: Date.now(),
+      completedAt: null,
+    });
+
+    item.setSavePath(filePath);
+
+    item.on('updated', (_, state) => {
+      const downloadState = state as DownloadState;
+      if (downloadState === 'progressing') {
+        downloadStore.update(id, {
+          receivedBytes: item.getReceivedBytes(),
+          totalBytes: item.getTotalBytes(),
+          state: 'progressing',
+        });
+      } else if (downloadState === 'completed') {
+        downloadStore.update(id, {
+          state: 'completed',
+          completedAt: Date.now(),
+          totalBytes: item.getTotalBytes(),
+          receivedBytes: item.getReceivedBytes(),
+        });
+      } else if (downloadState === 'cancelled') {
+        downloadStore.update(id, { state: 'cancelled' });
+      } else if (downloadState === 'interrupted') {
+        downloadStore.update(id, { state: 'interrupted' });
+      }
+      const updated = downloadStore.get(id);
+      if (updated) {
+        for (const win of BrowserWindow.getAllWindows()) {
+          win.webContents.send('orb:download-updated', updated);
+        }
+      }
+    });
+
+    item.on('done', (_, state) => {
+      const doneState = state as DownloadState;
+      if (doneState === 'completed') {
+        downloadStore.update(id, { state: 'completed', completedAt: Date.now() });
+      }
+    });
+  });
+
+  // IPC: downloads
+  ipcMain.handle('downloads:get-all', () => downloadStore.getAll());
+  ipcMain.handle('downloads:cancel', (_, id: string) => {
+    downloadStore.update(id, { state: 'cancelled' });
+    return { ok: true };
+  });
+  ipcMain.handle('downloads:remove', (_, id: string) => {
+    downloadStore.remove(id);
+    return { ok: true };
+  });
+  ipcMain.handle('downloads:clear-completed', () => {
+    downloadStore.clearCompleted();
+    return { ok: true };
+  });
+  ipcMain.handle('downloads:set-path', (_, p: string) => {
+    downloadPath = p;
+    return { ok: true, path: downloadPath };
+  });
+  ipcMain.handle('downloads:get-path', () => downloadPath);
+
+  // Expose download store to IPC
+  ;(global as any).__ORB_DOWNLOAD_STORE = downloadStore;
+
+  // Popups: Electron 22+ removed the webview 'new-window' event. Intercept at the
   // privacy hooks before Chromium attaches that WebView to its session.
   app.on('web-contents-created', (_event, contents) => {
     contents.on('will-attach-webview', (_attachEvent, webPreferences) => {
@@ -148,12 +237,45 @@ app.whenReady().then(async () => {
   await restoreExtensions();
   createMainWindow();
   registerIpcHandlers();
+  createMenu();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+  // Forward global keyboard shortcuts from web contents to the renderer,
+  // since accelerators in the app menu don't fire when a webview has focus.
+  const forwardShortcut = (webContents: Electron.WebContents, keyDown: KeyboardEvent) => {
+    const { key, metaKey, ctrlKey, shiftKey } = keyDown;
+    let action: string | null = null;
+    if ((metaKey || ctrlKey) && key === 't' && !shiftKey) action = 'new-tab';
+    else if ((metaKey || ctrlKey) && key === 'k' && !shiftKey) action = 'command-bar';
+    else if ((metaKey || ctrlKey) && key === 'l' && !shiftKey) action = 'focus-address';
+    else if ((metaKey || ctrlKey) && shiftKey && key.toLowerCase() === 'm') action = 'toggle-compact';
+    else if (key === 'Escape' && !metaKey && !ctrlKey && !shiftKey) action = 'close-overlays';
+
+    if (action) {
+      webContents.send('orb:shortcut', action);
     }
+  };
+
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('before-input-event', (_event, input) => {
+      if (input.type === 'keyDown') {
+        forwardShortcut(contents, input as unknown as KeyboardEvent);
+      }
+    });
+    contents.on('will-attach-webview', (_attachEvent, webPreferences) => {
+      const partition = webPreferences.partition;
+      webPreferences.preload = path.join(__dirname, 'preload/webview.js');
+      if (partition === 'persist:orb' || partition?.startsWith('persist:orb-profile-')) {
+        initAdBlocker(session.fromPartition(partition, { cache: true }));
+      }
+    });
+    contents.on('did-attach-webview', (_event, webContents) => adBlocker.applyWebRtcPolicy(webContents));
   });
+});
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createMainWindow();
+  }
 });
 
 app.on('window-all-closed', () => {

@@ -17,9 +17,20 @@ import GlanceView from './components/GlanceView';
 import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
 import PermissionPrompt from './components/PermissionPrompt';
+import DownloadsPanel from './components/DownloadsPanel';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
 import { normalizeGlanceUrl } from './lib/glance';
+type DownloadItem = {
+  id: string;
+  url: string;
+  filePath: string | null;
+  totalBytes: number;
+  receivedBytes: number;
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+  startedAt: number;
+  completedAt: number | null;
+};
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -38,6 +49,10 @@ export default function App() {
   const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
   // Per-tab loading state, used for the thin progress bar in the toolbar
   const [tabLoadingStates, setTabLoadingStates] = useState<Record<string, boolean>>({});
+  // Downloads panel state
+  const [downloadsOpen, setDownloadsOpen] = useState(false);
+  const [downloads, setDownloads] = useState<DownloadItem[]>([]);
+  const [currentDownloadPath, setCurrentDownloadPath] = useState('');
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
@@ -276,12 +291,52 @@ export default function App() {
     window.addEventListener('orb:new-space', handleNewSpace);
     window.addEventListener('orb:popup-requested', handlePopupRequestedEvent);
 
+    const handleShortcut = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const action = customEvent.detail;
+      if (action === 'new-tab') handleNewTab();
+      else if (action === 'command-bar') setCommandBarOpen((o) => !o);
+      else if (action === 'focus-address') {
+        requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
+      }
+      else if (action === 'toggle-compact') {
+        useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
+      }
+      else if (action === 'close-overlays') {
+        setCommandBarOpen(false);
+        setSettingsOpen(false);
+      }
+    };
+    window.addEventListener('orb:shortcut', handleShortcut as EventListener);
+
+    const handleDownloadUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<DownloadItem>;
+      const item = customEvent.detail;
+      setDownloads((prev) => {
+        const existing = prev.find((d) => d.id === item.id);
+        if (existing && existing.state === item.state && existing.receivedBytes === item.receivedBytes) {
+          return prev;
+        }
+        return [...prev.filter((d) => d.id !== item.id), item].sort((a, b) => b.startedAt - a.startedAt);
+      });
+    };
+    const handlePathSet = async () => {
+      const path = await window.orbApi?.getDownloadPath();
+      if (typeof path === 'string') setCurrentDownloadPath(path);
+    };
+    window.addEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
+
+    // Initialize download path
+    handlePathSet();
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('orb:navigate', handleNavigateEvent as EventListener);
       window.removeEventListener('orb:new-tab', handleNewTab);
       window.removeEventListener('orb:new-space', handleNewSpace);
       window.removeEventListener('orb:popup-requested', handlePopupRequestedEvent);
+      window.removeEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
+      window.removeEventListener('orb:shortcut', handleShortcut as EventListener);
     };
   }, [spaces.length, commandBarOpen, handleNavigate]);
 
@@ -421,6 +476,7 @@ export default function App() {
           onForward={navigateForward}
           onReload={navigateReload}
           loadingProgress={activeTabLoading ? 1 : 0}
+          onDownloadsToggle={() => setDownloadsOpen((o) => !o)}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}
@@ -491,6 +547,20 @@ export default function App() {
         {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
         <PermissionPrompt />
+        {downloadsOpen && (
+          <DownloadsPanel
+            downloads={downloads}
+            onCancel={(id) => { window.orbApi?.cancelDownload(id); setDownloadsOpen(false); }}
+            onRemove={(id) => { window.orbApi?.removeDownload(id); }}
+            onClearCompleted={() => { window.orbApi?.clearCompletedDownloads(); }}
+            setDownloadPath={async (p) => {
+              const result = await window.orbApi?.setDownloadPath(p);
+              if (result?.ok && typeof result.path === 'string') setCurrentDownloadPath(result.path);
+            }}
+            currentDownloadPath={currentDownloadPath}
+            onClose={() => setDownloadsOpen(false)}
+          />
+        )}
       </main>
     </div>
   );

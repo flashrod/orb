@@ -38,6 +38,13 @@ export interface ExposedApi {
   getPermissions: () => Promise<Array<{ host: string; permission: string; state: string; updatedAt: number }>>;
   setPermission: (host: string, permission: string, state: string) => Promise<{ ok: boolean }>;
   removePermission: (host: string, permission: string) => Promise<{ ok: boolean }>;
+  // Downloads
+  getDownloads: () => Promise<Array<{ id: string; url: string; filePath: string | null; totalBytes: number; receivedBytes: number; state: string; startedAt: number; completedAt: number | null }>>;
+  cancelDownload: (id: string) => Promise<{ ok: boolean }>;
+  removeDownload: (id: string) => Promise<{ ok: boolean }>;
+  clearCompletedDownloads: () => Promise<{ ok: boolean }>;
+  setDownloadPath: (p: string) => Promise<{ ok: boolean; path: string }>;
+  getDownloadPath: () => Promise<string>;
 }
 
 export const exposedApi: ExposedApi = {
@@ -86,4 +93,11 @@ export const exposedApi: ExposedApi = {
   getPermissions: async () => [],
   setPermission: async () => ({ ok: true }),
   removePermission: async () => ({ ok: true }),
+  // Downloads
+  getDownloads: async () => [],
+  cancelDownload: async () => ({ ok: true }),
+  removeDownload: async () => ({ ok: true }),
+  clearCompletedDownloads: async () => ({ ok: true }),
+  setDownloadPath: async () => ({ ok: true, path: '' }),
+  getDownloadPath: async () => '',
 };

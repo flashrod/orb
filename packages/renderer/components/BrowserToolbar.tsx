@@ -8,7 +8,7 @@ import { useAppearanceStore } from '../stores/appearance';
 type ExtensionInfo = { id: string; name: string; version: string };
 
 export default function BrowserToolbar({
-  activeTab, onNavigate, onBack, onForward, onReload, loadingProgress, onPickElement, canPickElement, glanceUrl, onGlance,
+  activeTab, onNavigate, onBack, onForward, onReload, loadingProgress, onPickElement, canPickElement, glanceUrl, onGlance, onDownloadsToggle,
 }: {
   activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate: (url: string) => void;
@@ -20,6 +20,7 @@ export default function BrowserToolbar({
   canPickElement: boolean;
   glanceUrl: string | null;
   onGlance: () => void;
+  onDownloadsToggle: () => void;
 }) {
   const { order, hidden, move } = useToolbarStore();
   const { setTabLayout, tabLayout, bookmarksBarVisible, setBookmarksBarVisible } = useAppearanceStore();
@@ -61,6 +62,7 @@ export default function BrowserToolbar({
       case 'picker': return <button type="button" aria-label="Pick an element for a Boost" title="Pick an element for a Boost" onClick={onPickElement} disabled={!canPickElement} className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-35"><CursorClick className="h-4 w-4" /></button>;
       case 'glance': return <button type="button" aria-label="Preview hovered link with Glance" title={glanceUrl ? 'Preview hovered link with Glance' : 'Hover a link on the page to preview it'} onClick={onGlance} disabled={!glanceUrl} className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-35"><Eye className="h-4 w-4" /></button>;
       case 'tabLayout': return <button type="button" aria-label={tabLayout === 'top' ? 'Use side tabs' : 'Use top tabs'} title={tabLayout === 'top' ? 'Use side tabs' : 'Use top tabs'} onClick={() => setTabLayout(tabLayout === 'top' ? 'split' : 'top')} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><List className="h-4 w-4" /></button>;
+      case 'downloads': return <button type="button" aria-label="Downloads" title="Downloads" onClick={onDownloadsToggle} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><Trash className="h-4 w-4" /></button>;
     }
   };
 
