@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSpaceStore } from './stores/spaces';
 import { useTabStore } from './stores/tabs';
-import Sidebar from './components/Sidebar';
 import TabBar from './components/TabBar';
 import CommandBar from './components/CommandBar';
 import BrowserToolbar from './components/BrowserToolbar';
@@ -22,9 +21,9 @@ export default function App() {
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
   const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
-  const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
+  const { spaces, activeSpaceId, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
-  const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, compactSideTabs, customColors, setTabLayout } = useAppearanceStore();
+  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, customColors, setTabLayout } = useAppearanceStore();
 
   const webviewRef = useRef<any>(null);
 
@@ -92,6 +91,11 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandBarOpen(!commandBarOpen);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        setSettingsSection('appearance');
+        setSettingsOpen(true);
       }
       if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
         e.preventDefault();
@@ -203,16 +207,6 @@ export default function App() {
 
   return (
     <div className="orb-frame flex h-screen w-screen overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar
-        spaces={spaces}
-        activeSpaceId={activeSpaceId}
-        setActiveSpace={setActiveSpace}
-        width={sidebarWidth}
-        autoHide={sidebarAutoHide}
-        onOpenSettings={(section) => { setSettingsSection(section); setSettingsOpen(true); }}
-      />
-
       {/* Main content area */}
       <main className="relative flex min-w-0 flex-1 overflow-hidden">
         {!tabPresentation.horizontalTabsVisible ? (
@@ -274,7 +268,7 @@ export default function App() {
         </div>
 
         {/* Command Bar Overlay */}
-        {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} />}
+        {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} />}
         {settingsOpen && <Settings initialSection={settingsSection} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
       </main>

@@ -29,8 +29,10 @@ function getIcon(name: string, className?: string) {
 
 export default function CommandBar({
   onClose,
+  onOpenSettings,
 }: {
   onClose: () => void;
+  onOpenSettings: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CommandResult[]>([]);
@@ -93,6 +95,14 @@ export default function CommandBar({
             void window.orbApi?.toggleDevTools();
             onClose();
           },
+        },
+        {
+          id: 'cmd-settings',
+          type: 'command',
+          title: 'Settings',
+          subtitle: 'Customize Orb (⌘,)',
+          icon: getIcon('search', 'w-4 h-4'),
+          action: onOpenSettings,
         }
       );
     } else {

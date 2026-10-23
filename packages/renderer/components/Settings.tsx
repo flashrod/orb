@@ -63,8 +63,8 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
   const { enabled, toggle } = useAdBlockerStore();
   const { order, hidden, move, toggleHidden, reset } = useToolbarStore();
   const {
-    theme, accent, density, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, compactSideTabs, motion,
-    setTheme, setAccent, setDensity, setTabLayout, setSidebarWidth, setSidebarAutoHide, setBookmarksBarVisible, setCompactSideTabs, setMotion,
+    theme, accent, density, tabLayout, bookmarksBarVisible, compactSideTabs, motion,
+    setTheme, setAccent, setDensity, setTabLayout, setBookmarksBarVisible, setCompactSideTabs, setMotion,
     customColors, setCustomColor, resetCustomColors,
   } = useAppearanceStore();
   const selected = sections.find((item) => item.id === section) || sections[0];
@@ -153,16 +153,8 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
                   </div>
                 </section>
 
-                <section className="grid grid-cols-2 gap-8 border-t orb-border pt-6">
-                  <div>
-                    <div className="flex items-center justify-between"><div><h2 className="orb-strong text-sm font-semibold">Sidebar width</h2><p className="orb-muted mt-1 text-xs">Give your spaces room to breathe.</p></div><span className="orb-muted font-mono text-xs">{sidebarWidth}px</span></div>
-                    <input type="range" min="64" max="112" step="8" value={sidebarWidth} onChange={(event) => setSidebarWidth(Number(event.target.value))} aria-label="Sidebar width" className="mt-4 w-full accent-[var(--orb-accent)]" />
-                    <button type="button" role="switch" aria-checked={sidebarAutoHide} onClick={() => setSidebarAutoHide(!sidebarAutoHide)} className="orb-control mt-4 flex w-full items-center justify-between rounded-md border orb-border px-3 py-2.5 text-left">
-                      <span><span className="orb-strong block text-xs font-medium">Auto-hide sidebar</span><span className="orb-muted mt-1 block text-[10px]">Reveal it from the left edge.</span></span>
-                      <span className={`relative ml-3 h-5 w-9 shrink-0 rounded-full transition-colors ${sidebarAutoHide ? 'bg-[var(--orb-accent)]' : 'bg-[var(--orb-border-strong)]'}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${sidebarAutoHide ? 'translate-x-[18px]' : 'translate-x-0.5'}`} /></span>
-                    </button>
-                  </div>
-                  <div>
+                <section className="border-t orb-border pt-6">
+                  <div className="max-w-[320px]">
                     <SectionHeading title="Motion" detail="Choose how the interface responds." />
                     <div className="space-y-1">{motionOptions.map((option) => <button key={option.id} onClick={() => setMotion(option.id)} aria-pressed={motion === option.id} className={`orb-control flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left ${motion === option.id ? 'orb-accent-soft orb-accent' : 'orb-muted'}`}>
                       <span><span className="block text-xs font-medium">{option.label}</span><span className="orb-muted mt-0.5 block text-[10px]">{option.detail}</span></span>{motion === option.id && <Check aria-hidden="true" className="h-4 w-4" />}

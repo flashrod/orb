@@ -15,6 +15,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [x] Keep the horizontal tab row and vertical tab rail mutually exclusive; put top tabs above the shared navigation/address row.
 - [x] Drag to reorder tabs in either tab layout; both layouts support pin, close, and new-tab actions.
 - [x] Compact side tabs collapse to an edge reveal, open on hover, and toggle with Cmd/Ctrl+Shift+E.
+- [x] Remove the persistent Spaces sidebar; switch workspaces through the keyboard-first command bar.
 - [x] Persistently customize toolbar controls: reorder or hide the home, navigation, address/search, bookmark, extension, picker, and tab-layout controls.
 - [x] Persistent bookmarks with draggable/nestable folders, rename, HTML import/export, and a bookmarks row hidden by default.
 - [x] Shared omnibox/search handling for the address bar, command bar, and new-tab search; focus the address bar automatically on a new tab.
