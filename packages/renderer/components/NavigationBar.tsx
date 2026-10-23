@@ -21,34 +21,40 @@ export default function NavigationBar({
   canGoForward?: boolean;
 }) {
   return (
-    <nav aria-label="Page navigation" className="flex h-10 items-center gap-1 px-3">
+    <nav
+      aria-label="Page navigation"
+      className="flex h-12 items-center gap-1 px-2.5 rounded-2xl orb-surface border orb-border shadow-sm"
+    >
       <button
         onClick={onBack}
         disabled={!canGoBack}
-        className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-35"
+        className="orb-nav-btn flex h-9 w-9 items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-35"
         title="Back"
+        aria-label="Back"
       >
         <ArrowLeft className="w-4 h-4" />
       </button>
       <button
         onClick={onForward}
         disabled={!canGoForward}
-        className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-35"
+        className="orb-nav-btn flex h-9 w-9 items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-35"
         title="Forward"
+        aria-label="Forward"
       >
         <ArrowRight className="w-4 h-4" />
       </button>
       <button
         onClick={onReload}
-        className="orb-control flex h-8 w-8 items-center justify-center rounded-md"
+        className="orb-nav-btn flex h-9 w-9 items-center justify-center rounded-full"
         title="Reload"
+        aria-label="Reload"
       >
         <ArrowClockwise className="w-4 h-4" />
       </button>
       <button
         onClick={onPickElement}
         disabled={!canPickElement}
-        className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-35"
+        className="orb-nav-btn flex h-9 w-9 items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-35"
         title="Pick an element for a Boost"
         aria-label="Pick an element for a Boost"
       >
@@ -56,8 +62,9 @@ export default function NavigationBar({
       </button>
       <button
         onClick={onToggleVerticalTabs}
-        className="orb-control flex h-8 w-8 items-center justify-center rounded-md"
+        className="orb-nav-btn flex h-9 w-9 items-center justify-center rounded-full"
         title="Vertical Tabs"
+        aria-label="Vertical Tabs"
       >
         <List className="w-4 h-4" />
       </button>

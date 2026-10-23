@@ -50,7 +50,7 @@ export default function AddressBar({
   };
 
   return (
-    <div className="orb-address orb-surface flex min-w-0 flex-1 items-center px-2">
+    <div className="orb-address orb-surface flex min-w-0 flex-1 items-center gap-1 px-2.5 rounded-3xl border orb-border shadow-sm">
       <div className="relative flex-1">
         <MagnifyingGlass aria-hidden="true" className="orb-muted absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
         <form
@@ -66,12 +66,12 @@ export default function AddressBar({
             onFocus={(event) => { setFocused(true); updateSuggestionAnchor(); if (activeTab?.url !== 'about:blank') event.currentTarget.select(); }}
             onBlur={() => setFocused(false)}
             placeholder="Search or type address"
-            className="orb-strong orb-placeholder w-full rounded-md border border-transparent bg-transparent py-1.5 pl-9 pr-4 text-[13px] outline-none transition-colors focus:border-[var(--orb-border-strong)] focus:bg-[var(--orb-elevated)] focus:shadow-sm"
+            className="orb-strong orb-placeholder w-full rounded-full border-transparent bg-transparent py-1.5 pl-9 pr-4 text-[13px] outline-none transition-colors focus:border-[var(--orb-border-strong)] focus:bg-[var(--orb-elevated)] focus:shadow-sm"
             autoComplete="off"
           />
         </form>
         {focused && suggestionAnchor && createPortal(
-          <div style={{ left: suggestionAnchor.left, top: suggestionAnchor.top, width: suggestionAnchor.width, backgroundColor: 'var(--orb-elevated)' }} className="orb-strong fixed z-[10000] rounded-lg border orb-border py-2 shadow-[0_12px_32px_rgba(41,37,36,0.18)]">
+          <div style={{ left: suggestionAnchor.left, top: suggestionAnchor.top, width: suggestionAnchor.width, backgroundColor: 'var(--orb-elevated)' }} className="orb-strong fixed z-[10000] rounded-2xl border orb-border py-2.5 shadow-[0_20px_40px_rgba(41,37,36,0.16)]">
             <div className="orb-muted flex items-center gap-2 px-3 py-1.5 text-xs">
               <MagnifyingGlass aria-hidden="true" className="h-3.5 w-3.5" />
               <span>Search the web or enter a website</span>

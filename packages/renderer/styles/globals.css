@@ -121,6 +121,10 @@
 .orb-control { color: var(--orb-text-muted); transition: background-color 140ms ease, color 140ms ease, transform 140ms ease; }
 .orb-control:hover { background: var(--orb-hover); color: var(--orb-text-strong); }
 .orb-control:active { transform: scale(.98); }
+.orb-nav-btn { color: var(--orb-text-muted); transition: background-color 140ms ease, color 140ms ease, transform 120ms ease; }
+.orb-nav-btn:hover { background: var(--orb-hover); color: var(--orb-text-strong); }
+.orb-nav-btn:disabled:hover { background: transparent; color: var(--orb-text-muted); }
+.orb-nav-btn:active { transform: scale(.94); }
 .orb-placeholder::placeholder { color: var(--orb-text-muted); }
 .orb-tab-active { background: var(--orb-elevated); color: var(--orb-text-strong); box-shadow: 0 1px 3px rgb(41 37 36 / 8%); }
 .orb-tab { background: transparent; color: var(--orb-text); }
