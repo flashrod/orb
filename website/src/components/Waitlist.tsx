@@ -39,12 +39,12 @@ export default function Waitlist() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="flex-1 px-5 py-3 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white text-sm"
+            className="flex-1 px-5 py-3 rounded-md border border-white/20 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white text-sm"
           />
           <button
             type="submit"
             disabled={status === 'sending'}
-            className="px-8 py-3 rounded-lg bg-white text-orb-accent text-sm font-medium hover:bg-orb-surface transition-colors disabled:opacity-60"
+            className="px-8 py-3 rounded-md bg-white text-orb-accent text-sm font-medium hover:bg-orb-surface transition-colors disabled:opacity-60"
           >
             {status === 'sending' ? 'Adding&hellip;' : 'Join waitlist'}
           </button>

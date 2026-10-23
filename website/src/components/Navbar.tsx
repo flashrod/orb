@@ -49,7 +49,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-orb-accent flex items-center justify-center text-white text-[10px] font-serif font-bold">
+            <div className="w-8 h-8 rounded-md bg-orb-accent flex items-center justify-center text-white text-[10px] font-serif font-bold">
               O
             </div>
             <span className="font-serif font-semibold text-orb-text-strong text-sm tracking-tight">
@@ -89,15 +89,12 @@ export default function Navbar() {
               href="https://github.com/flashrod/orb"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-orb-border text-orb-text-strong text-xs font-medium hover:bg-orb-hover transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-md border border-orb-border text-orb-text-strong text-xs font-medium hover:bg-orb-hover transition-colors"
             >
               <StarIcon />
               {stars !== null ? stars.toLocaleString() : 'Star'}
             </Link>
-            <Link
-              href="#waitlist"
-              className="btn-primary"
-            >
+            <Link href="#waitlist" className="btn-primary">
               Join waitlist
             </Link>
           </div>

@@ -13,6 +13,7 @@
     line-height: 1.6;
     margin: 0;
     color: var(--orb-text);
+    overflow-x: hidden;
   }
 
   h1,
@@ -26,23 +27,24 @@
   }
 
   h1 {
-    font-size: 3.5rem;
+    font-size: 4rem;
     font-weight: 600;
   }
 
   h2 {
-    font-size: 2.5rem;
+    font-size: 3rem;
     font-weight: 600;
   }
 
   h3 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 600;
   }
 
   h4 {
     font-size: 1rem;
     font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
   p {
@@ -57,11 +59,15 @@
   button {
     font-family: inherit;
   }
+
+  .kbd {
+    @apply border border-orb-border bg-orb-canvas rounded-sm px-1.5 py-0.5 text-[10px] font-mono text-orb-text;
+  }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-orb-text-strong text-white px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-orb-text-strong text-white px-7 py-3 rounded-md text-sm font-medium transition-all duration-200;
     box-shadow: none;
   }
 
@@ -74,7 +80,7 @@
   }
 
   .btn-secondary {
-    @apply bg-transparent border border-orb-border text-orb-text-strong px-6 py-3 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-transparent border border-orb-border text-orb-text-strong px-7 py-3 rounded-md text-sm font-medium transition-all duration-200;
     box-shadow: none;
   }
 
@@ -92,8 +98,8 @@
   }
 
   .section-padding {
-    padding-top: 96px;
-    padding-bottom: 96px;
+    padding-top: 120px;
+    padding-bottom: 120px;
   }
 
   .container-max {
@@ -112,5 +118,26 @@
   .reveal.visible {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  .ambient-blob {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: -1;
+    background: radial-gradient(
+      600px circle at 20% 30%,
+      color-mix(in srgb, var(--orb-accent) 8%, transparent),
+      transparent 40%
+    ),
+    radial-gradient(
+      500px circle at 80% 70%,
+      color-mix(in srgb, #1f6c9f 6%, transparent),
+      transparent 40%
+    );
+    opacity: 0.03;
   }
 }
