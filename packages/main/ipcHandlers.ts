@@ -31,11 +31,8 @@ export function registerIpcHandlers(): void {
   });
 
   // Toggle dev tools
-  ipcMain.handle('window:toggle-devtools', (_, webContentsId: number) => {
-    const win = windowManager.getWindow(webContentsId);
-    if (win) {
-      win.webContents.toggleDevTools();
-    }
+  ipcMain.handle('window:toggle-devtools', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools();
   });
 
   // Focus window

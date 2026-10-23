@@ -89,7 +89,7 @@ export default function CommandBar({
           subtitle: 'Open DevTools (⌘⌥I)',
           icon: getIcon('search', 'w-4 h-4'),
           action: () => {
-            window.dispatchEvent(new CustomEvent('orb:toggle-devtools'));
+            void window.orbApi?.toggleDevTools();
             onClose();
           },
         }

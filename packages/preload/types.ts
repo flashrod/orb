@@ -1,7 +1,7 @@
 export interface ExposedApi {
   getWindowById: (webContentsId: number) => Promise<any>;
   openExternal: (url: string) => Promise<void>;
-  toggleDevTools: (webContentsId: number) => Promise<void>;
+  toggleDevTools: () => Promise<void>;
   focusWindow: (webContentsId: number) => Promise<void>;
   saveDialog: (options: any) => Promise<any>;
   openDialog: (options: any) => Promise<any>;

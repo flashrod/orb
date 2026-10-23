@@ -13,7 +13,7 @@ import VerticalTabPanel from './components/VerticalTabPanel';
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [verticalTabsOpen, setVerticalTabsOpen] = useState(false);
-  const { spaces, activeSpaceId, setActiveSpace } = useSpaceStore();
+  const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
 
   const webviewRef = useRef<any>(null);
@@ -21,6 +21,12 @@ export default function App() {
   const navigateBack = useCallback(() => webviewRef.current?.navigateBack(), []);
   const navigateForward = useCallback(() => webviewRef.current?.navigateForward(), []);
   const navigateReload = useCallback(() => webviewRef.current?.navigateReload(), []);
+
+  useEffect(() => {
+    if (useSpaceStore.getState().spaces.length === 0) {
+      addSpace({ name: 'Personal', icon: 'globe', color: '#a0522d', tabIds: [] });
+    }
+  }, [addSpace]);
 
   const handleNavigate = useCallback((url: string) => {
     if (activeTabId) {
@@ -58,11 +64,37 @@ export default function App() {
         updateTab(activeTabId, { url });
       }
     };
+    const handleNewTab = () => {
+      const spaceStore = useSpaceStore.getState();
+      const targetSpaceId = spaceStore.activeSpaceId || spaceStore.spaces[0]?.id;
+      if (!targetSpaceId) return;
+
+      useTabStore.getState().addTab({
+        spaceId: targetSpaceId,
+        url: 'about:blank',
+        title: 'New Tab',
+        favicon: '',
+        isPinned: false,
+        isActive: true,
+      });
+    };
+    const handleNewSpace = () => {
+      useSpaceStore.getState().addSpace({
+        name: 'New Space',
+        icon: 'globe',
+        color: '#a0522d',
+        tabIds: [],
+      });
+    };
     window.addEventListener('orb:navigate', handleNavigateEvent as EventListener);
+    window.addEventListener('orb:new-tab', handleNewTab);
+    window.addEventListener('orb:new-space', handleNewSpace);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('orb:navigate', handleNavigateEvent as EventListener);
+      window.removeEventListener('orb:new-tab', handleNewTab);
+      window.removeEventListener('orb:new-space', handleNewSpace);
     };
   }, [spaces.length, commandBarOpen, activeTabId, updateTab]);
 
