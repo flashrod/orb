@@ -38,6 +38,10 @@ export function registerIpcHandlers(): void {
     BrowserWindow.fromWebContents(event.sender)?.webContents.toggleDevTools();
   });
 
+  ipcMain.handle('window:close-current', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close();
+  });
+
   // Focus window
   ipcMain.handle('window:focus', (_, webContentsId: number) => {
     const win = windowManager.getWindow(webContentsId);

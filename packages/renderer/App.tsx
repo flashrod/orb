@@ -13,6 +13,7 @@ import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 
+const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
@@ -229,6 +230,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           onReload={navigateReload}
         /> : null}
+        {!tabPresentation.horizontalTabsVisible && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
         <BrowserToolbar
           activeTab={activeTab}
           onNavigate={handleNavigate}

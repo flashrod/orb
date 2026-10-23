@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowBendDownRight, Copy, PushPin, Plus, ArrowClockwise, X } from '@phosphor-icons/react';
 
 export interface TabContextMenuProps {
@@ -47,7 +48,7 @@ export default function TabContextMenu(props: TabContextMenuProps) {
     </button>
   );
 
-  return <div ref={menuRef} role="menu" aria-label={`Actions for ${props.title}`} style={{ left, top }} className="orb-elevated orb-shadow fixed z-[100] w-[238px] rounded-lg border orb-border p-1.5">
+  return createPortal(<div ref={menuRef} role="menu" aria-label={`Actions for ${props.title}`} style={{ left, top, backgroundColor: 'var(--orb-elevated)' }} className="fixed z-[10000] w-[238px] rounded-lg border orb-border p-1.5 shadow-[0_12px_32px_rgba(41,37,36,0.2)]">
     {action('New tab to the right', ArrowBendDownRight, props.onNewTab)}
     {action('Duplicate', Copy, props.onDuplicate)}
     {action('Reload', ArrowClockwise, props.onReload, !props.canReload)}
@@ -56,5 +57,5 @@ export default function TabContextMenu(props: TabContextMenuProps) {
     {action('Close tab', X, props.onCloseTab)}
     {action('Close other tabs', X, props.onCloseOthers, !props.canCloseOthers)}
     {action('Close tabs to the right', X, props.onCloseToRight, !props.canCloseToRight)}
-  </div>;
+  </div>, document.body);
 }

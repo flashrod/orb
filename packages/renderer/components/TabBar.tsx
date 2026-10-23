@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Globe, Plus, X } from '@phosphor-icons/react';
 import { useTabStore } from '../stores/tabs';
-import { getTabsToClose, orderPinnedTabsFirst } from '../lib/tabActions';
+import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
@@ -40,6 +40,14 @@ export default function TabBar({
   };
 
   const handleCloseMany = (tabIds: string[]) => tabIds.forEach((id) => removeTab(id));
+  const closeTab = (id: string) => {
+    const allTabs = useTabStore.getState().tabs;
+    if (isLastTabToClose(allTabs, id) && window.orbApi?.closeCurrentWindow) {
+      void window.orbApi.closeCurrentWindow();
+      return;
+    }
+    removeTab(id);
+  };
 
   return (
     <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights ? 'pl-[112px] pr-3' : 'px-3'}`}>
@@ -47,7 +55,7 @@ export default function TabBar({
         const hostname = getHostname(tab.url);
         const isActive = activeTabId === tab.id;
         return (
-          <div key={tab.id} draggable onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggingId; if (!id || id === tab.id) return; const allTabs = useTabStore.getState().tabs; const targetIndex = allTabs.findIndex((item) => item.id === tab.id); const sourceIndex = allTabs.findIndex((item) => item.id === id); moveTab(id, activeSpaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0)); }} onAuxClick={(event) => { if (event.button === 1) removeTab(tab.id); }} onContextMenu={(event) => { event.preventDefault(); setContextTabId(tab.id); setContextPosition({ x: event.clientX, y: event.clientY }); }} className={`group relative flex h-full shrink-0 items-end ${draggingId === tab.id ? 'opacity-40' : ''}`}>
+          <div key={tab.id} draggable onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggingId; if (!id || id === tab.id) return; const allTabs = useTabStore.getState().tabs; const targetIndex = allTabs.findIndex((item) => item.id === tab.id); const sourceIndex = allTabs.findIndex((item) => item.id === id); moveTab(id, activeSpaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0)); }} onAuxClick={(event) => { if (event.button === 1) closeTab(tab.id); }} onContextMenu={(event) => { event.preventDefault(); setContextTabId(tab.id); setContextPosition({ x: event.clientX, y: event.clientY }); }} className={`group relative flex h-full shrink-0 items-end ${draggingId === tab.id ? 'opacity-40' : ''}`}>
             <button
               type="button"
               role="tab"
@@ -64,7 +72,7 @@ export default function TabBar({
               )}
               {!tab.isPinned && <span className="orb-strong min-w-0 flex-1 truncate text-[12px] font-medium">{tab.title || hostname}</span>}
             </button>
-            <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={() => removeTab(tab.id)} className={`orb-control absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${tab.isPinned ? 'right-0' : 'right-1'}`}>
+            <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={() => closeTab(tab.id)} className={`orb-control absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${tab.isPinned ? 'right-0' : 'right-1'}`}>
               <X className="h-3 w-3" />
             </button>
           </div>
@@ -87,7 +95,7 @@ export default function TabBar({
           onReload={onReload}
           onDuplicate={() => addTab({ spaceId: activeSpaceId, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: tab.isPinned, isActive: true })}
           onTogglePinned={() => updateTab(tab.id, { isPinned: !tab.isPinned })}
-          onCloseTab={() => removeTab(tab.id)}
+          onCloseTab={() => closeTab(tab.id)}
           onCloseOthers={() => handleCloseMany(closeOthers)}
           onCloseToRight={() => handleCloseMany(closeRight)}
           onDismiss={() => { setContextTabId(null); setContextPosition(null); }}

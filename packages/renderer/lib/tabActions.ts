@@ -16,3 +16,7 @@ export function getTabsToClose<T extends { id: string }>(
   if (targetIndex < 0) return [];
   return tabs.filter((tab, index) => direction === 'right' ? index > targetIndex : index !== targetIndex).map((tab) => tab.id);
 }
+
+export function isLastTabToClose<T extends { id: string }>(tabs: T[], targetId: string): boolean {
+  return tabs.length === 1 && tabs[0].id === targetId;
+}

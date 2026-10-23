@@ -7,6 +7,7 @@ export interface ExposedApi {
   getWindowById: (webContentsId: number) => Promise<any>;
   openExternal: (url: string) => Promise<void>;
   toggleDevTools: () => Promise<void>;
+  closeCurrentWindow: () => Promise<void>;
   focusWindow: (webContentsId: number) => Promise<void>;
   saveDialog: (options: any) => Promise<any>;
   openDialog: (options: any) => Promise<any>;
@@ -32,6 +33,7 @@ export const exposedApi: ExposedApi = {
   getWindowById: () => Promise.resolve(null),
   openExternal: async () => {},
   toggleDevTools: async () => {},
+  closeCurrentWindow: async () => {},
   focusWindow: async () => {},
   saveDialog: async () => Promise.resolve({}),
   openDialog: async () => Promise.resolve({}),
