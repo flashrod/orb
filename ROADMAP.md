@@ -6,6 +6,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 
 - [x] Electron + React + TypeScript + Vite + Tailwind + Zustand browser shell.
 - [x] Chromium WebView navigation, address entry, back/forward/reload, and horizontal tabs.
+- [x] Loading, page URL, and title state follow Electron WebView navigation events, including failed loads.
 - [x] Spaces with persistent names and selection; vertical tab rail.
 - [x] Command bar for finding tabs/spaces, creating tabs/spaces, and navigating.
 - [x] Essentials pinned sites, persisted per Space.

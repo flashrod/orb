@@ -1,10 +1,12 @@
 import React, { forwardRef, useEffect, useRef, useState, useCallback, useImperativeHandle } from 'react';
+import { pickPageElement, PickedElement } from '../lib/elementPicker';
 
 type WebViewHandle = {
   navigateBack: () => void;
   navigateForward: () => void;
   navigateReload: () => void;
   loadUrl: (url: string) => void;
+  pickElement: () => Promise<PickedElement | null>;
 };
 
 export default forwardRef<WebViewHandle, {
@@ -67,13 +69,13 @@ export default forwardRef<WebViewHandle, {
       onLoadingChange?.(true);
     };
 
-    const handleDidCommitNavigation = () => {
+    const handleNavigation = (event: any) => {
       const wv = webview as any;
-      const currentUrl = wv.getURL ? wv.getURL() : '';
+      const currentUrl = event?.url || (wv.getURL ? wv.getURL() : '');
       onUrlChange?.(currentUrl);
     };
 
-    const handleDidStopLoad = () => {
+    const handleDidStopLoading = () => {
       setIsLoading(false);
       onLoadingChange?.(false);
       const wv = webview as any;
@@ -85,25 +87,29 @@ export default forwardRef<WebViewHandle, {
       onFaviconChange?.(fav);
     };
 
+    const handleDidFailLoad = (event: any) => {
+      if (event.isMainFrame === false) return;
+      setIsLoading(false);
+      onLoadingChange?.(false);
+    };
+
     const handleNewWindow = (e: any) => {
       e.preventDefault();
     };
 
     webview.addEventListener('did-start-loading', handleDidStartLoading);
-    webview.addEventListener(
-      'did-commit-navigation',
-      handleDidCommitNavigation
-    );
-    webview.addEventListener('did-stop-load', handleDidStopLoad);
+    webview.addEventListener('did-navigate', handleNavigation);
+    webview.addEventListener('did-navigate-in-page', handleNavigation);
+    webview.addEventListener('did-stop-loading', handleDidStopLoading);
+    webview.addEventListener('did-fail-load', handleDidFailLoad);
     webview.addEventListener('new-window', handleNewWindow);
 
     return () => {
       webview.removeEventListener('did-start-loading', handleDidStartLoading);
-      webview.removeEventListener(
-        'did-commit-navigation',
-        handleDidCommitNavigation
-      );
-      webview.removeEventListener('did-stop-load', handleDidStopLoad);
+      webview.removeEventListener('did-navigate', handleNavigation);
+      webview.removeEventListener('did-navigate-in-page', handleNavigation);
+      webview.removeEventListener('did-stop-loading', handleDidStopLoading);
+      webview.removeEventListener('did-fail-load', handleDidFailLoad);
       webview.removeEventListener('new-window', handleNewWindow);
     };
   }, [
@@ -122,6 +128,11 @@ export default forwardRef<WebViewHandle, {
     navigateForward,
     navigateReload,
     loadUrl,
+    pickElement: async () => {
+      const webview = webviewRef.current;
+      if (!webview || isLoading) return null;
+      return pickPageElement(webview);
+    },
   }));
 
   // Set webview src when url changes
@@ -133,7 +144,7 @@ export default forwardRef<WebViewHandle, {
   }, [url]);
 
   return (
-    <div className="absolute inset-0 w-full h-full bg-black relative">
+    <div className="orb-frame absolute inset-0 h-full w-full">
       <webview
         ref={webviewRef}
         className="w-full h-full"
@@ -141,10 +152,10 @@ export default forwardRef<WebViewHandle, {
         preload=""
       />
       {isLoading && (
-        <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-            <span className="text-sm text-white/60">Loading...</span>
+        <div className="orb-frame absolute inset-0 z-10 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 orb-border" style={{ borderTopColor: 'var(--orb-accent)' }} />
+            <span className="orb-muted text-sm">Opening page</span>
           </div>
         </div>
       )}
