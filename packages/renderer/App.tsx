@@ -16,6 +16,7 @@ import StartPage from './components/StartPage';
 import GlanceView from './components/GlanceView';
 import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
+import PermissionPrompt from './components/PermissionPrompt';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
 import { normalizeGlanceUrl } from './lib/glance';
@@ -489,6 +490,7 @@ export default function App() {
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} />}
         {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
+        <PermissionPrompt />
       </main>
     </div>
   );

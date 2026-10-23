@@ -56,6 +56,12 @@ contextBridge.exposeInMainWorld('orbApi', {
   getBoosts: () => ipcRenderer.invoke('boosts:get-all'),
   saveBoost: (boost: NewBoost) => ipcRenderer.invoke('boosts:save', boost) as Promise<BoostRecord>,
   deleteBoost: (id: string) => ipcRenderer.invoke('boosts:delete', id),
+
+  // Permissions
+  permissionRespond: (id: string, allowed: boolean) => ipcRenderer.invoke('permission:respond', { id, allowed }),
+  getPermissions: () => ipcRenderer.invoke('permission:get-all'),
+  setPermission: (host: string, permission: string, state: string) => ipcRenderer.invoke('permission:set', { host, permission, state }),
+  removePermission: (host: string, permission: string) => ipcRenderer.invoke('permission:remove', { host, permission }),
 });
 
 declare global {
@@ -93,6 +99,11 @@ declare global {
       getBoosts: () => Promise<BoostRecord[]>;
       saveBoost: (boost: NewBoost) => Promise<BoostRecord>;
       deleteBoost: (id: string) => Promise<{ deleted: boolean }>;
+      // Permissions
+      permissionRespond: (id: string, allowed: boolean) => Promise<void>;
+      getPermissions: () => Promise<Array<{ host: string; permission: string; state: string; updatedAt: number }>>;
+      setPermission: (host: string, permission: string, state: string) => Promise<{ ok: boolean }>;
+      removePermission: (host: string, permission: string) => Promise<{ ok: boolean }>;
     };
   }
 }

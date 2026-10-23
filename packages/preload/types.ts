@@ -33,6 +33,11 @@ export interface ExposedApi {
   getBoosts: () => Promise<BoostRecord[]>;
   saveBoost: (boost: NewBoost) => Promise<BoostRecord>;
   deleteBoost: (id: string) => Promise<{ deleted: boolean }>;
+  // Permissions
+  permissionRespond: (id: string, allowed: boolean) => Promise<void>;
+  getPermissions: () => Promise<Array<{ host: string; permission: string; state: string; updatedAt: number }>>;
+  setPermission: (host: string, permission: string, state: string) => Promise<{ ok: boolean }>;
+  removePermission: (host: string, permission: string) => Promise<{ ok: boolean }>;
 }
 
 export const exposedApi: ExposedApi = {
@@ -77,4 +82,8 @@ export const exposedApi: ExposedApi = {
     updatedAt: boost.updatedAt ?? Date.now(),
   }),
   deleteBoost: async () => ({ deleted: true }),
+  permissionRespond: async () => {},
+  getPermissions: async () => [],
+  setPermission: async () => ({ ok: true }),
+  removePermission: async () => ({ ok: true }),
 };
