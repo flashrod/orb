@@ -17,6 +17,7 @@ import { useBoostStore } from './stores/boosts';
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts'>('appearance');
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
   const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
@@ -202,7 +203,7 @@ export default function App() {
         setActiveSpace={setActiveSpace}
         width={sidebarWidth}
         autoHide={sidebarAutoHide}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={(section) => { setSettingsSection(section); setSettingsOpen(true); }}
       />
 
       {/* Main content area */}
@@ -216,8 +217,14 @@ export default function App() {
           />
         )}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+        {tabLayout === 'top' && <TabBar
+          tabs={spaceTabs}
+          activeTabId={activeTabId}
+          activeSpaceId={activeSpaceId || ''}
+          setActiveTab={setActiveTab}
+        />}
         {/* Navigation controls */}
-        <div className="orb-surface flex h-11 shrink-0 items-center border-b orb-border px-2">
+        <div className="orb-surface flex h-[52px] shrink-0 items-center border-b orb-border px-2">
           <NavigationBar
             onBack={navigateBack}
             onForward={navigateForward}
@@ -226,20 +233,8 @@ export default function App() {
             onPickElement={() => void handlePickElement()}
             canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           />
+          <AddressBar activeTab={activeTab} onNavigate={handleNavigate} />
         </div>
-
-        {/* Address Bar */}
-        <AddressBar
-          activeTab={activeTab}
-          onNavigate={handleNavigate}
-        />
-
-        {tabLayout === 'top' && <TabBar
-          tabs={spaceTabs}
-          activeTabId={activeTabId}
-          activeSpaceId={activeSpaceId || ''}
-          setActiveTab={setActiveTab}
-        />}
 
         {/* Web Content */}
         <div className="orb-frame relative flex-1 overflow-hidden">
@@ -272,7 +267,7 @@ export default function App() {
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} />}
-        {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+        {settingsOpen && <Settings initialSection={settingsSection} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
       </main>
     </div>

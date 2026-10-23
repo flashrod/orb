@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTabStore } from '../stores/tabs';
 import { X } from '@phosphor-icons/react';
 
@@ -21,7 +21,8 @@ export default function VerticalTabPanel({
   onClose: () => void;
   spaceId: string;
 }) {
-  const { tabs, activeTabId, setActiveTab, removeTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTab, removeTab, moveTab } = useTabStore();
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const spaceTabs = tabs.filter((t: { spaceId: string }) => t.spaceId === spaceId);
   const handleCloseTab = (e: React.MouseEvent, tabId: string) => {
@@ -57,11 +58,16 @@ export default function VerticalTabPanel({
             spaceTabs.map((tab) => (
               <div
                 key={tab.id}
+                draggable
+                onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }}
+                onDragEnd={() => setDraggingId(null)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggingId; if (!id || id === tab.id) return; const allTabs = useTabStore.getState().tabs; const targetIndex = allTabs.findIndex((item) => item.id === tab.id); const sourceIndex = allTabs.findIndex((item) => item.id === id); moveTab(id, spaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0)); }}
                 onClick={() => {
                   setActiveTab(tab.id);
                   onClose();
                 }}
-                className={`orb-vertical-row group flex min-h-10 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+                className={`orb-vertical-row group flex min-h-10 cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors ${draggingId === tab.id ? 'opacity-40' : ''} ${
                   activeTabId === tab.id
                     ? 'orb-accent-soft orb-strong'
                     : 'orb-control'

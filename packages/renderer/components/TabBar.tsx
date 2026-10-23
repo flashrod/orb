@@ -17,7 +17,8 @@ export default function TabBar({
   activeSpaceId: string;
   setActiveTab: (id: string | null) => void;
 }) {
-  const { removeTab, addTab } = useTabStore();
+  const { removeTab, addTab, moveTab } = useTabStore();
+  const [draggingId, setDraggingId] = React.useState<string | null>(null);
 
   const handleNewTab = () => {
     addTab({ spaceId: activeSpaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
@@ -29,7 +30,7 @@ export default function TabBar({
         const hostname = getHostname(tab.url);
         const isActive = activeTabId === tab.id;
         return (
-          <div key={tab.id} onAuxClick={(event) => { if (event.button === 1) removeTab(tab.id); }} className="group relative flex h-full shrink-0 items-end">
+          <div key={tab.id} draggable onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggingId; if (!id || id === tab.id) return; const allTabs = useTabStore.getState().tabs; const targetIndex = allTabs.findIndex((item) => item.id === tab.id); const sourceIndex = allTabs.findIndex((item) => item.id === id); moveTab(id, activeSpaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0)); }} onAuxClick={(event) => { if (event.button === 1) removeTab(tab.id); }} className={`group relative flex h-full shrink-0 items-end ${draggingId === tab.id ? 'opacity-40' : ''}`}>
             <button
               type="button"
               role="tab"

@@ -12,6 +12,8 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [x] Essentials pinned sites, persisted per Space.
 - [x] Warm Paper/Sage/Night themes, accent choices, editable palette colors, compact density, sidebar width/auto-hide, and motion preference.
 - [x] Selectable top tabs or a vertical tab rail while navigation and address controls stay at the top.
+- [x] Keep the horizontal tab row and vertical tab rail mutually exclusive; put top tabs above the shared navigation/address row.
+- [x] Drag to reorder tabs in either tab layout.
 - [x] Shared omnibox/search handling for the address bar, command bar, and new-tab search; focus the address bar automatically on a new tab.
 - [x] Compact, single-line top tabs with favicons and clear active-tab styling.
 - [x] Basic network ad/tracker filtering, imported uBlock-style lists, HTTPS-only redirect, and request-header reduction for some fingerprinting signals.
@@ -30,7 +32,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 ### Tabs, folders, and bookmarks
 
 - [ ] **Real split view** — render two independent pages side by side, choose/swap either pane, resize the divider, and close a pane without losing its tab.
-- [ ] **Tab organization** — reorder by drag and drop, group tabs into named folders, collapse groups, pin tabs, and search hundreds of tabs quickly.
+- [ ] **Tab organization** — group tabs into named folders, collapse groups, pin tabs, and search hundreds of tabs quickly. Drag reordering is shipped.
 - [ ] **Bookmarks model** — add/edit/remove bookmarks and organize them in nested folders with persistent ordering.
 - [ ] **Bookmarks bar** — optional bar along the address area; drag bookmarks/folders onto it and reorder them; hide/show from the bar or Settings.
 - [ ] **Compact mode** — hide selected browser chrome for more page space, with a reliable keyboard shortcut and discoverable controls to restore it.
@@ -45,7 +47,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 
 ### Privacy and settings
 
-- [ ] **Settings information architecture** — dedicated sections for Appearance, Tabs, Sidebar, Bookmarks, Profiles, Privacy, Boosts, and Shortcuts; every visible toggle must affect real behavior.
+- [ ] **Settings information architecture** — Appearance, Privacy, and Boosts sections are shipped; add dedicated Tabs, Sidebar, Bookmarks, Profiles, and Shortcuts sections. Every visible toggle must affect real behavior.
 - [ ] **Shields controls** — block ads/trackers and unwanted page elements by default; per-site exceptions, allowlist management, list controls, and a blocked-request log.
 - [ ] **Filter-list management** — enable/disable lists, add custom list URLs, update lists, and report failures/status.
 - [ ] **HTTPS-only behavior** — test redirect/fallback behavior and add a site exception flow.
@@ -61,7 +63,8 @@ Each row is a focused commit or small reviewable slice.
 
 - [x] **Boosts store** — CRUD per-domain CSS/JS records in an on-disk SQLite database, with typed IPC and a renderer store.
 - [x] **Element picker** — hover to inspect/select an element, generate a resilient semantic selector, save a per-domain hide rule, and apply it immediately.
-- [ ] **Boosts editor** — list/edit per-domain CSS/JS, enable/disable, delete, validate, and preview changes.
+- [x] **Boosts editor** — list/edit per-domain CSS/JS, enable/disable, delete, and save changes.
+- [ ] **Boost validation and preview** — validate syntax and preview unsaved changes before applying.
 - [ ] **Apply boosts** — inject enabled CSS/JS only into matching domains, with safe lifecycle handling on navigation.
 - [ ] **Default cookie-banner boost** — ship opt-in/common selectors, explain what it hides, and provide a per-site disable control.
 

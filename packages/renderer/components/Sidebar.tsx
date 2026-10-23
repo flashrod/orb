@@ -28,7 +28,7 @@ export default function Sidebar({
   setActiveSpace: (id: string | null) => void;
   width: number;
   autoHide: boolean;
-  onOpenSettings: () => void;
+  onOpenSettings: (section: 'appearance' | 'privacy') => void;
 }) {
   const [hovering, setHovering] = useState(false);
   const { addSpace } = useSpaceStore();
@@ -86,7 +86,7 @@ export default function Sidebar({
 
         <div className="flex flex-col gap-1 border-t orb-border pt-3">
           <button
-            onClick={onOpenSettings}
+            onClick={() => onOpenSettings('privacy')}
             className={`orb-control flex h-10 items-center gap-3 rounded-lg px-2.5 ${expanded ? '' : 'justify-center'}`}
             title="Privacy and Boosts"
           >
@@ -94,7 +94,7 @@ export default function Sidebar({
             {expanded && <span className="text-left text-xs">Privacy & Boosts</span>}
           </button>
           <button
-            onClick={onOpenSettings}
+            onClick={() => onOpenSettings('appearance')}
             className={`orb-control flex h-10 items-center gap-3 rounded-lg px-2.5 ${expanded ? '' : 'justify-center'}`}
             title="Appearance settings"
             aria-label="Open appearance settings"

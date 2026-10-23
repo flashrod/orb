@@ -30,7 +30,7 @@ export default function AddressBar({
   };
 
   return (
-    <div className="orb-address orb-surface flex shrink-0 items-center border-b orb-border px-3">
+    <div className="orb-address orb-surface flex min-w-0 flex-1 items-center px-2">
       <div className="relative flex-1">
         <MagnifyingGlass aria-hidden="true" className="orb-muted absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
         <form
