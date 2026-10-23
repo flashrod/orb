@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { BookmarkSimple, CaretDown, CaretRight, Folder, FolderOpen, Plus, Trash } from '@phosphor-icons/react';
+import { BookmarkSimple, CaretDown, DotsThree, Folder, FolderOpen, Plus, Trash } from '@phosphor-icons/react';
 import { BookmarkItem, useBookmarkStore } from '../stores/bookmarks';
+import { exportBookmarkHtml, parseBookmarkHtml } from '../lib/bookmarkHtml';
 
 export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string) => void }) {
-  const { items, addFolder, moveItem, removeItem } = useBookmarkStore();
+  const { items, addFolder, moveItem, removeItem, renameItem, importItems } = useBookmarkStore();
   const [openFolder, setOpenFolder] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [folderDraft, setFolderDraft] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [importError, setImportError] = useState('');
+  const importRef = React.useRef<HTMLInputElement>(null);
 
   const roots = items.filter((item) => item.parentId === null);
   const children = (id: string) => items.filter((item) => item.parentId === id);
@@ -20,7 +24,7 @@ export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string)
 
   const renderItem = (item: BookmarkItem, nested = false) => item.kind === 'folder' ? (
     <div key={item.id} className="relative shrink-0" draggable onDragStart={(event) => { setDraggingId(item.id); event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, item)}>
-      <button type="button" aria-expanded={openFolder === item.id} onClick={() => setOpenFolder(openFolder === item.id ? null : item.id)} className={`orb-control flex h-7 items-center gap-1.5 rounded px-2 text-[11px] ${draggingId === item.id ? 'opacity-40' : ''}`}>
+      <button type="button" aria-expanded={openFolder === item.id} onClick={() => setOpenFolder(openFolder === item.id ? null : item.id)} onDoubleClick={() => { const name = window.prompt('Rename bookmark folder', item.title); if (name?.trim()) renameItem(item.id, name.trim()); }} className={`orb-control flex h-7 items-center gap-1.5 rounded px-2 text-[11px] ${draggingId === item.id ? 'opacity-40' : ''}`}>
         {openFolder === item.id ? <FolderOpen className="orb-muted h-3.5 w-3.5" /> : <Folder className="orb-muted h-3.5 w-3.5" />}{item.title}<CaretDown className="orb-muted h-3 w-3" />
       </button>
       {openFolder === item.id && <div className={`orb-elevated orb-shadow absolute ${nested ? 'left-full top-0 ml-1' : 'left-0 top-full mt-1'} z-30 min-w-48 rounded-lg border orb-border p-1`}>
@@ -30,14 +34,31 @@ export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string)
     </div>
   ) : (
     <div key={item.id} draggable onDragStart={(event) => { setDraggingId(item.id); event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, item)} className={`group relative flex shrink-0 items-center ${draggingId === item.id ? 'opacity-40' : ''}`}>
-      <button type="button" title={`${item.title} · ${item.url}`} onClick={() => onNavigate(item.url)} className="orb-control flex h-7 max-w-40 items-center gap-1.5 rounded px-2 text-[11px]"><BookmarkSimple className="orb-muted h-3.5 w-3.5 shrink-0" /><span className="truncate">{item.title}</span></button>
+      <button type="button" title={`${item.title} · ${item.url}`} onClick={() => onNavigate(item.url)} onDoubleClick={() => { const name = window.prompt('Rename bookmark', item.title); if (name?.trim()) renameItem(item.id, name.trim()); }} className="orb-control flex h-7 max-w-40 items-center gap-1.5 rounded px-2 text-[11px]"><BookmarkSimple className="orb-muted h-3.5 w-3.5 shrink-0" /><span className="truncate">{item.title}</span></button>
       <button type="button" aria-label={`Remove ${item.title} bookmark`} onClick={() => removeItem(item.id)} className="orb-elevated absolute -right-1 -top-1 z-10 hidden h-4 w-4 items-center justify-center rounded-full border orb-border group-hover:flex"><Trash className="h-2.5 w-2.5" /></button>
     </div>
   );
 
+  const importFile = async (file?: File) => {
+    if (!file) return;
+    try { importItems(parseBookmarkHtml(await file.text())); setImportError(''); }
+    catch (error) { setImportError(error instanceof Error ? error.message : 'Could not import bookmarks.'); }
+  };
+
+  const exportFile = () => {
+    const blob = new Blob([exportBookmarkHtml(items)], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = 'orb-bookmarks.html'; link.click(); URL.revokeObjectURL(url);
+  };
+
   return <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event)} className="orb-surface flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b orb-border px-3 scrollbar-hide">
     {roots.map((item) => renderItem(item))}
     {folderDraft ? <form className="flex shrink-0 items-center gap-1" onSubmit={(event) => { event.preventDefault(); const input = event.currentTarget.elements.namedItem('folder') as HTMLInputElement; if (input.value.trim()) addFolder(input.value.trim()); setFolderDraft(false); }}><input name="folder" autoFocus aria-label="New bookmark folder name" placeholder="Folder name" className="orb-frame h-6 w-28 rounded border orb-border px-1.5 text-[10px] outline-none" onKeyDown={(event) => { if (event.key === 'Escape') setFolderDraft(false); }} /><button type="submit" className="orb-accent text-[10px]">Add</button></form> : <button type="button" onClick={() => setFolderDraft(true)} title="New bookmark folder" aria-label="New bookmark folder" className="orb-control flex h-7 w-7 shrink-0 items-center justify-center rounded"><Plus className="h-3.5 w-3.5" /></button>}
-    {roots.length === 0 && !folderDraft && <span className="orb-muted text-[10px]">Bookmarks you add will appear here</span>}
+    <div className="relative shrink-0"><button type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Bookmark options" title="Bookmark options" className="orb-control flex h-7 w-7 items-center justify-center rounded"><DotsThree className="h-4 w-4" /></button>{menuOpen && <div className="orb-elevated orb-shadow absolute right-0 top-full z-40 mt-1 w-44 rounded-lg border orb-border p-1">
+      <button type="button" onClick={() => { setMenuOpen(false); importRef.current?.click(); }} className="orb-control w-full rounded px-2 py-1.5 text-left text-[10px]">Import bookmarks…</button>
+      <button type="button" onClick={() => { exportFile(); setMenuOpen(false); }} className="orb-control w-full rounded px-2 py-1.5 text-left text-[10px]">Export as HTML</button>
+      {importError && <p role="alert" className="px-2 py-1 text-[9px] text-red-700">{importError}</p>}
+    </div>}</div>
+    <input ref={importRef} type="file" accept=".html,text/html" className="hidden" onChange={(event) => { void importFile(event.target.files?.[0]); event.currentTarget.value = ''; }} />
   </div>;
 }

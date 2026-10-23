@@ -13,8 +13,10 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [x] Warm Paper/Sage/Night themes, accent choices, editable palette colors, compact density, sidebar width/auto-hide, and motion preference.
 - [x] Selectable top tabs or a vertical tab rail while navigation and address controls stay at the top.
 - [x] Keep the horizontal tab row and vertical tab rail mutually exclusive; put top tabs above the shared navigation/address row.
-- [x] Drag to reorder tabs in either tab layout.
-- [x] Persistent bookmarks, draggable/nestable folders, a bookmark action in the address bar, and a show/hide bookmarks row.
+- [x] Drag to reorder tabs in either tab layout; both layouts support pin, close, and new-tab actions.
+- [x] Compact side tabs collapse to an edge reveal, open on hover, and toggle with Cmd/Ctrl+Shift+E.
+- [x] Persistently customize toolbar controls: reorder or hide the home, navigation, address/search, bookmark, extension, picker, and tab-layout controls.
+- [x] Persistent bookmarks with draggable/nestable folders, rename, HTML import/export, and a bookmarks row hidden by default.
 - [x] Shared omnibox/search handling for the address bar, command bar, and new-tab search; focus the address bar automatically on a new tab.
 - [x] Compact, single-line top tabs with favicons and clear active-tab styling.
 - [x] Basic network ad/tracker filtering, imported uBlock-style lists, HTTPS-only redirect, and request-header reduction for some fingerprinting signals.
@@ -34,9 +36,9 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 
 - [ ] **Real split view** — render two independent pages side by side, choose/swap either pane, resize the divider, and close a pane without losing its tab.
 - [ ] **Tab organization** — group tabs into named folders, collapse groups, pin tabs, and search hundreds of tabs quickly. Drag reordering is shipped.
-- [ ] **Bookmark editing** — rename saved pages and folders; add a richer organizer for managing larger collections.
+- [ ] **Bookmark editing** — add a richer organizer for managing larger collections.
 - [x] **Bookmarks bar** — optional row below the address controls; drag to reorder/nest bookmarks and folders; hide/show from Settings.
-- [ ] **Compact mode** — hide selected browser chrome for more page space, with a reliable keyboard shortcut and discoverable controls to restore it.
+- [ ] **Compact mode** — hide all selected browser chrome for more page space, with a reliable keyboard shortcut and discoverable controls to restore it. Compact side tabs are shipped.
 - [ ] **Show/hide controls** — independent toggles for sidebar, tab strip, bookmarks bar, and other browser chrome, with sensible minimum navigation access.
 
 ### Contextual browsing

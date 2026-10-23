@@ -9,12 +9,20 @@ export interface BookmarkItem {
   kind: 'bookmark' | 'folder';
 }
 
+export interface BookmarkImportNode {
+  title: string;
+  url?: string;
+  children?: BookmarkImportNode[];
+}
+
 interface BookmarkStore {
   items: BookmarkItem[];
   addBookmark: (title: string, url: string, parentId?: string | null) => void;
   addFolder: (title: string) => void;
   removeItem: (id: string) => void;
   moveItem: (id: string, parentId: string | null, beforeId?: string) => void;
+  renameItem: (id: string, title: string) => void;
+  importItems: (nodes: BookmarkImportNode[], parentId?: string | null) => void;
   hasUrl: (url: string) => boolean;
 }
 
@@ -48,6 +56,21 @@ export const useBookmarkStore = create<BookmarkStore>()(persist((set, get) => ({
     const targetIndex = beforeId ? rest.findIndex((candidate) => candidate.id === beforeId) : -1;
     rest.splice(targetIndex >= 0 ? targetIndex : rest.length, 0, moved);
     return { items: rest };
+  }),
+  renameItem: (id, title) => set((state) => ({ items: state.items.map((item) => item.id === id ? { ...item, title } : item) })),
+  importItems: (nodes, parentId = null) => set((state) => {
+    const items = [...state.items];
+    const append = (entries: BookmarkImportNode[], parent: string | null) => {
+      for (const entry of entries) {
+        if (entry.url && items.some((item) => item.kind === 'bookmark' && item.url === entry.url)) continue;
+        const folder = !entry.url;
+        const id = crypto.randomUUID();
+        items.push({ id, title: entry.title || (folder ? 'Imported folder' : entry.url || 'Bookmark'), url: entry.url || '', parentId: parent, kind: folder ? 'folder' : 'bookmark' });
+        if (folder && entry.children?.length) append(entry.children, id);
+      }
+    };
+    append(nodes, parentId);
+    return { items };
   }),
   hasUrl: (url) => get().items.some((item) => item.kind === 'bookmark' && item.url === url),
 }), { name: 'orb-bookmarks', storage: createJSONStorage(() => localStorage) }));
