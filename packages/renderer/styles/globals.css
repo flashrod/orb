@@ -3,9 +3,22 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Zen warm monochrome palette */
+    --zen-bg: 240 241 243;      /* warm off-white */
+    --zen-surface: 234 235 236; /* surface slightly darker */
+    --zen-border: 215 213 210;  /* warm gray border */
+    --zen-text: 87 83 78;       /* warm slate body */
+    --zen-text-strong: 41 37 36; /* warm slate headings */
+    --zen-text-muted: 168 162 158; /* muted */
+    --zen-accent: 160 82 45;    /* muted warm accent */
+    --zen-accent-hover: 133 68 37;
+    --zen-radius: 6px;
+  }
+
   html {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) #0a0a0b;
+    scrollbar-color: rgba(87, 83, 78, 0.2) rgb(var(--zen-bg));
   }
 
   ::-webkit-scrollbar {
@@ -14,50 +27,84 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #0a0a0b;
+    background: rgb(var(--zen-bg));
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(87, 83, 78, 0.2);
     border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(87, 83, 78, 0.35);
   }
 
   body {
-    @apply bg-orb-dark text-white;
+    background-color: rgb(var(--zen-bg));
+    color: rgb(var(--zen-text));
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  * {
+    border-color: rgb(var(--zen-border));
   }
 }
 
 @layer components {
-  .sidebar-item {
-    @apply flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors duration-150 cursor-pointer hover:bg-white/5;
+  .zen-card {
+    @apply bg-white/90 border border-zinc-200 rounded-lg p-4 shadow-sm;
   }
 
-  .sidebar-item-active {
-    @apply bg-white/10 text-orb-accent border-r-2 border-orb-accent;
+  .zen-input {
+    @apply bg-white border border-zinc-200 rounded-md px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900/20 transition-all duration-150;
   }
 
-  .tab-item {
-    @apply flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors duration-150 cursor-pointer hover:bg-white/5 min-w-[120px] truncate;
+  .zen-button {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-700 bg-white border border-zinc-200 rounded-md hover:bg-zinc-50 hover:border-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-900/10 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .tab-item-active {
-    @apply bg-white/10 border-b-2 border-orb-accent pb-1.5;
+  .zen-button-primary {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-zinc-900 border border-zinc-900 rounded-md hover:bg-zinc-800 hover:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900/20 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .command-item {
-    @apply flex items-center justify-between px-4 py-2 text-sm cursor-pointer hover:bg-white/5 transition-colors duration-100;
+  .zen-space-item {
+    @apply flex items-center gap-3 px-3 py-2 text-sm text-zinc-700 rounded-md transition-colors duration-150 cursor-pointer hover:bg-zinc-100 hover:text-zinc-900;
   }
 
-  .input-base {
-    @apply bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-orb-accent transition-all duration-150;
+  .zen-space-item-active {
+    @apply bg-zinc-900 text-white border-r-2 border-zinc-900;
   }
 
-  .card-base {
-    @apply bg-white/5 border border-white/10 rounded-xl p-4;
+  .zen-tab-item {
+    @apply flex items-center gap-2 px-3 py-1.5 text-sm text-zinc-600 rounded-md transition-colors duration-150 cursor-pointer hover:bg-zinc-100 hover:text-zinc-900 min-w-[100px] truncate;
+  }
+
+  .zen-tab-item-active {
+    @apply bg-zinc-900 text-white border-b-2 border-zinc-900 pb-1.5;
+  }
+
+  .zen-command-item {
+    @apply flex items-center justify-between px-4 py-2 text-sm text-zinc-700 cursor-pointer hover:bg-zinc-50 transition-colors duration-100;
+  }
+
+  .zen-empty-state {
+    @apply flex flex-col items-center justify-center text-center py-20;
+  }
+
+  .zen-empty-icon {
+    @apply w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 mb-4;
+  }
+
+  .zen-heading {
+    @apply text-lg font-medium text-zinc-900 tracking-tight;
+  }
+
+  .zen-subheading {
+    @apply text-sm text-zinc-500;
+  }
+
+  .zen-link {
+    @apply text-zinc-600 hover:text-zinc-900 underline underline-offset-2 hover:decoration-zinc-900/30 transition-colors;
   }
 }
