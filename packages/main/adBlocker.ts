@@ -451,7 +451,7 @@ export function initAdBlocker(ses: Electron.Session): void {
   // HTTPS-only mode: upgrade http:// to https://
   ses.webRequest.onBeforeRequest(
     {
-      urls: ['http://*'],
+      urls: ['http://*/*'],
     },
     (details, callback) => {
       if (!adBlocker.httpsOnlyEnabled) {
