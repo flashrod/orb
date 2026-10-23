@@ -46,43 +46,42 @@ export default function TabBar({
   };
 
   return (
-    <div className="h-10 border-b border-white/5 bg-white/5 flex items-center px-4 gap-2 overflow-x-auto scrollbar-hide">
+    <div className="h-10 border-b border-zinc-200 bg-white flex items-center px-3 gap-2 overflow-x-auto scrollbar-hide">
       {tabs.map((tab) => (
         <div
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
           onMouseDown={(e) => {
             if (e.button === 1) {
-              // Middle click to close
               e.preventDefault();
               removeTab(tab.id);
             }
           }}
           className={`${
             activeTabId === tab.id
-              ? 'bg-white/10 border-b-2 border-orb-accent pb-[calc(100%-1px)]'
+              ? 'bg-zinc-900 border-b-2 border-zinc-900 pb-[calc(100%-1px)]'
               : ''
-          } tab-item flex items-center gap-2 min-w-[100px] group`}
+          } zen-tab-item flex items-center gap-2 min-w-[100px] group`}
         >
           {tab.favicon ? (
             <img
               src={getFavicon(tab.url)}
               alt=""
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded-sm"
               onError={(e) => (e.target as HTMLImageElement).classList.add('hidden')}
             />
           ) : (
-            <div className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[10px]">
+            <div className="w-4 h-4 rounded-full bg-zinc-100 flex items-center justify-center text-[10px] text-zinc-600">
               {new URL(tab.url).hostname.charAt(0).toUpperCase()}
             </div>
           )}
-          <span className="truncate text-xs text-white/80 group-hover:text-white">
+          <span className="truncate text-xs text-zinc-600 group-hover:text-zinc-900">
             {tab.title || new URL(tab.url).hostname}
           </span>
-          {tab.isPinned && <Pin className="w-3 h-3 text-white/40" />}
+          {tab.isPinned && <Pin className="w-3 h-3 text-zinc-400" />}
           <button
             onClick={(e) => handleCloseTab(e, tab.id)}
-            className="w-5 h-5 rounded hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="w-5 h-5 rounded-sm hover:bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <X className="w-3 h-3" />
           </button>
@@ -90,10 +89,10 @@ export default function TabBar({
       ))}
       <button
         onClick={handleNewTab}
-        className="w-7 h-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+        className="w-7 h-7 rounded-sm hover:bg-zinc-50 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-colors"
         title="New Tab (⌘T)"
       >
-        <RefreshCw className="w-3 h-3" />
+        <RefreshCw className="w-3 h-3 text-zinc-500" />
       </button>
     </div>
   );
