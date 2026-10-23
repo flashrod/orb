@@ -15,6 +15,7 @@ interface AppearanceStore {
   tabLayout: TabLayout;
   sidebarWidth: number;
   sidebarAutoHide: boolean;
+  bookmarksBarVisible: boolean;
   motion: MotionPreference;
   customColors: Partial<Record<PaletteToken, string>>;
   setTheme: (theme: AppearanceTheme) => void;
@@ -23,6 +24,7 @@ interface AppearanceStore {
   setTabLayout: (layout: TabLayout) => void;
   setSidebarWidth: (width: number) => void;
   setSidebarAutoHide: (enabled: boolean) => void;
+  setBookmarksBarVisible: (enabled: boolean) => void;
   setMotion: (motion: MotionPreference) => void;
   setCustomColor: (token: PaletteToken, color: string) => void;
   resetCustomColors: () => void;
@@ -37,6 +39,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       tabLayout: 'top',
       sidebarWidth: 72,
       sidebarAutoHide: false,
+      bookmarksBarVisible: true,
       motion: 'gentle',
       customColors: {},
       setTheme: (theme) => set({ theme }),
@@ -45,6 +48,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setTabLayout: (tabLayout) => set({ tabLayout }),
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
       setSidebarAutoHide: (sidebarAutoHide) => set({ sidebarAutoHide }),
+      setBookmarksBarVisible: (bookmarksBarVisible) => set({ bookmarksBarVisible }),
       setMotion: (motion) => set({ motion }),
       setCustomColor: (token, color) => set((state) => {
         const customColors = { ...state.customColors };

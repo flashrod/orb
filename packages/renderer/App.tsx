@@ -12,6 +12,8 @@ import Settings from './components/Settings';
 import { useAppearanceStore } from './stores/appearance';
 import StartPage from './components/StartPage';
 import { useBoostStore } from './stores/boosts';
+import { useBookmarkStore } from './stores/bookmarks';
+import BookmarksBar from './components/BookmarksBar';
 
 
 export default function App() {
@@ -22,7 +24,8 @@ export default function App() {
   const [pickerNotice, setPickerNotice] = useState('');
   const { spaces, activeSpaceId, setActiveSpace, addSpace } = useSpaceStore();
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
-  const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, customColors, setTabLayout } = useAppearanceStore();
+  const { theme, accent, density, motion, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, customColors, setTabLayout } = useAppearanceStore();
+  const { items: bookmarks, addBookmark, removeItem } = useBookmarkStore();
 
   const webviewRef = useRef<any>(null);
 
@@ -233,8 +236,19 @@ export default function App() {
             onPickElement={() => void handlePickElement()}
             canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           />
-          <AddressBar activeTab={activeTab} onNavigate={handleNavigate} />
+          <AddressBar
+            activeTab={activeTab}
+            onNavigate={handleNavigate}
+            isBookmarked={Boolean(activeTab && bookmarks.some((item) => item.kind === 'bookmark' && item.url === activeTab.url))}
+            onBookmark={() => {
+              if (!activeTab || activeTab.url === 'about:blank') return;
+              const existing = bookmarks.find((item) => item.kind === 'bookmark' && item.url === activeTab.url);
+              if (existing) removeItem(existing.id);
+              else addBookmark(activeTab.title || (() => { try { return new URL(activeTab.url).hostname; } catch { return activeTab.url; } })(), activeTab.url);
+            }}
+          />
         </div>
+        {bookmarksBarVisible && <BookmarksBar onNavigate={handleNavigate} />}
 
         {/* Web Content */}
         <div className="orb-frame relative flex-1 overflow-hidden">

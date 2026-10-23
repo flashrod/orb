@@ -60,8 +60,8 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const { enabled, toggle } = useAdBlockerStore();
   const {
-    theme, accent, density, tabLayout, sidebarWidth, sidebarAutoHide, motion,
-    setTheme, setAccent, setDensity, setTabLayout, setSidebarWidth, setSidebarAutoHide, setMotion,
+    theme, accent, density, tabLayout, sidebarWidth, sidebarAutoHide, bookmarksBarVisible, motion,
+    setTheme, setAccent, setDensity, setTabLayout, setSidebarWidth, setSidebarAutoHide, setBookmarksBarVisible, setMotion,
     customColors, setCustomColor, resetCustomColors,
   } = useAppearanceStore();
   const selected = sections.find((item) => item.id === section) || sections[0];
@@ -164,6 +164,13 @@ export default function Settings({ onClose, initialSection = 'appearance' }: { o
                     <div className="space-y-1">{motionOptions.map((option) => <button key={option.id} onClick={() => setMotion(option.id)} aria-pressed={motion === option.id} className={`orb-control flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left ${motion === option.id ? 'orb-accent-soft orb-accent' : 'orb-muted'}`}>
                       <span><span className="block text-xs font-medium">{option.label}</span><span className="orb-muted mt-0.5 block text-[10px]">{option.detail}</span></span>{motion === option.id && <Check aria-hidden="true" className="h-4 w-4" />}
                     </button>)}</div>
+                  </div>
+                </section>
+
+                <section className="border-t orb-border pt-5">
+                  <div className="orb-elevated flex w-full items-center justify-between rounded-md border orb-border px-3 py-2.5 text-left">
+                    <span><span className="orb-strong block text-xs font-medium">Show bookmarks bar</span><span className="orb-muted mt-1 block text-[10px]">Keep your saved pages and folders below the address bar.</span></span>
+                    <Toggle checked={bookmarksBarVisible} onChange={() => setBookmarksBarVisible(!bookmarksBarVisible)} label="Show bookmarks bar" />
                   </div>
                 </section>
               </div>
