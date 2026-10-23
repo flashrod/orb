@@ -1,6 +1,6 @@
 # Orb Roadmap
 
-Orb is a calm, customizable Chromium browser for people who want their browsing arranged around workspaces, with privacy that is visible and controllable. This list tracks shipped behavior separately from work that is still needed for a dependable daily browser.
+Orb is a calm, customizable Chromium browser for people who want their browsing arranged around workspaces, with privacy that is visible and controllable. This list tracks shipped behavior separately from work that is still needed for a dependable daily browser. The visual direction is familiar, polished horizontal tabs with Chrome/Firefox affordances and a quieter Arc/Zen-inspired vertical workspace sidebar.
 
 ## Shipped
 
@@ -11,6 +11,8 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 - [x] Essentials pinned sites, persisted per Space.
 - [x] Warm Paper/Sage/Night themes, accent choices, editable palette colors, compact density, sidebar width/auto-hide, and motion preference.
 - [x] Selectable top tabs or a vertical tab rail while navigation and address controls stay at the top.
+- [x] Shared omnibox/search handling for the address bar, command bar, and new-tab search; focus the address bar automatically on a new tab.
+- [x] Compact, single-line top tabs with favicons and clear active-tab styling.
 - [x] Basic network ad/tracker filtering, imported uBlock-style lists, HTTPS-only redirect, and request-header reduction for some fingerprinting signals.
 
 ## Daily-browser foundations
@@ -35,6 +37,7 @@ Orb is a calm, customizable Chromium browser for people who want their browsing 
 
 ### Contextual browsing
 
+- [ ] **Search preferences** — let users choose a default search provider and keep address/search interpretation consistent across the omnibox, command bar, and new-tab page.
 - [ ] **Glance link preview** — open a temporary, isolated preview from a link without replacing the current page; support pin/open/close and keyboard control.
 - [ ] **Compare sources** — send links into either split-view pane and keep the current reading position.
 - [ ] **Keyboard-first navigation** — complete shortcut map, command bar actions for profiles/spaces/bookmarks, and accessible focus handling.

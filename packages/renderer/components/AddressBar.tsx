@@ -1,33 +1,31 @@
 import React from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
+import { resolveAddressOrSearch } from '../lib/navigation';
 
 
 export default function AddressBar({
   activeTab,
   onNavigate,
 }: {
-  activeTab: { url: string; title: string } | undefined;
+  activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate?: (url: string) => void;
 }) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const [url, setUrl] = React.useState(activeTab?.url === 'about:blank' ? '' : activeTab?.url || '');
   const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
     setUrl(activeTab?.url === 'about:blank' ? '' : activeTab?.url || '');
-  }, [activeTab?.url]);
+    if (activeTab?.url === 'about:blank') {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [activeTab?.id, activeTab?.url]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const input = url.trim();
-    if (!input) return;
-
-    const looksLikeAddress = /^(localhost(:\d+)?|([\w-]+\.)+[a-z]{2,}(:\d+)?)([/?#].*)?$/i.test(input);
-    const finalUrl = input.includes('://')
-      ? input
-      : looksLikeAddress
-        ? `https://${input}`
-        : `https://www.google.com/search?q=${encodeURIComponent(input)}`;
-    onNavigate?.(finalUrl);
+    const destination = resolveAddressOrSearch(url);
+    if (!destination) return;
+    onNavigate?.(destination);
     setFocused(false);
   };
 
@@ -40,11 +38,12 @@ export default function AddressBar({
           className="w-full"
         >
           <input
+            ref={inputRef}
             aria-label="Search or enter address"
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onFocus={() => setFocused(true)}
+            onFocus={(event) => { setFocused(true); if (activeTab?.url !== 'about:blank') event.currentTarget.select(); }}
             onBlur={() => setFocused(false)}
             placeholder="Search or type address"
             className="orb-strong orb-placeholder w-full rounded-md border border-transparent bg-transparent py-1.5 pl-9 pr-4 text-[13px] outline-none transition-colors focus:border-[var(--orb-border-strong)] focus:bg-[var(--orb-elevated)] focus:shadow-sm"

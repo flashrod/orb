@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MagnifyingGlass, X, SignIn, Globe, SquaresFour, Plus } from '@phosphor-icons/react';
 import { useTabStore } from '../stores/tabs';
 import { useSpaceStore } from '../stores/spaces';
+import { resolveAddressOrSearch } from '../lib/navigation';
 
 interface CommandResult {
   id: string;
@@ -96,8 +97,8 @@ export default function CommandBar({
       );
     } else {
       // URL navigation - treat query as URL/search
-      const url = lower.includes('://') || lower.includes('.') ? lower : `https://www.google.com/search?q=${encodeURIComponent(lower)}`;
-      results.push({
+      const url = resolveAddressOrSearch(q);
+      if (url) results.push({
         id: 'cmd-navigate',
         type: 'url',
         title: lower.includes(' ') ? `Search for "${lower}"` : `Go to ${lower}`,

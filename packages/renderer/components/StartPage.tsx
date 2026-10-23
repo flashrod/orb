@@ -1,13 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowUpRight, Command, Globe, SquaresFour, Plus, MagnifyingGlass, Sparkle, X } from '@phosphor-icons/react';
 import { useEssentialsStore } from '../stores/essentials';
-
-function normalizeUrl(input: string): string {
-  const trimmed = input.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (/^(localhost|[\w-]+\.)+[a-z]{2,}(:\d+)?([/?#].*)?$/i.test(trimmed)) return `https://${trimmed}`;
-  return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
-}
+import { resolveAddressOrSearch, resolveWebsiteAddress } from '../lib/navigation';
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
@@ -36,18 +30,18 @@ export default function StartPage({
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
-    if (query.trim()) onNavigate(normalizeUrl(query));
+    const destination = resolveAddressOrSearch(query);
+    if (destination) onNavigate(destination);
   };
 
   const submitEssential = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!siteUrl.trim()) return;
-    const url = normalizeUrl(siteUrl);
-    if (new URL(url).hostname === 'www.google.com') {
+    const url = resolveWebsiteAddress(siteUrl);
+    if (!url) {
       setSiteError('Enter a website address such as example.com.');
       return;
     }
-    const title = siteName.trim() || (() => { try { return new URL(url).hostname; } catch { return 'Website'; } })();
+    const title = siteName.trim() || new URL(url).hostname;
     addSite({ spaceId, title, url });
     setSiteName('');
     setSiteUrl('');

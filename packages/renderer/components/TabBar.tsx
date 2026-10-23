@@ -24,18 +24,19 @@ export default function TabBar({
   };
 
   return (
-    <div role="tablist" aria-label="Open tabs" className="orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border px-3 pt-1.5 scrollbar-hide">
+    <div role="tablist" aria-label="Open tabs" className="orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border px-3 pt-1 scrollbar-hide">
       {tabs.map((tab) => {
         const hostname = getHostname(tab.url);
         const isActive = activeTabId === tab.id;
         return (
-          <div key={tab.id} onAuxClick={(event) => { if (event.button === 1) removeTab(tab.id); }} className="group relative">
+          <div key={tab.id} onAuxClick={(event) => { if (event.button === 1) removeTab(tab.id); }} className="group relative flex h-full shrink-0 items-end">
             <button
               type="button"
               role="tab"
               aria-selected={isActive}
+              title={`${tab.title || hostname} · ${hostname}`}
               onClick={() => setActiveTab(tab.id)}
-              className={`orb-tab flex min-w-[132px] max-w-[220px] items-center gap-2.5 rounded-t-lg border border-b-0 pl-3 pr-8 text-left transition-colors ${isActive ? 'orb-tab-active orb-border' : 'border-transparent'}`}
+              className={`orb-tab relative flex h-[37px] min-w-[128px] max-w-[210px] items-center gap-2 rounded-t-[9px] border border-b-0 px-3 pr-8 text-left transition-colors ${isActive ? 'orb-tab-active orb-border' : 'border-transparent'}`}
             >
               {tab.favicon ? (
                 <img src={tab.favicon} alt="" className="h-4 w-4 shrink-0 rounded-sm" onError={(event) => (event.currentTarget.style.visibility = 'hidden')} />
@@ -44,10 +45,7 @@ export default function TabBar({
                   <Globe aria-hidden="true" className="h-3 w-3" />
                 </span>
               )}
-              <span className="min-w-0 flex-1">
-                <span className="orb-strong block truncate text-xs font-medium">{tab.title || hostname}</span>
-                <span className="orb-muted block truncate text-[10px]">{hostname}</span>
-              </span>
+              <span className="orb-strong min-w-0 flex-1 truncate text-[12px] font-medium">{tab.title || hostname}</span>
               {tab.isPinned && <PushPin aria-label="Pinned" className="orb-muted h-3 w-3 shrink-0" />}
             </button>
             <button
