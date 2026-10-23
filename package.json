@@ -24,6 +24,7 @@
     "sql.js": "^1.15.1",
     "tailwind-merge": "^2.6.1",
     "tldts": "^6.1.86",
+    "ws": "^8.22.0",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
