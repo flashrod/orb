@@ -8,6 +8,7 @@ import AddressBar from './components/AddressBar';
 import NavigationBar from './components/NavigationBar';
 import WebView from './components/WebView';
 
+
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const { spaces, activeSpaceId, setActiveSpace } = useSpaceStore();
@@ -90,6 +91,10 @@ export default function App() {
               tabId={activeTabId}
               url={activeTab?.url || ''}
               spaceId={activeSpaceId || ''}
+              onUrlChange={(url) => updateTab(activeTabId, { url })}
+              onTitleChange={(title) => updateTab(activeTabId, { title })}
+              onFaviconChange={(favicon) => updateTab(activeTabId, { favicon })}
+              onLoadingChange={() => {}}
             />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-white/30">
