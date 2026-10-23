@@ -76,6 +76,9 @@ export function registerIpcHandlers(): void {
       trackerBlockingEnabled: adBlocker.trackerBlockingEnabled,
       trackerRuleCount: adBlocker.getTrackerRuleCount(),
       httpsOnlyEnabled: adBlocker.isHttpsOnly(),
+      thirdPartyCookieBlockingEnabled: adBlocker.thirdPartyCookieBlockingEnabled,
+      webRtcProtectionEnabled: adBlocker.webRtcProtectionEnabled,
+      fingerprintingProtectionEnabled: adBlocker.fingerprintingProtectionEnabled,
       allowlist: adBlocker.getAllowlist(),
       blockedRequests: adBlocker.getBlockedRequests(),
       filterLists: adBlocker.getFilterLists(),
@@ -94,6 +97,21 @@ export function registerIpcHandlers(): void {
     return adBlocker.removeCustomFilterList(id);
   });
   ipcMain.handle('adblocker:filter-lists-refresh', () => adBlocker.loadLists().then(() => adBlocker.getFilterLists()));
+  ipcMain.handle('adblocker:third-party-cookies-set', (_event, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid cookie protection value.');
+    adBlocker.setThirdPartyCookieBlocking(enabled);
+    return { enabled };
+  });
+  ipcMain.handle('adblocker:fingerprinting-set', (_event, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid fingerprinting protection value.');
+    adBlocker.setFingerprintingProtection(enabled);
+    return { enabled };
+  });
+  ipcMain.handle('adblocker:webrtc-set', (_event, enabled: boolean) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid WebRTC protection value.');
+    adBlocker.setWebRtcProtection(enabled);
+    return { enabled };
+  });
 
   ipcMain.handle('adblocker:allowlist-add', (_event, value: string) => {
     if (typeof value !== 'string') throw new Error('Enter a valid site.');

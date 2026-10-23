@@ -1,7 +1,7 @@
 import { app, session, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import { decideFilterAction, FilterRequestContext, NetworkFilterRule, matchesFilterRule, parseFilterLine } from './filterRules';
+import { decideFilterAction, FilterRequestContext, isThirdPartyRequest, NetworkFilterRule, matchesFilterRule, parseFilterLine } from './filterRules';
 
 // Filter list sources (from Arc's manifest.json reverse engineering)
 type FilterListType = 'generic' | 'privacy' | 'cookies';
@@ -60,6 +60,9 @@ export class AdBlocker {
   trackerBlockingEnabled = true;
   cosmeticFilteringEnabled = true;
   httpsOnlyEnabled = false;
+  thirdPartyCookieBlockingEnabled = true;
+  webRtcProtectionEnabled = true;
+  fingerprintingProtectionEnabled = true;
   private preferencesLoaded = false;
 
   loadPreferences(): void {
@@ -67,11 +70,14 @@ export class AdBlocker {
     this.preferencesLoaded = true;
     try {
       const file = path.join(app.getPath('userData'), 'privacy-preferences.json');
-      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; userAllowlist: string[]; filterLists: FilterListSource[] }>;
+      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; userAllowlist: string[]; filterLists: FilterListSource[] }>;
       if (typeof state.enabled === 'boolean') this.enabled = state.enabled;
       if (typeof state.trackerBlockingEnabled === 'boolean') this.trackerBlockingEnabled = state.trackerBlockingEnabled;
       if (typeof state.cosmeticFilteringEnabled === 'boolean') this.cosmeticFilteringEnabled = state.cosmeticFilteringEnabled;
       if (typeof state.httpsOnlyEnabled === 'boolean') this.httpsOnlyEnabled = state.httpsOnlyEnabled;
+      if (typeof state.thirdPartyCookieBlockingEnabled === 'boolean') this.thirdPartyCookieBlockingEnabled = state.thirdPartyCookieBlockingEnabled;
+      if (typeof state.webRtcProtectionEnabled === 'boolean') this.webRtcProtectionEnabled = state.webRtcProtectionEnabled;
+      if (typeof state.fingerprintingProtectionEnabled === 'boolean') this.fingerprintingProtectionEnabled = state.fingerprintingProtectionEnabled;
       if (Array.isArray(state.userAllowlist)) this.userAllowlist = new Set(state.userAllowlist.filter((item) => typeof item === 'string').map((item) => item.toLowerCase()));
       if (Array.isArray(state.filterLists)) {
         const saved = new Map(state.filterLists.map((item) => [item.id, item]));
@@ -90,6 +96,9 @@ export class AdBlocker {
         trackerBlockingEnabled: this.trackerBlockingEnabled,
         cosmeticFilteringEnabled: this.cosmeticFilteringEnabled,
         httpsOnlyEnabled: this.httpsOnlyEnabled,
+        thirdPartyCookieBlockingEnabled: this.thirdPartyCookieBlockingEnabled,
+        webRtcProtectionEnabled: this.webRtcProtectionEnabled,
+        fingerprintingProtectionEnabled: this.fingerprintingProtectionEnabled,
         userAllowlist: [...this.userAllowlist],
         filterLists: this.filterSources,
       }, null, 2));
@@ -293,7 +302,13 @@ export class AdBlocker {
 
   // Check if domain is allowlisted
   isAllowlisted(domain: string): boolean {
-    return this.userAllowlist.has(domain.toLowerCase());
+    const host = domain.toLowerCase();
+    return [...this.userAllowlist].some((item) => host === item || host.endsWith(`.${item}`));
+  }
+
+  isRequestAllowlisted(url: string, initiatorUrl?: string): boolean {
+    try { return this.isAllowlisted(new URL(url).hostname) || (initiatorUrl ? this.isAllowlisted(new URL(initiatorUrl).hostname) : false); }
+    catch { return false; }
   }
 
   // Get all allowlisted domains
@@ -319,6 +334,20 @@ export class AdBlocker {
   setHttpsOnly(enabled: boolean): void {
     this.httpsOnlyEnabled = enabled;
     this.persistPreferences();
+  }
+
+  setThirdPartyCookieBlocking(enabled: boolean): void { this.thirdPartyCookieBlockingEnabled = enabled; this.persistPreferences(); }
+  setFingerprintingProtection(enabled: boolean): void { this.fingerprintingProtectionEnabled = enabled; this.persistPreferences(); }
+  setWebRtcProtection(enabled: boolean): void {
+    this.webRtcProtectionEnabled = enabled;
+    for (const contents of activeWebContents) if (!contents.isDestroyed()) contents.setWebRTCIPHandlingPolicy(enabled ? 'disable_non_proxied_udp' : 'default');
+    this.persistPreferences();
+  }
+
+  applyWebRtcPolicy(contents: Electron.WebContents): void {
+    activeWebContents.add(contents);
+    contents.setWebRTCIPHandlingPolicy(this.webRtcProtectionEnabled ? 'disable_non_proxied_udp' : 'default');
+    contents.once('destroyed', () => activeWebContents.delete(contents));
   }
 
   isHttpsOnly(): boolean {
@@ -375,6 +404,7 @@ export class AdBlocker {
 
 export const adBlocker = new AdBlocker();
 const initializedSessions = new WeakSet<Electron.Session>();
+const activeWebContents = new Set<Electron.WebContents>();
 let filterListsLoading: Promise<void> | null = null;
 
 export function initAdBlocker(ses: Electron.Session): void {
@@ -416,25 +446,37 @@ export function initAdBlocker(ses: Electron.Session): void {
     },
     (details, callback) => {
       const headers = { ...(details.requestHeaders || {}) };
+      const requestDetails = details as Electron.OnBeforeSendHeadersListenerDetails & { initiator?: string };
+      const initiator = requestDetails.initiator || details.referrer || undefined;
+      if (adBlocker.thirdPartyCookieBlockingEnabled && isThirdPartyRequest(details.url, initiator) && !adBlocker.isRequestAllowlisted(details.url, initiator)) {
+        for (const key of Object.keys(headers)) if (key.toLowerCase() === 'cookie') delete headers[key];
+      }
 
       // Remove or neutralize fingerprinting headers
-      delete headers['Sec-CH-UA'];
-      delete headers['Sec-CH-UA-Platform'];
-      delete headers['Sec-CH-UA-Mobile'];
-      delete headers['Sec-CH-UA-Model'];
-      delete headers['Sec-CH-UA-Full-Version'];
-      delete headers['Sec-CH-UA-Arch'];
-      delete headers['Sec-CH-UA-Bitness'];
-      delete headers['Sec-CH-UA-Full-Version-List'];
-      delete headers['X-Client-Data'];
-      delete headers['X-Requested-With'];
-
-      // Reduce Accept-Language granularity
-      if (headers['Accept-Language']) {
-        headers['Accept-Language'] = headers['Accept-Language'].toString().split(',')[0];
+      if (adBlocker.fingerprintingProtectionEnabled) {
+        for (const key of Object.keys(headers)) {
+          if (/^sec-ch-ua-/i.test(key) || /^x-client-data$/i.test(key) || /^x-requested-with$/i.test(key)) delete headers[key];
+        }
+        delete headers['Sec-CH-UA'];
+        headers['DNT'] = '1';
+        headers['Sec-GPC'] = '1';
+        const languageKey = Object.keys(headers).find((key) => key.toLowerCase() === 'accept-language');
+        if (languageKey) headers[languageKey] = String(headers[languageKey]).split(',')[0];
       }
 
       callback({ requestHeaders: headers });
     }
   );
+
+  ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (details, callback) => {
+    const requestDetails = details as Electron.OnHeadersReceivedListenerDetails & { initiator?: string };
+    const initiator = requestDetails.initiator || details.referrer || undefined;
+    if (!adBlocker.thirdPartyCookieBlockingEnabled || !isThirdPartyRequest(details.url, initiator) || adBlocker.isRequestAllowlisted(details.url, initiator)) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+    const responseHeaders = { ...(details.responseHeaders || {}) };
+    for (const key of Object.keys(responseHeaders)) if (key.toLowerCase() === 'set-cookie' || key.toLowerCase() === 'set-cookie2') delete responseHeaders[key];
+    callback({ responseHeaders });
+  });
 }

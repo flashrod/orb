@@ -3,7 +3,7 @@ import { Check, Shield, Trash, WarningCircle } from '@phosphor-icons/react';
 
 type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
 type FilterList = { id: string; name: string; url: string; enabled: boolean; custom?: boolean; ruleCount: number; error: string | null; lastUpdated: number | null };
-type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[]; filterLists: FilterList[] };
+type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[]; filterLists: FilterList[] };
 
 function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: () => void; label: string; disabled?: boolean }) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={onChange}
@@ -12,7 +12,7 @@ function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onCh
   </button>;
 }
 
-const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, allowlist: [], blockedRequests: [], filterLists: [] };
+const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, thirdPartyCookieBlockingEnabled: true, webRtcProtectionEnabled: true, fingerprintingProtectionEnabled: true, allowlist: [], blockedRequests: [], filterLists: [] };
 
 export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
   const [status, setStatus] = useState<Status>(emptyStatus);
@@ -54,6 +54,9 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
     { label: 'Block ads and page trackers', description: `${status.ruleCount.toLocaleString()} advertising rules loaded`, checked: status.enabled, toggle: () => update(() => window.orbApi.toggleAdBlocker(!status.enabled)) },
     { label: 'Block known trackers and cookie scripts', description: `${status.trackerRuleCount.toLocaleString()} privacy rules loaded`, checked: status.trackerBlockingEnabled, toggle: () => update(() => window.orbApi.toggleTrackerBlocking(!status.trackerBlockingEnabled)) },
     { label: 'Prefer HTTPS connections', description: 'Upgrade HTTP requests; sites that reject HTTPS can be added as exceptions later.', checked: status.httpsOnlyEnabled, toggle: () => update(() => window.orbApi.toggleHttpsOnly(!status.httpsOnlyEnabled)) },
+    { label: 'Block third-party cookies', description: 'Strip cross-site Cookie and Set-Cookie headers. Some embedded sign-in flows may need an exception.', checked: status.thirdPartyCookieBlockingEnabled, toggle: () => update(() => window.orbApi.setThirdPartyCookieBlocking(!status.thirdPartyCookieBlockingEnabled)) },
+    { label: 'Reduce fingerprinting signals', description: 'Limit Client Hints, normalize language detail, and send Do Not Track and Global Privacy Control signals.', checked: status.fingerprintingProtectionEnabled, toggle: () => update(() => window.orbApi.setFingerprintingProtection(!status.fingerprintingProtectionEnabled)) },
+    { label: 'Limit WebRTC IP exposure', description: 'Use Chromium’s disable-non-proxied-UDP policy for profile sessions; VPN and relay behavior can vary.', checked: status.webRtcProtectionEnabled, toggle: () => update(() => window.orbApi.setWebRtcProtection(!status.webRtcProtectionEnabled)) },
   ];
 
   return <div className="mx-auto max-w-[720px] space-y-7">

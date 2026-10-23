@@ -6,6 +6,17 @@ export interface FilterRequestContext {
   sameSite?: boolean;
 }
 
+export function isThirdPartyRequest(requestUrl: string, initiatorUrl?: string): boolean {
+  try {
+    if (!initiatorUrl) return false;
+    const requestHost = new URL(requestUrl).hostname;
+    const initiatorHost = new URL(initiatorUrl).hostname;
+    const requestSite = getDomain(requestHost) || requestHost;
+    const initiatorSite = getDomain(initiatorHost) || initiatorHost;
+    return requestSite !== initiatorSite;
+  } catch { return false; }
+}
+
 export interface NetworkFilterRule {
   action: 'block' | 'allow';
   source: string;

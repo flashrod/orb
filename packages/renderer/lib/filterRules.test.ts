@@ -40,3 +40,12 @@ describe('ABP network filters', () => {
     expect(decideFilterAction([block, allow], 'https://ads.example/a.png', { resourceType: 'image', initiatorUrl: 'https://other.example' })).toBe('block');
   });
 });
+
+describe('privacy request context', () => {
+  it('uses the public suffix list to distinguish same-site and third-party requests', async () => {
+    const { isThirdPartyRequest } = await import('../../main/filterRules');
+    expect(isThirdPartyRequest('https://cdn.example.co.uk/a.js', 'https://www.example.co.uk')).toBe(false);
+    expect(isThirdPartyRequest('https://tracker.co.uk/a.js', 'https://www.example.co.uk')).toBe(true);
+    expect(isThirdPartyRequest('https://tracker.example/a.js', '')).toBe(false);
+  });
+});

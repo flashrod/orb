@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { windowManager } from './windowManager';
 import { registerIpcHandlers } from './ipcHandlers';
-import { initAdBlocker } from './adBlocker';
+import { adBlocker, initAdBlocker } from './adBlocker';
 import { restoreExtensions } from './extensions';
 
 app.setAppUserModelId('company.thebrowser.orb');
@@ -64,6 +64,7 @@ app.whenReady().then(async () => {
         initAdBlocker(session.fromPartition(partition, { cache: true }));
       }
     });
+    contents.on('did-attach-webview', (_event, webContents) => adBlocker.applyWebRtcPolicy(webContents));
   });
   await restoreExtensions();
   createMainWindow();

@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('orbApi', {
   addFilterList: (url: string, name?: string) => ipcRenderer.invoke('adblocker:filter-lists-add', url, name),
   removeFilterList: (id: string) => ipcRenderer.invoke('adblocker:filter-lists-remove', id),
   refreshFilterLists: () => ipcRenderer.invoke('adblocker:filter-lists-refresh'),
+  setThirdPartyCookieBlocking: (enabled: boolean) => ipcRenderer.invoke('adblocker:third-party-cookies-set', enabled),
+  setFingerprintingProtection: (enabled: boolean) => ipcRenderer.invoke('adblocker:fingerprinting-set', enabled),
+  setWebRtcProtection: (enabled: boolean) => ipcRenderer.invoke('adblocker:webrtc-set', enabled),
   importUblockList: (filePath: string) =>
     ipcRenderer.invoke('adblocker:import-ublock-list', filePath),
 
@@ -83,6 +86,9 @@ declare global {
       addFilterList: (url: string, name?: string) => Promise<any[]>;
       removeFilterList: (id: string) => Promise<any[]>;
       refreshFilterLists: () => Promise<any[]>;
+      setThirdPartyCookieBlocking: (enabled: boolean) => Promise<{ enabled: boolean }>;
+      setFingerprintingProtection: (enabled: boolean) => Promise<{ enabled: boolean }>;
+      setWebRtcProtection: (enabled: boolean) => Promise<{ enabled: boolean }>;
       importUblockList: (filePath: string) => Promise<any>;
       getBoosts: () => Promise<BoostRecord[]>;
       saveBoost: (boost: NewBoost) => Promise<BoostRecord>;
