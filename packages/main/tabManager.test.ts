@@ -146,6 +146,20 @@ describe('TabManager', () => {
     expect(manager.list()).toEqual([]);
   });
 
+  it('strips tracking parameters when opening and navigating', () => {
+    const { manager, views } = setup();
+
+    const tab = openTab(manager, 'https://example.com/article?utm_source=news&id=1');
+
+    expect(tab.url).toBe('https://example.com/article?id=1');
+    expect(views[0].loaded).toEqual(['https://example.com/article?id=1']);
+
+    manager.navigate(tab.id, 'https://example.org/?fbclid=x&q=orb');
+
+    expect(tab.url).toBe('https://example.org/?q=orb');
+    expect(views[0].loaded.at(-1)).toBe('https://example.org/?q=orb');
+  });
+
   it('navigates and reloads through the view', () => {
     const { manager, views } = setup();
     const tab = openTab(manager, 'https://a.com');

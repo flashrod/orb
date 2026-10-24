@@ -8,6 +8,7 @@ import { initAdBlocker } from './adBlocker';
 import { PrewarmPool } from './prewarmPool';
 import { buildPageContextMenu } from './pageContextMenu';
 import { selectTabsToHibernate } from '../shared/tabLifecycle';
+import { stripTrackingParams } from '../shared/privacy';
 import type { TabMemorySample } from '../shared/memory';
 import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
 
@@ -331,6 +332,12 @@ export class NativeTabHost {
     contents.on('audio-state-changed', (event) => emit({ type: 'audible-changed', audible: event.audible }));
     contents.on('focus', () => {
       if (!this.window.isDestroyed()) this.window.webContents.send('orb:tab-focused', { tabId });
+    });
+    contents.on('will-navigate', (event, url) => {
+      const cleaned = stripTrackingParams(url);
+      if (cleaned === url) return;
+      event.preventDefault();
+      void contents.loadURL(cleaned);
     });
     contents.on('context-menu', (_event, params) => {
       if (this.window.isDestroyed()) return;

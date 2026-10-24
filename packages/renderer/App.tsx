@@ -21,6 +21,7 @@ import DownloadsPanel from './components/DownloadsPanel';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { bindMainEvents } from './lib/mainEvents';
 import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
+import { stripTrackingParams } from '../shared/privacy';
 import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
@@ -299,6 +300,7 @@ export default function App() {
   }, []);
 
   const handleNavigate = useCallback((url: string) => {
+    url = stripTrackingParams(url);
     let targetTabId = useTabStore.getState().activeTabId;
     if (!targetTabId) {
       const spaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
@@ -379,6 +381,7 @@ export default function App() {
       });
     };
     const handlePopupRequested = (url: string) => {
+      url = stripTrackingParams(url);
       const spaceStore = useSpaceStore.getState();
       const targetSpaceId = spaceStore.activeSpaceId || spaceStore.spaces[0]?.id;
       if (!targetSpaceId) return;

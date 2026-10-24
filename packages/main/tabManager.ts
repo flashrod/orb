@@ -7,6 +7,7 @@ import {
   type TabStateSnapshot,
   type ViewBounds,
 } from '../shared/tabModel';
+import { stripTrackingParams } from '../shared/privacy';
 import {
   MEMORY_GUARD_IDLE_MS,
   MEMORY_GUARD_MAX_LIVE_TABS,
@@ -89,7 +90,7 @@ export class TabManager {
       id: input.id ?? this.newId(),
       spaceId: input.spaceId,
       profileId: input.profileId,
-      url: normalizeUrl(input.url),
+      url: stripTrackingParams(normalizeUrl(input.url)),
       title: 'New Tab',
       favicon: '',
       isPinned: Boolean(input.isPinned),
@@ -148,7 +149,7 @@ export class TabManager {
   navigate(id: string, url: string): void {
     const tab = this.tabs.get(id);
     if (!tab) return;
-    const nextUrl = normalizeUrl(url);
+    const nextUrl = stripTrackingParams(normalizeUrl(url));
     tab.url = nextUrl;
     tab.isLoading = true;
     this.viewFor(tab)?.loadURL(nextUrl);

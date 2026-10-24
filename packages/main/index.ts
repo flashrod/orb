@@ -3,6 +3,7 @@ import path from 'node:path';
 import { registerIpcHandlers } from './ipcHandlers';
 import { NativeTabHost, registerNativeTabHandlers } from './nativeTabs';
 import { adBlocker, initAdBlocker } from './adBlocker';
+import { stripTrackingParams } from '../shared/privacy';
 import { restoreExtensions } from './extensions';
 import { createMenu } from './menu';
 import { PermissionStore, type PermissionName, type PermissionState } from './permissions';
@@ -187,9 +188,20 @@ app.whenReady().then(async () => {
     // Never let a page (or the shell) open a native window. http(s) targets are
     // handed to the renderer, which opens them as tabs.
     contents.setWindowOpenHandler((details) => {
-      if (isWebUrl(details.url)) broadcast('orb:popup-requested', { url: details.url });
+      if (isWebUrl(details.url)) broadcast('orb:popup-requested', { url: stripTrackingParams(details.url) });
       return { action: 'deny' };
     });
+
+    // Pages should not be able to hand tracking identifiers to the next hop.
+    // The shell has its own navigation guard, so leave window contents alone.
+    if (contents.getType() !== 'window') {
+      contents.on('will-navigate', (event, url) => {
+        const cleaned = stripTrackingParams(url);
+        if (cleaned === url) return;
+        event.preventDefault();
+        void contents.loadURL(cleaned);
+      });
+    }
 
     contents.on('before-input-event', (_inputEvent, input) => {
       forwardShortcutFromGuest(contents, input);
@@ -212,7 +224,7 @@ app.whenReady().then(async () => {
 
     contents.on('did-attach-webview', (_attachEvent, guest) => {
       guest.setWindowOpenHandler((details) => {
-        if (isWebUrl(details.url)) broadcast('orb:popup-requested', { url: details.url });
+        if (isWebUrl(details.url)) broadcast('orb:popup-requested', { url: stripTrackingParams(details.url) });
         return { action: 'deny' };
       });
       adBlocker.applyWebRtcPolicy(guest);
