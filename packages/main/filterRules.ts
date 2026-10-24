@@ -147,10 +147,75 @@ export function matchesFilterRule(rule: NetworkFilterRule, url: string, context:
   return rule.regex.test(url);
 }
 
-export function decideFilterAction(rules: NetworkFilterRule[], url: string, context: FilterRequestContext): 'block' | 'allow' | 'none' {
-  const matches = rules.filter((rule) => matchesFilterRule(rule, url, context));
-  if (matches.some((rule) => rule.action === 'allow')) return 'allow';
-  return matches.some((rule) => rule.action === 'block') ? 'block' : 'none';
+/**
+ * Pre-indexes rules by their domain anchor so a request only evaluates rules
+ * that can possibly match its host (plus the generic set), instead of scanning
+ * every rule in every list.
+ */
+export class FilterRuleIndex {
+  private readonly generic: NetworkFilterRule[] = [];
+  private readonly byDomain = new Map<string, NetworkFilterRule[]>();
+
+  constructor(rules: NetworkFilterRule[]) {
+    for (const rule of rules) {
+      if (rule.domainAnchor) {
+        const anchor = rule.domainAnchor.toLowerCase();
+        const list = this.byDomain.get(anchor) ?? [];
+        list.push(rule);
+        this.byDomain.set(anchor, list);
+      } else {
+        this.generic.push(rule);
+      }
+    }
+  }
+
+  get size(): number {
+    let total = this.generic.length;
+    for (const list of this.byDomain.values()) total += list.length;
+    return total;
+  }
+
+  candidates(url: string): NetworkFilterRule[] {
+    let host: string;
+    try {
+      host = new URL(url).hostname.toLowerCase().replace(/\.$/, '');
+    } catch {
+      return [];
+    }
+    if (!host) return [];
+    const result = [...this.generic];
+    const labels = host.split('.');
+    for (let index = 0; index < labels.length; index += 1) {
+      const list = this.byDomain.get(labels.slice(index).join('.'));
+      if (list) result.push(...list);
+    }
+    return result;
+  }
+
+  decide(url: string, context: FilterRequestContext): 'block' | 'allow' | 'none' {
+    let blocked = false;
+    for (const rule of this.candidates(url)) {
+      if (!matchesFilterRule(rule, url, context)) continue;
+      if (rule.action === 'allow') return 'allow';
+      blocked = true;
+    }
+    return blocked ? 'block' : 'none';
+  }
+
+  firstBlockMatch(url: string, context: FilterRequestContext): NetworkFilterRule | undefined {
+    for (const rule of this.candidates(url)) {
+      if (rule.action === 'block' && matchesFilterRule(rule, url, context)) return rule;
+    }
+    return undefined;
+  }
+}
+
+export function decideFilterAction(
+  rules: NetworkFilterRule[] | FilterRuleIndex,
+  url: string,
+  context: FilterRequestContext,
+): 'block' | 'allow' | 'none' {
+  return rules instanceof FilterRuleIndex ? rules.decide(url, context) : new FilterRuleIndex(rules).decide(url, context);
 }
 import { getDomain } from 'tldts';
 

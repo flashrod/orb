@@ -1,7 +1,7 @@
 import { app, session, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import { decideFilterAction, FilterRequestContext, isThirdPartyRequest, NetworkFilterRule, matchesFilterRule, parseFilterLine } from './filterRules';
+import { FilterRequestContext, FilterRuleIndex, isThirdPartyRequest, NetworkFilterRule, parseFilterLine } from './filterRules';
 
 // Filter list sources (from Arc's manifest.json reverse engineering)
 type FilterListType = 'generic' | 'privacy' | 'cookies';
@@ -50,6 +50,8 @@ interface CosmeticFilterRule {
 export class AdBlocker {
   private networkRules: NetworkFilterRule[] = [];
   private trackerRules: NetworkFilterRule[] = [];
+  private networkIndex = new FilterRuleIndex([]);
+  private trackerIndex = new FilterRuleIndex([]);
   private cosmeticRules: CosmeticFilterRule[] = [];
   private userAllowlist: Set<string> = new Set(); // domains the user explicitly allows
   private blockedRequests: { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number }[] = [];
@@ -154,6 +156,7 @@ export class AdBlocker {
 
     this.networkRules = networkRules;
     this.trackerRules = trackerRules;
+    this.rebuildIndexes();
     this.cosmeticRules = cosmeticRules;
 
     console.log(
@@ -219,13 +222,18 @@ export class AdBlocker {
     return { selector, domain, isRegexSelect };
   }
 
+  private rebuildIndexes(): void {
+    this.networkIndex = new FilterRuleIndex(this.networkRules);
+    this.trackerIndex = new FilterRuleIndex(this.trackerRules);
+  }
+
   // ABP allow rules override block rules in the same list and apply to matching request context.
   shouldBlock(url: string, context: FilterRequestContext = { resourceType: 'other' }): boolean {
     if (!this.enabled) return false;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
       if ([...this.userAllowlist].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) return false;
-      return decideFilterAction(this.networkRules, url, context) === 'block';
+      return this.networkIndex.decide(url, context) === 'block';
     } catch { return false; }
   }
 
@@ -234,7 +242,7 @@ export class AdBlocker {
     try {
       const hostname = new URL(url).hostname.toLowerCase();
       if ([...this.userAllowlist].some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) return false;
-      return decideFilterAction(this.trackerRules, url, context) === 'block';
+      return this.trackerIndex.decide(url, context) === 'block';
     } catch { return false; }
   }
 
@@ -247,9 +255,15 @@ export class AdBlocker {
       const hostname = new URL(url).hostname.toLowerCase();
       const initiatorHost = context.initiatorUrl ? new URL(context.initiatorUrl).hostname.toLowerCase() : '';
       if ([...this.userAllowlist].some((domain) => [hostname, initiatorHost].some((host) => host === domain || host.endsWith(`.${domain}`)))) return false;
-      const rules = [...this.networkRules, ...(this.trackerBlockingEnabled ? this.trackerRules : [])];
-      if (decideFilterAction(rules, url, context) !== 'block') return false;
-      const matched = rules.find((rule) => rule.action === 'block' && matchesFilterRule(rule, url, context));
+      const networkDecision = this.networkIndex.decide(url, context);
+      const trackerDecision = this.trackerBlockingEnabled ? this.trackerIndex.decide(url, context) : 'none';
+      // Allow rules in either list win, matching the previous merged-list
+      // behavior without rebuilding a combined index on every request.
+      if (networkDecision === 'allow' || trackerDecision === 'allow') return false;
+      if (networkDecision !== 'block' && trackerDecision !== 'block') return false;
+      const matched = networkDecision === 'block'
+        ? this.networkIndex.firstBlockMatch(url, context)
+        : this.trackerIndex.firstBlockMatch(url, context);
       let request = `${new URL(url).origin}${new URL(url).pathname}`;
       if (request.length > 180) request = `${request.slice(0, 177)}…`;
       this.blockedRequests.unshift({
@@ -396,6 +410,7 @@ export class AdBlocker {
         }
       }
 
+      this.rebuildIndexes();
       console.log(`[AdBlocker] Imported ${imported} uBlock rules from ${filePath}`);
       return imported;
     } catch (err) {
