@@ -8,6 +8,7 @@ import { restoreExtensions } from './extensions';
 import { createMenu } from './menu';
 import { PermissionStore, type PermissionName, type PermissionState } from './permissions';
 import { DownloadStore } from './downloads';
+import { HistoryStore, fileHistoryStorage } from './historyStore';
 import {
   broadcast,
   isOrbPartition,
@@ -124,6 +125,11 @@ app.whenReady().then(async () => {
   const downloadStore = new DownloadStore();
   await downloadStore.load();
 
+  const historyStore = new HistoryStore(
+    fileHistoryStorage(path.join(app.getPath('userData'), 'history.json')),
+  );
+  await historyStore.load();
+
   let downloadPath = app.getPath('downloads');
 
   const ctx: SessionContext = {
@@ -144,6 +150,17 @@ app.whenReady().then(async () => {
     const pending = ctx.pendingPermissions.get(id);
     if (!pending) return { ok: false };
     pending.resolve(allowed);
+    return { ok: true };
+  });
+
+  ipcMain.handle('history:query', (_, text: unknown, limit: unknown) =>
+    historyStore.query(typeof text === 'string' ? text : '', typeof limit === 'number' ? limit : 20));
+  ipcMain.handle('history:remove', async (_, url: unknown) => {
+    if (typeof url === 'string') await historyStore.remove(url);
+    return { ok: true };
+  });
+  ipcMain.handle('history:clear', async () => {
+    await historyStore.clear();
     return { ok: true };
   });
 
@@ -194,7 +211,7 @@ app.whenReady().then(async () => {
 
     // Pages should not be able to hand tracking identifiers to the next hop.
     // The shell has its own navigation guard, so leave window contents alone.
-    if (contents.getType() !== 'window') {
+    if (contents !== mainWindow?.webContents) {
       contents.on('will-navigate', (event, url) => {
         const cleaned = stripTrackingParams(url);
         if (cleaned === url) return;
@@ -205,6 +222,17 @@ app.whenReady().then(async () => {
 
     contents.on('before-input-event', (_inputEvent, input) => {
       forwardShortcutFromGuest(contents, input);
+    });
+
+    // Record real page visits once the document settles, so the title is
+    // available. The shell itself is not browsing history.
+    contents.on('did-stop-loading', () => {
+      // WebContentsView reports type 'window', so compare identity with the
+      // shell instead of relying on the type name.
+      if (contents === mainWindow?.webContents || contents.isDestroyed()) return;
+      const url = contents.getURL();
+      if (!isWebUrl(url)) return;
+      void historyStore.record(url, contents.getTitle()).catch(() => undefined);
     });
 
     contents.on('will-attach-webview', (_attachEvent, webPreferences) => {

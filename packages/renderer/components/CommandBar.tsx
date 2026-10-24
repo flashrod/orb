@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MagnifyingGlass, X, SignIn, Globe, SquaresFour, Plus } from '@phosphor-icons/react';
+import { ClockCounterClockwise, MagnifyingGlass, X, SignIn, Globe, SquaresFour, Plus } from '@phosphor-icons/react';
 import { useTabStore } from '../stores/tabs';
 import { useSpaceStore } from '../stores/spaces';
 import { useProfileStore } from '../stores/profiles';
@@ -8,7 +8,7 @@ import { resolveAddressOrSearch } from '../lib/navigation';
 
 interface CommandResult {
   id: string;
-  type: 'tab' | 'space' | 'profile' | 'command' | 'url';
+  type: 'tab' | 'space' | 'profile' | 'command' | 'url' | 'history';
   title: string;
   subtitle: string;
   icon: React.ReactNode;
@@ -22,6 +22,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   dashboard: SquaresFour,
   search: MagnifyingGlass,
   plus: Plus,
+  history: ClockCounterClockwise,
 };
 
 function getIcon(name: string, className?: string) {
@@ -39,6 +40,7 @@ export default function CommandBar({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CommandResult[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [historyResults, setHistoryResults] = useState<CommandResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { tabs, activeTabId } = useTabStore();
@@ -48,9 +50,43 @@ export default function CommandBar({
 
   useEffect(() => {
     inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
     setResults(buildResults(query));
     setSelectedIndex(-1);
-  }, [query, tabs, spaces, profiles, activeTabId, activeSpaceId, searchProvider]);
+  }, [query, tabs, spaces, profiles, activeTabId, activeSpaceId, searchProvider, historyResults]);
+
+  useEffect(() => {
+    const text = query.trim();
+    if (!text || !window.orbApi?.queryHistory) {
+      setHistoryResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void window.orbApi.queryHistory(text, 6).then((entries) => {
+        if (cancelled) return;
+        setHistoryResults(entries.map((entry) => ({
+          id: `history-${entry.url}`,
+          type: 'history' as const,
+          title: entry.title || entry.host,
+          subtitle: `${entry.host} · History`,
+          icon: getIcon('history', 'w-4 h-4'),
+          action: () => {
+            window.dispatchEvent(new CustomEvent('orb:navigate', { detail: { url: entry.url } }));
+            onClose();
+          },
+          host: entry.host,
+          url: entry.url,
+        })));
+      }).catch(() => undefined);
+    }, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, onClose]);
 
   const buildResults = (q: string): CommandResult[] => {
     const lower = q.toLowerCase().trim();
@@ -60,7 +96,10 @@ export default function CommandBar({
     const tabResults = buildTabResults(lower);
     results.push(...tabResults);
 
-    // 2. Spaces
+    // 2. History (already filtered and ranked by the main process)
+    results.push(...historyResults);
+
+    // 3. Spaces
     const spaceResults = buildSpaceResults(lower);
     results.push(...spaceResults);
 
@@ -83,7 +122,21 @@ export default function CommandBar({
         },
       })));
 
-    // 3. Commands
+    if (lower.startsWith('clear hist')) {
+      results.push({
+        id: 'cmd-clear-history',
+        type: 'command',
+        title: 'Clear browsing history',
+        subtitle: 'Remove every recorded visit',
+        icon: getIcon('history', 'w-4 h-4'),
+        action: () => {
+          void window.orbApi?.clearHistory();
+          onClose();
+        },
+      });
+    }
+
+    // 4. Commands
     if (!lower) {
       results.push(
         {

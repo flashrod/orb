@@ -89,6 +89,11 @@ contextBridge.exposeInMainWorld('orbApi', {
   setPermission: (host: string, permission: string, state: string) => ipcRenderer.invoke('permission:set', { host, permission, state }),
   removePermission: (host: string, permission: string) => ipcRenderer.invoke('permission:remove', { host, permission }),
 
+  // History
+  queryHistory: (text: string, limit?: number) => ipcRenderer.invoke('history:query', text, limit ?? 20),
+  removeHistory: (url: string) => ipcRenderer.invoke('history:remove', url),
+  clearHistory: () => ipcRenderer.invoke('history:clear'),
+
   // Downloads
   getDownloads: () => ipcRenderer.invoke('downloads:get-all'),
   cancelDownload: (id: string) => ipcRenderer.invoke('downloads:cancel', id),
@@ -165,6 +170,10 @@ declare global {
       getPermissions: () => Promise<Array<{ host: string; permission: string; state: string; updatedAt: number }>>;
       setPermission: (host: string, permission: string, state: string) => Promise<{ ok: boolean }>;
       removePermission: (host: string, permission: string) => Promise<{ ok: boolean }>;
+      // History
+      queryHistory: (text: string, limit?: number) => Promise<Array<{ url: string; title: string; host: string; visitedAt: number; visitCount: number }>>;
+      removeHistory: (url: string) => Promise<{ ok: boolean }>;
+      clearHistory: () => Promise<{ ok: boolean }>;
       // Downloads
       getDownloads: () => Promise<Array<{ id: string; url: string; filePath: string | null; totalBytes: number; receivedBytes: number; state: string; startedAt: number; completedAt: number | null }>>;
       cancelDownload: (id: string) => Promise<{ ok: boolean }>;
