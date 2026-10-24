@@ -1,8 +1,7 @@
 'use client';
 
 import { useScrollReveal } from '@/lib/useScrollReveal';
-import { Carousel, CarouselSlide } from '@/components/Carousel';
-import { Layout, Globe, Shield, Eye, Clock } from '@phosphor-icons/react';
+import { Layout, Globe, Shield } from '@phosphor-icons/react';
 
 function SplitViewIcon() {
   return (
@@ -27,33 +26,50 @@ type Feature = {
   icon: React.ElementType;
   title: string;
   description: string;
+  span?: number;
+  rowSpan?: number;
 };
 
 const features: Feature[] = [
   {
     icon: Layout,
     title: 'Spaces',
-    description: 'Named spaces keep your tabs, bookmarks, and history separate by context.',
+    description:
+      'Named, color-coded spaces isolate tabs, bookmarks, and history by context. Each space gets its own profile partition for cookie and storage isolation.',
+    span: 2,
+    rowSpan: 2,
   },
   {
     icon: Globe,
     title: 'Boosts',
-    description: 'Custom CSS and JS for any site. Hide cookie banners, reshape layouts, dark-mode the web.',
+    description:
+      'Inject custom CSS and JavaScript into any site with an intelligent element picker. Hide cookie banners, reshape layouts, strip autoplaying videos.',
+    span: 1,
+    rowSpan: 1,
   },
   {
     icon: Shield,
     title: 'Ad + tracker blocking',
-    description: 'Real EasyList and uBlock rules. Third-party cookies blocked by default.',
+    description:
+      'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch. Blocked requests are logged so you can see what was stopped.',
+    span: 1,
+    rowSpan: 1,
   },
   {
     icon: SplitViewIcon,
     title: 'Split view',
-    description: 'Two tabs side by side with a draggable divider.',
+    description:
+      'View two tabs side by side with a draggable divider. Swap panes or close split view with keyboard control.',
+    span: 1,
+    rowSpan: 1,
   },
   {
     icon: TabGroupsIcon,
     title: 'Tab groups',
-    description: 'Collapse, rename, and reorder tab groups that persist across restart.',
+    description:
+      'Collapse and rename tab groups. Drag tabs between groups. Persist across restarts with their own color and name.',
+    span: 1,
+    rowSpan: 1,
   },
 ];
 
@@ -72,31 +88,26 @@ export default function Features() {
             </p>
           </div>
         </div>
-        <Carousel>
-          {features.map((feature) => {
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 grid-auto-flow-dense">
+          {features.map((feature, i) => {
             const Icon = feature.icon;
             return (
-              <CarouselSlide key={feature.title}>
-                <div className="flex items-start justify-between p-8">
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
-                        <Icon size={18} weight="bold" />
-                      </div>
-                      <h3 className="text-lg font-semibold">{feature.title}</h3>
-                    </div>
-                    <p className="text-sm text-orb-text leading-relaxed">{feature.description}</p>
+              <div
+                key={feature.title}
+                className={`card reveal col-span-${feature.span ?? 1} row-span-${feature.rowSpan ?? 1}`}
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
+                    <Icon size={18} weight="bold" />
                   </div>
-                  <div className="ml-8 flex items-center justify-end">
-                    <div className="w-12 h-12 rounded-lg border border-orb-border bg-orb-surface flex items-center justify-center">
-                      <Icon size={14} weight="regular" className="opacity-50" />
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-semibold">{feature.title}</h3>
                 </div>
-              </CarouselSlide>
+                <p className="text-sm text-orb-text leading-relaxed">{feature.description}</p>
+              </div>
             );
           })}
-        </Carousel>
+        </div>
       </div>
     </section>
   );
