@@ -99,6 +99,23 @@ export default function App() {
     return selectedId ? webviewRefs.current[selectedId] : null;
   }, []);
 
+  const openFind = useCallback(() => {
+    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+    const current = allTabs.find((tab) => tab.id === currentTabId);
+    if (current && current.url !== 'about:blank') setFindOpen(true);
+  }, []);
+
+  const printActive = useCallback(() => {
+    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+    const current = allTabs.find((tab) => tab.id === currentTabId);
+    if (!current || current.url === 'about:blank') return;
+    if (NATIVE_TABS) {
+      void window.orbApi?.tabs.print(current.id);
+      return;
+    }
+    webviewRefs.current[current.id]?.print();
+  }, []);
+
   const runFind = useCallback((text: string, forward: boolean, findNext: boolean) => {
     if (!text) return;
     const id = useTabStore.getState().activeTabId;
@@ -344,9 +361,11 @@ export default function App() {
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
-        const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
-        const current = allTabs.find((tab) => tab.id === currentTabId);
-        if (current && current.url !== 'about:blank') setFindOpen(true);
+        openFind();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        printActive();
       }
       if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split') {
         e.preventDefault();
@@ -423,6 +442,8 @@ export default function App() {
       if (action === 'new-tab') handleNewTab();
       else if (action === 'new-space') handleNewSpace();
       else if (action === 'command-bar') setCommandBarOpen(true);
+      else if (action === 'find') openFind();
+      else if (action === 'print') printActive();
       else if (action === 'focus-address') {
         requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
       }

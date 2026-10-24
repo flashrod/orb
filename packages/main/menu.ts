@@ -42,6 +42,8 @@ export function createMenu(): void {
           click: () => dispatch('new-space'),
         },
         { type: 'separator' },
+        { label: 'Print…', accelerator: 'CmdOrCtrl+P', click: () => dispatch('print') },
+        { type: 'separator' },
         { role: 'close' },
       ],
     },
@@ -58,7 +60,7 @@ export function createMenu(): void {
         { type: 'separator' },
         { label: 'Open Command Bar…', accelerator: 'CmdOrCtrl+K', click: () => dispatch('command-bar') },
         { label: 'Focus Address Bar', accelerator: 'CmdOrCtrl+L', click: () => dispatch('focus-address') },
-        { label: 'Find…', accelerator: 'CmdOrCtrl+F', enabled: false },
+        { label: 'Find…', accelerator: 'CmdOrCtrl+F', click: () => dispatch('find') },
       ],
     },
     {

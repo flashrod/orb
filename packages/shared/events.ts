@@ -33,6 +33,8 @@ export type OrbShortcutAction =
   | 'focus-address'
   | 'toggle-compact'
   | 'settings'
+  | 'find'
+  | 'print'
   | 'close-overlays';
 
 export type { TabStateSnapshot } from './tabModel';

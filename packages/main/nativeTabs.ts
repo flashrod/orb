@@ -198,6 +198,12 @@ export class NativeTabHost {
     });
   }
 
+  print(id: string): void {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return;
+    view.webContents.print({ printBackground: true });
+  }
+
   /** Hibernates every background tab that is safe to reclaim. */
   hibernateBackground(): string[] {
     const snapshot = this.manager.snapshot();
@@ -520,6 +526,7 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:wake', (host, id) => host.wake(requireString(id, 'tab id')));
   on('tabs:apply-memory-budget', (host) => host.applyMemoryBudget());
   on('tabs:pick-element', (host, id) => host.pickElement(requireString(id, 'tab id')));
+  on('tabs:print', (host, id) => host.print(requireString(id, 'tab id')));
   on('tabs:memory', (host) => host.memory());
   on('tabs:hibernate-background', (host) => host.hibernateBackground());
   on('tabs:find-in-page', (host, id, text, options) => {

@@ -10,6 +10,7 @@ import { PermissionStore, type PermissionName, type PermissionState } from './pe
 import { DownloadStore } from './downloads';
 import { HistoryStore, fileHistoryStorage } from './historyStore';
 import { findOpenUrl } from './cli';
+import { shortcutForInput } from './shortcuts';
 import {
   broadcast,
   isOrbPartition,
@@ -126,27 +127,16 @@ function createMainWindow(ctx: SessionContext) {
   return mainWindow;
 }
 
-type ShortcutAction = 'new-tab' | 'command-bar' | 'focus-address' | 'toggle-compact' | 'close-overlays';
-
 /**
- * Accelerators do not fire while a guest <webview> holds focus, so shortcuts
- * pressed inside a page are forwarded to the shell window instead.
+ * Accelerators do not fire while a guest page holds focus, so shortcuts pressed
+ * inside a page are forwarded to the shell window instead. WebContentsView
+ * reports type 'window', so compare identity with the shell rather than type.
  */
 function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input): void {
-  if (input.type !== 'keyDown' || input.isAutoRepeat) return;
-  const type = contents.getType();
-  if (type !== 'webview' && type !== 'browserView') return;
+  if (contents === mainWindow?.webContents) return;
+  if (contents.getType() === 'remote' || contents.getType() === 'backgroundPage') return;
 
-  const key = input.key.toLowerCase();
-  const command = input.meta || input.control;
-  let action: ShortcutAction | null = null;
-
-  if (command && !input.shift && key === 't') action = 'new-tab';
-  else if (command && !input.shift && key === 'k') action = 'command-bar';
-  else if (command && !input.shift && key === 'l') action = 'focus-address';
-  else if (command && input.shift && key === 'm') action = 'toggle-compact';
-  else if (!command && !input.shift && key === 'escape') action = 'close-overlays';
-
+  const action = shortcutForInput(input);
   if (!action) return;
 
   const host = contents.hostWebContents;

@@ -12,6 +12,7 @@ type WebViewHandle = {
   findInPage: (text: string, forward: boolean, findNext: boolean) => void;
   stopFindInPage: (action: 'clearSelection' | 'keepSelection' | 'activateSelection') => void;
   isAudible: () => boolean;
+  print: () => void;
 };
 
 export default forwardRef<WebViewHandle, {
@@ -216,6 +217,10 @@ export default forwardRef<WebViewHandle, {
     stopFindInPage: (action) => {
       const webview = webviewRef.current as any;
       webview?.stopFindInPage(action);
+    },
+    print: () => {
+      const webview = webviewRef.current as any;
+      webview?.print();
     },
   }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
 
