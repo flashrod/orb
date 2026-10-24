@@ -61,8 +61,9 @@ export default function App() {
   const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
   // Per-tab loading state, used for the thin progress bar in the toolbar
   const [tabLoadingStates, setTabLoadingStates] = useState<Record<string, boolean>>({});
-  // Last painted frame of the active native page, shown while shell UI covers it.
-  const [pageSnapshot, setPageSnapshot] = useState<string | null>(null);
+  // Last painted frame per native tab, shown while shell UI covers the page
+  // or a hibernated tab spins its view back up.
+  const [pageSnapshots, setPageSnapshots] = useState<Record<string, string>>({});
   // Compact rail peek: temporarily widen the rail without leaving compact mode.
   const [railPeek, setRailPeek] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
@@ -128,6 +129,16 @@ export default function App() {
     }
     runFind(findQuery, true, false);
   }, [findOpen, findQuery, runFind]);
+
+  // Drop frames for closed tabs so the map cannot grow without bound.
+  useEffect(() => {
+    const liveIds = new Set(tabs.map((tab) => tab.id));
+    setPageSnapshots((previous) => {
+      const entries = Object.entries(previous).filter(([id]) => liveIds.has(id));
+      if (entries.length === Object.keys(previous).length) return previous;
+      return Object.fromEntries(entries);
+    });
+  }, [tabs]);
 
   // The find bar belongs to the active tab; switching tabs closes it.
   useEffect(() => {
@@ -502,6 +513,7 @@ export default function App() {
   const mountedTabs = spaceTabs.filter((tab) => mountedTabIds.has(tab.id) && (!tab.isUnloaded || tab.id === activeTabId));
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeTabLoading = activeTab ? tabLoadingStates[activeTab.id] || false : false;
+  const activeSnapshot = activeTab ? pageSnapshots[activeTab.id] : undefined;
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
   const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
   const overlayActive = useAnyShellOverlay();
@@ -516,10 +528,6 @@ export default function App() {
     !pickerBusy &&
     !resizingSplit,
   );
-
-  useEffect(() => {
-    if (nativePageVisible) setPageSnapshot(null);
-  }, [nativePageVisible]);
 
   // Entering or leaving compact mode always starts from the collapsed rail.
   useEffect(() => {
@@ -547,7 +555,7 @@ export default function App() {
       setTabLoadingStates((prev) => (prev[tabId] === loading ? prev : { ...prev, [tabId]: loading }));
     },
     onSnapshot: (tabId, dataUrl) => {
-      if (tabId === useTabStore.getState().activeTabId) setPageSnapshot(dataUrl);
+      setPageSnapshots((previous) => ({ ...previous, [tabId]: dataUrl }));
     },
   });
 
@@ -754,8 +762,8 @@ export default function App() {
 
         {/* Web Content */}
         <div ref={pageAreaRef} data-orb-page-area className="orb-frame relative flex-1 overflow-hidden">
-          {NATIVE_TABS && pageSnapshot && !nativePageVisible ? (
-            <img src={pageSnapshot} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
+          {NATIVE_TABS && activeSnapshot && (!nativePageVisible || activeTabLoading) ? (
+            <img src={activeSnapshot} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
           ) : null}
           {splitTabs?.[0] && splitTabs[1] ? <>
             <div ref={splitAreaRef} className="absolute inset-0 grid" style={{ gridTemplateColumns: `minmax(0, ${splitRatio}fr) 8px minmax(0, ${1 - splitRatio}fr)` }}>

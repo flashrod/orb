@@ -5,9 +5,15 @@ import { orbSessionFor, type SessionContext } from './sessions';
 import { profilePartition } from '../shared/profiles';
 import { clampBounds, type TabOpenInput, type TabStateSnapshot, type ViewBounds } from '../shared/tabModel';
 import { initAdBlocker } from './adBlocker';
+import { PrewarmPool } from './prewarmPool';
 import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
 
 const PRELOAD_DIR = path.join(__dirname, 'preload');
+
+type PrewarmedView = {
+  view: WebContentsView;
+  destroy: () => void;
+};
 
 /**
  * Owns the native page views for one window: one WebContentsView per live tab,
@@ -20,6 +26,7 @@ export class NativeTabHost {
   private readonly ctx: SessionContext;
   private readonly views = new Map<string, WebContentsView>();
   private readonly snapshots = new Map<string, string>();
+  private readonly prewarm: PrewarmPool<PrewarmedView>;
   private split: { id: string; bounds: ViewBounds } | null = null;
   private pageVisible = true;
   private desiredPageVisible = true;
@@ -36,6 +43,14 @@ export class NativeTabHost {
       },
     });
 
+    this.prewarm = new PrewarmPool<PrewarmedView>(
+      (profileId) => this.makeView(profileId),
+      { schedule: (task) => setTimeout(task, 25) },
+    );
+    // Warm the default profile after the window has painted so startup is not
+    // competing with a hidden view.
+    setTimeout(() => this.prewarm.warm('default'), 0);
+
     window.on('closed', () => this.destroy());
   }
 
@@ -46,6 +61,7 @@ export class NativeTabHost {
   }
 
   activate(id: string): void {
+    this.sendWakeSnapshot(id);
     this.manager.activate(id);
   }
 
@@ -123,6 +139,7 @@ export class NativeTabHost {
   }
 
   wake(id: string): void {
+    this.sendWakeSnapshot(id);
     this.manager.wake(id);
   }
 
@@ -212,7 +229,8 @@ export class NativeTabHost {
 
   // ------------------------------------------------------------- internals
 
-  private createView(tabId: string, url: string, profileId: string, bounds: ViewBounds): TabView {
+  /** Builds a hidden view; the pool keeps one ready per profile. */
+  private makeView(profileId: string): PrewarmedView {
     const partition = profilePartition(profileId);
     const session = orbSessionFor(partition, this.ctx);
     initAdBlocker(session);
@@ -230,8 +248,24 @@ export class NativeTabHost {
     });
 
     this.window.contentView.addChildView(view);
+    view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+    view.setVisible(false);
+
+    return {
+      view,
+      destroy: () => {
+        if (!this.window.isDestroyed()) this.window.contentView.removeChildView(view);
+        if (!view.webContents.isDestroyed()) view.webContents.close();
+      },
+    };
+  }
+
+  private createView(tabId: string, url: string, profileId: string, bounds: ViewBounds): TabView {
+    const warmed = this.prewarm.take(profileId);
+    const view = (warmed ?? this.makeView(profileId)).view;
     view.setBounds(bounds);
     this.views.set(tabId, view);
+    if (!warmed) setTimeout(() => this.prewarm.warm(profileId), 25);
 
     const contents = view.webContents;
     const emit = (event: TabViewEvent) => this.manager.handleViewEvent(tabId, event);
@@ -280,6 +314,15 @@ export class NativeTabHost {
     };
   }
 
+  /** Replays the last frame while a hibernated tab spins its view back up. */
+  private sendWakeSnapshot(id: string): void {
+    const tab = this.manager.snapshot().tabs.find((candidate) => candidate.id === id);
+    if (!tab || tab.lifecycle !== 'hibernated') return;
+    const dataUrl = this.snapshots.get(id);
+    if (!dataUrl || this.window.isDestroyed()) return;
+    this.window.webContents.send('orb:tab-snapshot', { tabId: id, dataUrl });
+  }
+
   private applyVisibility(): void {
     const activeId = this.manager.getActiveTabId();
     for (const [id, view] of this.views) {
@@ -312,6 +355,7 @@ export class NativeTabHost {
   private destroy(): void {
     if (this.closed) return;
     this.closed = true;
+    this.prewarm.destroy();
     this.manager.destroy();
     this.views.clear();
     this.snapshots.clear();
