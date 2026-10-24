@@ -45,6 +45,8 @@ export interface ExposedApi {
   clearCompletedDownloads: () => Promise<{ ok: boolean }>;
   setDownloadPath: (p: string) => Promise<{ ok: boolean; path: string }>;
   getDownloadPath: () => Promise<string>;
+  on: (channel: string, listener: (payload: unknown) => void) => number;
+  off: (subscriptionId: number) => void;
 }
 
 export const exposedApi: ExposedApi = {
@@ -100,4 +102,6 @@ export const exposedApi: ExposedApi = {
   clearCompletedDownloads: async () => ({ ok: true }),
   setDownloadPath: async () => ({ ok: true, path: '' }),
   getDownloadPath: async () => '',
+  on: () => 0,
+  off: () => {},
 };

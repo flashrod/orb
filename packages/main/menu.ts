@@ -1,4 +1,14 @@
-import { app, Menu } from 'electron';
+import { BrowserWindow, Menu } from 'electron';
+
+/**
+ * Menu items cannot call into React directly, so they dispatch the same
+ * shortcut actions the renderer already understands.
+ */
+function dispatch(action: string): void {
+  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('orb:shortcut', action);
+}
 
 export function createMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -6,6 +16,8 @@ export function createMenu(): void {
       label: 'Orb',
       submenu: [
         { role: 'about' },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => dispatch('settings') },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -22,10 +34,12 @@ export function createMenu(): void {
         {
           label: 'New Tab',
           accelerator: 'CmdOrCtrl+T',
+          click: () => dispatch('new-tab'),
         },
         {
           label: 'New Space',
           accelerator: 'CmdOrCtrl+Shift+T',
+          click: () => dispatch('new-space'),
         },
         { type: 'separator' },
         { role: 'close' },
@@ -41,6 +55,10 @@ export function createMenu(): void {
         { role: 'copy' },
         { role: 'paste' },
         { role: 'selectAll' },
+        { type: 'separator' },
+        { label: 'Open Command Bar…', accelerator: 'CmdOrCtrl+K', click: () => dispatch('command-bar') },
+        { label: 'Focus Address Bar', accelerator: 'CmdOrCtrl+L', click: () => dispatch('focus-address') },
+        { label: 'Find…', accelerator: 'CmdOrCtrl+F', enabled: false },
       ],
     },
     {

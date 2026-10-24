@@ -1,8 +1,33 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { BoostRecord, NewBoost } from '../shared/boosts';
+import { isOrbEventChannel } from '../shared/events';
+
+// Main -> renderer push events. Only allowlisted channels are subscribable, and
+// each subscription gets an id so the renderer can cancel it without needing to
+// pass the original callback back across the context bridge.
+const eventSubscriptions = new Map<number, { channel: string; handler: (...args: any[]) => void }>();
+let nextSubscriptionId = 1;
+
+function subscribeToOrbEvent(channel: string, listener: (payload: unknown) => void): number {
+  if (!isOrbEventChannel(channel) || typeof listener !== 'function') return 0;
+  const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => listener(payload);
+  const id = nextSubscriptionId++;
+  eventSubscriptions.set(id, { channel, handler });
+  ipcRenderer.on(channel, handler);
+  return id;
+}
+
+function unsubscribeFromOrbEvent(subscriptionId: number): void {
+  const subscription = eventSubscriptions.get(subscriptionId);
+  if (!subscription) return;
+  ipcRenderer.removeListener(subscription.channel, subscription.handler);
+  eventSubscriptions.delete(subscriptionId);
+}
 
 // Expose protected APIs to the renderer process
 contextBridge.exposeInMainWorld('orbApi', {
+  on: subscribeToOrbEvent,
+  off: unsubscribeFromOrbEvent,
   listExtensions: () => ipcRenderer.invoke('extensions:list'),
   installExtension: () => ipcRenderer.invoke('extensions:install'),
   removeExtension: (id: string) => ipcRenderer.invoke('extensions:remove', id),
@@ -119,6 +144,9 @@ declare global {
       clearCompletedDownloads: () => Promise<{ ok: boolean }>;
       setDownloadPath: (p: string) => Promise<{ ok: boolean; path: string }>;
       getDownloadPath: () => Promise<string>;
+      // Main -> renderer events (allowlisted channels only)
+      on: (channel: string, listener: (payload: unknown) => void) => number;
+      off: (subscriptionId: number) => void;
     };
   }
 }
