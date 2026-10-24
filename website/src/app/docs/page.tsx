@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import DocsSidebar from '@/components/DocsSidebar';
 
 export default function DocsPage() {
   return (
@@ -31,11 +30,7 @@ export default function DocsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          <aside className="lg:col-span-3 hidden lg:block">
-            <DocsSidebar />
-          </aside>
-
-          <div className="lg:col-span-9 space-y-20">
+          <div className="space-y-20">
             <section id="stack" className="reveal">
               <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-3">
