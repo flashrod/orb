@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { ArrowUpRight, Command, Globe, SquaresFour, Plus, MagnifyingGlass, Sparkle, X } from '@phosphor-icons/react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowUpRight, Command, ClockCounterClockwise, Globe, SquaresFour, Plus, MagnifyingGlass, Sparkle, X } from '@phosphor-icons/react';
+import { countRestorableTabs, restoreLastSession } from '../lib/restoreSession';
 import { useEssentialsStore } from '../stores/essentials';
 import { resolveAddressOrSearch, resolveWebsiteAddress } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
@@ -33,6 +34,20 @@ export default function StartPage({
   const date = useMemo(() => formatDate(new Date()), []);
   const { searchProvider, essentialsScope } = useBrowserPreferencesStore();
   const sites = filterEssentialsForContext(allSites, essentialsScope, spaceId, profileId);
+  const [restorableCount, setRestorableCount] = useState(0);
+  const [restoreNotice, setRestoreNotice] = useState('');
+
+  useEffect(() => {
+    setRestorableCount(countRestorableTabs());
+  }, [tabCount]);
+
+  const restoreTabs = () => {
+    const restored = restoreLastSession();
+    setRestorableCount(countRestorableTabs());
+    setRestoreNotice(restored > 0
+      ? `Restored ${restored} ${restored === 1 ? 'tab' : 'tabs'} from your last session.`
+      : 'Those tabs are already open.');
+  };
 
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
@@ -70,6 +85,17 @@ export default function StartPage({
           <h1 className="orb-serif orb-strong text-[clamp(34px,4vw,48px)] font-medium leading-[1.1] tracking-[-0.035em]">A little room to think.</h1>
           <p className="orb-muted mt-3 max-w-[48ch] text-[15px] leading-6">Your browser, arranged around what matters in this space.</p>
         </div>
+
+        {restorableCount > 0 && (
+          <div className="orb-elevated mt-4 flex max-w-[640px] items-center gap-3 rounded-lg border orb-border px-3 py-2">
+            <ClockCounterClockwise className="orb-accent h-4 w-4 shrink-0" aria-hidden="true" />
+            <p className="orb-muted min-w-0 flex-1 text-xs">
+              {restorableCount} {restorableCount === 1 ? 'tab is' : 'tabs are'} not open from your last session.
+            </p>
+            <button type="button" onClick={restoreTabs} className="orb-accent-bg shrink-0 rounded-md px-2.5 py-1 text-xs font-medium text-white">Restore all tabs</button>
+          </div>
+        )}
+        {restoreNotice && <p role="status" className="orb-muted mt-2 text-xs">{restoreNotice}</p>}
 
         <form onSubmit={submitSearch} className="orb-elevated mt-8 flex h-[58px] max-w-[720px] items-center gap-3 rounded-xl border orb-border px-4 transition-colors focus-within:border-[var(--orb-border-strong)]">
           <MagnifyingGlass aria-hidden="true" className="orb-accent h-[18px] w-[18px] shrink-0" />

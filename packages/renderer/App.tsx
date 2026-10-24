@@ -21,6 +21,7 @@ import DownloadsPanel from './components/DownloadsPanel';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { bindMainEvents } from './lib/mainEvents';
 import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
+import { captureSession, SESSION_SNAPSHOT_KEY } from './lib/sessionSnapshot';
 import { stripTrackingParams } from '../shared/privacy';
 import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
@@ -80,7 +81,7 @@ export default function App() {
   const mountedTabIdsRef = useRef<Set<string>>(new Set());
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
-  const { activeTabId, tabs, setActiveTab, updateTab, loadTab } = useTabStore();
+  const { activeTabId, tabs, groups, setActiveTab, updateTab, loadTab } = useTabStore();
   const splitTabIds = useSplitViewStore((state) => state.tabIds);
   const splitRatio = useSplitViewStore((state) => state.ratio);
   const activePane = useSplitViewStore((state) => state.activePane);
@@ -233,6 +234,28 @@ export default function App() {
       tabLastActiveAtRef.current[activeTabId] = Date.now();
     }
   }, [activeTabId]);
+
+  // Keep a last-session snapshot independent of the live store so tabs can be
+  // recovered after an unexpected exit. An empty session never overwrites it:
+  // closing every tab should still leave something to restore.
+  useEffect(() => {
+    const saveSnapshot = () => {
+      const state = useTabStore.getState();
+      const snapshot = captureSession(state.tabs, state.groups, state.activeTabId);
+      if (!snapshot) return;
+      try {
+        localStorage.setItem(SESSION_SNAPSHOT_KEY, JSON.stringify(snapshot));
+      } catch {
+        // Storage full: the live store remains the primary copy.
+      }
+    };
+    const timer = window.setTimeout(saveSnapshot, 800);
+    window.addEventListener('beforeunload', saveSnapshot);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('beforeunload', saveSnapshot);
+    };
+  }, [tabs, groups, activeTabId]);
 
   useEffect(() => {
     mountedTabIdsRef.current = mountedTabIds;

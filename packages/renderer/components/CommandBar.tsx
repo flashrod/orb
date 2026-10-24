@@ -5,6 +5,7 @@ import { useSpaceStore } from '../stores/spaces';
 import { useProfileStore } from '../stores/profiles';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 import { resolveAddressOrSearch } from '../lib/navigation';
+import { countRestorableTabs, restoreLastSession } from '../lib/restoreSession';
 
 interface CommandResult {
   id: string;
@@ -136,6 +137,27 @@ export default function CommandBar({
       });
     }
 
+    const restoreCommand = (): CommandResult | null => {
+      const restoreCount = countRestorableTabs();
+      if (restoreCount === 0) return null;
+      return {
+        id: 'cmd-restore-session',
+        type: 'command',
+        title: `Restore ${restoreCount} ${restoreCount === 1 ? 'tab' : 'tabs'} from last session`,
+        subtitle: 'Reopen tabs that are no longer open',
+        icon: getIcon('history', 'w-4 h-4'),
+        action: () => {
+          restoreLastSession();
+          onClose();
+        },
+      };
+    };
+
+    if (lower.startsWith('restore')) {
+      const entry = restoreCommand();
+      if (entry) results.push(entry);
+    }
+
     // 4. Commands
     if (!lower) {
       results.push(
@@ -181,6 +203,8 @@ export default function CommandBar({
           action: onOpenSettings,
         }
       );
+      const restoreEntry = restoreCommand();
+      if (restoreEntry) results.push(restoreEntry);
     } else {
       // URL navigation - treat query as URL/search
       const url = resolveAddressOrSearch(q, searchProvider);
