@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Orb benchmark harness</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #111; color: #eee; font: 13px ui-monospace, monospace; }
+      #stage { position: absolute; inset: 0; }
+      .pane { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
+      .pane.active { visibility: visible; pointer-events: auto; }
+      #status { position: absolute; left: 8px; bottom: 8px; z-index: 10; opacity: 0.6; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="status">waiting…</div>
+    <script>
+      const stage = document.getElementById('stage');
+      const status = document.getElementById('status');
+      const HIBERNATE_COUNT = 15;
+      const SWITCH_SAMPLES = 10;
+      const LOAD_TIMEOUT_MS = 30000;
+
+      const panes = [];
+      const loadTimes = [];
+
+      let continueResolve = null;
+      window.bench.onContinue(() => {
+        if (continueResolve) {
+          const resolve = continueResolve;
+          continueResolve = null;
+          resolve();
+        }
+      });
+      const waitForContinue = () => new Promise((resolve) => { continueResolve = resolve; });
+
+      function nextFrame() {
+        return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+
+      function createTab(url, index) {
+        const pane = document.createElement('div');
+        pane.className = 'pane';
+        const view = document.createElement('webview');
+        view.style.width = '100%';
+        view.style.height = '100%';
+        view.setAttribute('partition', 'persist:orb-benchmark');
+        pane.appendChild(view);
+        stage.appendChild(pane);
+        panes.push({ pane, view, url });
+
+        return new Promise((resolve) => {
+          let settled = false;
+          const finish = (ms, ok) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            loadTimes[index] = { url, ms: Math.round(ms), ok };
+            resolve();
+          };
+          const started = performance.now();
+          const timer = setTimeout(() => finish(performance.now() - started, false), LOAD_TIMEOUT_MS);
+          view.addEventListener('did-stop-loading', () => finish(performance.now() - started, true), { once: true });
+          view.addEventListener('did-fail-load', (event) => {
+            if (event.isMainFrame === false) return;
+            finish(performance.now() - started, false);
+          }, { once: true });
+          view.src = url;
+        });
+      }
+
+      async function measureSwitches() {
+        const samples = [];
+        for (let i = 0; i < SWITCH_SAMPLES; i += 1) {
+          const from = i % panes.length;
+          const to = (i + 1) % panes.length;
+          const started = performance.now();
+          panes[from].pane.classList.remove('active');
+          panes[to].pane.classList.add('active');
+          await nextFrame();
+          samples.push(Math.round(performance.now() - started));
+        }
+        return samples;
+      }
+
+      window.bench.onStart(async ({ urls }) => {
+        status.textContent = `loading ${urls.length} tabs…`;
+        await Promise.all(urls.map((url, index) => createTab(url, index)));
+
+        panes.forEach((entry, index) => entry.pane.classList.toggle('active', index === 0));
+        await nextFrame();
+        window.bench.report({ phase: 'loaded', loadTimes });
+        // Main samples memory and idle CPU here before the next phase.
+        await waitForContinue();
+
+        status.textContent = 'measuring tab switches…';
+        const switchMs = await measureSwitches();
+        window.bench.report({ phase: 'switched', switchMs });
+        await waitForContinue();
+
+        status.textContent = `hibernating ${HIBERNATE_COUNT} tabs…`;
+        for (let i = panes.length - 1; i >= 0 && panes.length - i <= HIBERNATE_COUNT; i -= 1) {
+          panes[i].view.remove();
+          panes[i].pane.remove();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        window.bench.report({ phase: 'hibernated' });
+
+        status.textContent = 'done';
+      });
+    </script>
+  </body>
+</html>

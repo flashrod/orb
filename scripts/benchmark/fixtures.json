@@ -1,0 +1,26 @@
+{
+  "description": "Fixed 20-tab workload for every Orb benchmark run. Keep this list stable so numbers stay comparable across releases; add new fixtures only with a new file version.",
+  "version": 1,
+  "urls": [
+    "https://example.com",
+    "https://en.wikipedia.org/wiki/Web_browser",
+    "https://github.com/electron/electron",
+    "https://news.ycombinator.com",
+    "https://www.bbc.com/news",
+    "https://www.theverge.com",
+    "https://developer.mozilla.org/en-US/docs/Web/API",
+    "https://www.nytimes.com",
+    "https://www.reddit.com/r/webdev",
+    "https://stackoverflow.com/questions",
+    "https://www.youtube.com",
+    "https://x.com",
+    "https://www.instagram.com",
+    "https://www.amazon.com",
+    "https://www.apple.com",
+    "https://www.cloudflare.com",
+    "https://stripe.com",
+    "https://vercel.com",
+    "https://tailwindcss.com",
+    "https://react.dev"
+  ]
+}

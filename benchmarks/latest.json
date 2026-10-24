@@ -1,0 +1,201 @@
+{
+  "startedAt": "2026-10-24T03:46:12.526Z",
+  "electron": "45.0.0",
+  "chromium": "156.0.8078.48",
+  "node": "24.22.0",
+  "platform": "darwin arm64",
+  "fixtureCount": 20,
+  "coldStartMs": 209,
+  "loadTimes": [
+    {
+      "url": "https://example.com",
+      "ms": 541,
+      "ok": true
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Web_browser",
+      "ms": 3519,
+      "ok": true
+    },
+    {
+      "url": "https://github.com/electron/electron",
+      "ms": 7523,
+      "ok": true
+    },
+    {
+      "url": "https://news.ycombinator.com",
+      "ms": 1720,
+      "ok": true
+    },
+    {
+      "url": "https://www.bbc.com/news",
+      "ms": 8940,
+      "ok": true
+    },
+    {
+      "url": "https://www.theverge.com",
+      "ms": 12054,
+      "ok": true
+    },
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/API",
+      "ms": 3988,
+      "ok": true
+    },
+    {
+      "url": "https://www.nytimes.com",
+      "ms": 7241,
+      "ok": true
+    },
+    {
+      "url": "https://www.reddit.com/r/webdev",
+      "ms": 586,
+      "ok": true
+    },
+    {
+      "url": "https://stackoverflow.com/questions",
+      "ms": 2563,
+      "ok": true
+    },
+    {
+      "url": "https://www.youtube.com",
+      "ms": 1902,
+      "ok": false
+    },
+    {
+      "url": "https://x.com",
+      "ms": 4181,
+      "ok": true
+    },
+    {
+      "url": "https://www.instagram.com",
+      "ms": 4175,
+      "ok": true
+    },
+    {
+      "url": "https://www.amazon.com",
+      "ms": 1394,
+      "ok": true
+    },
+    {
+      "url": "https://www.apple.com",
+      "ms": 4422,
+      "ok": true
+    },
+    {
+      "url": "https://www.cloudflare.com",
+      "ms": 9367,
+      "ok": true
+    },
+    {
+      "url": "https://stripe.com",
+      "ms": 3848,
+      "ok": true
+    },
+    {
+      "url": "https://vercel.com",
+      "ms": 2434,
+      "ok": true
+    },
+    {
+      "url": "https://tailwindcss.com",
+      "ms": 5327,
+      "ok": true
+    },
+    {
+      "url": "https://react.dev",
+      "ms": 2807,
+      "ok": true
+    }
+  ],
+  "switchMs": [
+    62,
+    84,
+    82,
+    100,
+    100,
+    83,
+    83,
+    100,
+    100,
+    83
+  ],
+  "memory": {
+    "shellOnly": {
+      "totalMB": 360,
+      "byTypeMB": {
+        "Browser": 160,
+        "GPU": 66,
+        "Utility": 47,
+        "Tab": 87
+      },
+      "processCount": 4
+    },
+    "twentyTabs": {
+      "totalMB": 4797,
+      "byTypeMB": {
+        "Browser": 193,
+        "GPU": 83,
+        "Utility": 161,
+        "Tab": 4361
+      },
+      "processCount": 48
+    },
+    "hibernated": {
+      "totalMB": 2013,
+      "byTypeMB": {
+        "Browser": 235,
+        "GPU": 82,
+        "Utility": 166,
+        "Tab": 1530
+      },
+      "processCount": 18
+    }
+  },
+  "idleCpuPercent": 5.65,
+  "loads": {
+    "ok": 19,
+    "failed": 1,
+    "medianMs": 3988,
+    "p95Ms": 12054,
+    "slowestMs": 12054
+  },
+  "switches": {
+    "medianMs": 83,
+    "p95Ms": 100,
+    "samples": [
+      62,
+      84,
+      82,
+      100,
+      100,
+      83,
+      83,
+      100,
+      100,
+      83
+    ]
+  },
+  "guests": [
+    {
+      "id": 6,
+      "pid": 62533
+    },
+    {
+      "id": 5,
+      "pid": 62531
+    },
+    {
+      "id": 4,
+      "pid": 62529
+    },
+    {
+      "id": 3,
+      "pid": 62527
+    },
+    {
+      "id": 2,
+      "pid": 62525
+    }
+  ]
+}
