@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import { resolveAddressOrSearch } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
+import { useShellOverlay } from '../stores/shellOverlay';
 
 
 export default function AddressBar({
@@ -17,6 +18,7 @@ export default function AddressBar({
   const [focused, setFocused] = React.useState(false);
   const [suggestionAnchor, setSuggestionAnchor] = React.useState<{ left: number; top: number; width: number } | null>(null);
   const searchProvider = useBrowserPreferencesStore((state) => state.searchProvider);
+  useShellOverlay(focused && Boolean(suggestionAnchor));
 
   const updateSuggestionAnchor = React.useCallback(() => {
     const rect = inputRef.current?.getBoundingClientRect();

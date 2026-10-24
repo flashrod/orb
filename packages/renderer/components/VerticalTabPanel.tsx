@@ -6,6 +6,7 @@ import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/t
 import TabContextMenu from './TabContextMenu';
 import { chooseSplitPair } from '../lib/splitView';
 import { useSplitViewStore } from '../stores/splitView';
+import { useShellOverlay } from '../stores/shellOverlay';
 import { partitionTabsByGroup } from '../lib/tabGroups';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
@@ -98,6 +99,7 @@ export default function VerticalTabPanel({
 
   const contextTab = contextTabId ? spaceTabs.find((tab) => tab.id === contextTabId) : undefined;
   const closeOthers = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'others') : [];
+  useShellOverlay(Boolean(contextTab && contextPosition));
   const closeRight = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'right') : [];
 
   return <>

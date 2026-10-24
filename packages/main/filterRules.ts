@@ -38,7 +38,10 @@ function escapeRegExp(value: string): string {
 
 function ruleRegex(pattern: string, domainAnchor?: string, matchCase = false): RegExp | null {
   try {
-    if (pattern.startsWith('/') && pattern.lastIndexOf('/') > 0) {
+    // uBlock regex filters are `/expression/` optionally followed by flags.
+    // A leading slash alone is not enough: `/a/?ad=` is a path pattern, and
+    // treating it as the regex /a/ blocks every URL containing an "a".
+    if (/^\/.+\/[gimsuy]*$/.test(pattern)) {
       const lastSlash = pattern.lastIndexOf('/');
       const flags = pattern.slice(lastSlash + 1).replace(/[^gimsuy]/g, '');
       return new RegExp(pattern.slice(1, lastSlash), flags.includes('i') || matchCase ? flags : `${flags}i`);

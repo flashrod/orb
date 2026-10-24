@@ -6,6 +6,7 @@ import { partitionTabsByGroup } from '../lib/tabGroups';
 import TabContextMenu from './TabContextMenu';
 import { chooseSplitPair } from '../lib/splitView';
 import { useSplitViewStore } from '../stores/splitView';
+import { useShellOverlay } from '../stores/shellOverlay';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -86,6 +87,7 @@ export default function TabBar({
   const closeOthers = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'others') : [];
   const closeRight = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'right') : [];
   const contextGroup = contextTab?.groupId ? groups.find((group) => group.id === contextTab.groupId)?.name || null : null;
+  useShellOverlay(Boolean(contextTab && contextPosition));
 
   return <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights ? 'pl-[112px] pr-3' : 'px-3'}`}>
     {partition.pinned.map(renderTab)}

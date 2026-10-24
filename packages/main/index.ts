@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipcHandlers';
+import { NativeTabHost, registerNativeTabHandlers } from './nativeTabs';
 import { adBlocker, initAdBlocker } from './adBlocker';
 import { restoreExtensions } from './extensions';
 import { createMenu } from './menu';
@@ -18,14 +19,17 @@ import {
 app.setAppUserModelId('org.orb.browser');
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_DEV === 'true';
+const NATIVE_TABS = process.env.ORB_NATIVE_TABS === '1';
 const PRELOAD_DIR = path.join(__dirname, 'preload');
 const DEFAULT_PARTITION = 'persist:orb';
 
 // Keep a global reference of the window object, otherwise it will be
 // closed automatically when the JavaScript object is garbage collected.
 let mainWindow: BrowserWindow | null = null;
+let sessionContext: SessionContext | null = null;
+const nativeHosts = new WeakMap<BrowserWindow, NativeTabHost>();
 
-function createMainWindow() {
+function createMainWindow(ctx: SessionContext) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -47,11 +51,11 @@ function createMainWindow() {
   });
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL(`http://localhost:5173${NATIVE_TABS ? '?nativeTabs=1' : ''}`);
     mainWindow.webContents.openDevTools();
   } else {
     // Production: load from vite-built renderer output (dist/renderer/)
-    mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'), NATIVE_TABS ? { query: { nativeTabs: '1' } } : undefined);
   }
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -76,6 +80,10 @@ function createMainWindow() {
     mainWindow = null;
   });
 
+  // Native page views live in the same window, above the React shell. The
+  // renderer opts in per window; until it does, the webview path is untouched.
+  nativeHosts.set(mainWindow, new NativeTabHost(mainWindow, ctx));
+
   return mainWindow;
 }
 
@@ -87,7 +95,8 @@ type ShortcutAction = 'new-tab' | 'command-bar' | 'focus-address' | 'toggle-comp
  */
 function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input): void {
   if (input.type !== 'keyDown' || input.isAutoRepeat) return;
-  if (contents.getType() !== 'webview') return;
+  const type = contents.getType();
+  if (type !== 'webview' && type !== 'browserView') return;
 
   const key = input.key.toLowerCase();
   const command = input.meta || input.control;
@@ -123,6 +132,7 @@ app.whenReady().then(async () => {
     activeDownloads: new Map(),
     getDownloadPath: () => downloadPath,
   };
+  sessionContext = ctx;
 
   // Default partition: hardened before any window or webview exists.
   const orbSession = orbSessionFor(DEFAULT_PARTITION, ctx);
@@ -210,14 +220,21 @@ app.whenReady().then(async () => {
   });
 
   await restoreExtensions();
-  createMainWindow();
+  createMainWindow(ctx);
   registerIpcHandlers();
+  registerNativeTabHandlers((event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return win ? nativeHosts.get(win) : undefined;
+  });
   createMenu();
 });
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createMainWindow();
+    // macOS keeps the process alive with no window; recreate with the same
+    // session context that the first window used.
+    const ctx = sessionContext;
+    if (ctx) createMainWindow(ctx);
   }
 });
 

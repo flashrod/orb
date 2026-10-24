@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-export type ToolbarItemId = 'home' | 'back' | 'forward' | 'reload' | 'address' | 'bookmark' | 'bookmarks' | 'extensions' | 'picker' | 'glance' | 'tabLayout' | 'downloads';
+export type ToolbarItemId = 'home' | 'back' | 'forward' | 'reload' | 'address' | 'bookmark' | 'bookmarks' | 'extensions' | 'picker' | 'glance' | 'tabLayout' | 'downloads' | 'settings';
 
 export const TOOLBAR_ITEMS: { id: ToolbarItemId; label: string }[] = [
   { id: 'home', label: 'Home' },
@@ -16,6 +16,7 @@ export const TOOLBAR_ITEMS: { id: ToolbarItemId; label: string }[] = [
   { id: 'glance', label: 'Preview hovered link' },
   { id: 'tabLayout', label: 'Switch tab placement' },
   { id: 'downloads', label: 'Downloads' },
+  { id: 'settings', label: 'Settings' },
 ];
 
 const defaultOrder = TOOLBAR_ITEMS.map((item) => item.id);

@@ -5,6 +5,10 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   root: 'packages/renderer',
+  // Electron loads the production renderer from file://, so asset URLs must be
+  // relative. Absolute "/assets/..." paths resolve to the filesystem root and
+  // produce a blank window.
+  base: './',
   build: {
     outDir: '../../dist/renderer',
     emptyOutDir: true,

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { BoostRecord, NewBoost } from '../shared/boosts';
 import { isOrbEventChannel } from '../shared/events';
+import type { TabOpenInput, TabStateSnapshot, ViewBounds } from '../shared/tabModel';
 
 // Main -> renderer push events. Only allowlisted channels are subscribable, and
 // each subscription gets an id so the renderer can cancel it without needing to
@@ -95,6 +96,27 @@ contextBridge.exposeInMainWorld('orbApi', {
   clearCompletedDownloads: () => ipcRenderer.invoke('downloads:clear-completed'),
   setDownloadPath: (p: string) => ipcRenderer.invoke('downloads:set-path', p),
   getDownloadPath: () => ipcRenderer.invoke('downloads:get-path'),
+
+  // Native tab views (main-process WebContentsView engine)
+  tabs: {
+    open: (input: TabOpenInput) => ipcRenderer.invoke('tabs:open', input) as Promise<TabStateSnapshot | null>,
+    activate: (id: string) => ipcRenderer.invoke('tabs:activate', id) as Promise<void>,
+    close: (id: string) => ipcRenderer.invoke('tabs:close', id) as Promise<void>,
+    navigate: (id: string, url: string) => ipcRenderer.invoke('tabs:navigate', id, url) as Promise<void>,
+    reload: (id: string) => ipcRenderer.invoke('tabs:reload', id) as Promise<void>,
+    back: (id: string) => ipcRenderer.invoke('tabs:back', id) as Promise<void>,
+    forward: (id: string) => ipcRenderer.invoke('tabs:forward', id) as Promise<void>,
+    reorder: (ids: string[]) => ipcRenderer.invoke('tabs:reorder', ids) as Promise<TabStateSnapshot | null>,
+    setBounds: (bounds: ViewBounds) => ipcRenderer.invoke('tabs:set-bounds', bounds) as Promise<void>,
+    setTabBounds: (id: string, bounds: ViewBounds) => ipcRenderer.invoke('tabs:set-tab-bounds', id, bounds) as Promise<void>,
+    setPageVisible: (visible: boolean) => ipcRenderer.invoke('tabs:set-page-visible', visible) as Promise<void>,
+    hibernate: (id: string) => ipcRenderer.invoke('tabs:hibernate', id) as Promise<void>,
+    wake: (id: string) => ipcRenderer.invoke('tabs:wake', id) as Promise<void>,
+    applyMemoryBudget: () => ipcRenderer.invoke('tabs:apply-memory-budget') as Promise<string[]>,
+    snapshot: () => ipcRenderer.invoke('tabs:snapshot') as Promise<TabStateSnapshot>,
+    getSnapshot: (id: string) => ipcRenderer.invoke('tabs:get-snapshot', id) as Promise<string | null>,
+    debugState: () => ipcRenderer.invoke('tabs:debug-state') as Promise<unknown>,
+  },
 });
 
 declare global {
@@ -144,6 +166,25 @@ declare global {
       clearCompletedDownloads: () => Promise<{ ok: boolean }>;
       setDownloadPath: (p: string) => Promise<{ ok: boolean; path: string }>;
       getDownloadPath: () => Promise<string>;
+      tabs: {
+        open: (input: TabOpenInput) => Promise<TabStateSnapshot | null>;
+        activate: (id: string) => Promise<void>;
+        close: (id: string) => Promise<void>;
+        navigate: (id: string, url: string) => Promise<void>;
+        reload: (id: string) => Promise<void>;
+        back: (id: string) => Promise<void>;
+        forward: (id: string) => Promise<void>;
+        reorder: (ids: string[]) => Promise<TabStateSnapshot | null>;
+        setBounds: (bounds: ViewBounds) => Promise<void>;
+        setTabBounds: (id: string, bounds: ViewBounds) => Promise<void>;
+        setPageVisible: (visible: boolean) => Promise<void>;
+        hibernate: (id: string) => Promise<void>;
+        wake: (id: string) => Promise<void>;
+        applyMemoryBudget: () => Promise<string[]>;
+        snapshot: () => Promise<TabStateSnapshot>;
+        getSnapshot: (id: string) => Promise<string | null>;
+        debugState: () => Promise<unknown>;
+      };
       // Main -> renderer events (allowlisted channels only)
       on: (channel: string, listener: (payload: unknown) => void) => number;
       off: (subscriptionId: number) => void;

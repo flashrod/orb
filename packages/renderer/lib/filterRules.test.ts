@@ -39,6 +39,21 @@ describe('ABP network filters', () => {
     expect(decideFilterAction([block, allow], 'https://ads.example/a.png', { resourceType: 'image', initiatorUrl: 'https://shop.example' })).toBe('allow');
     expect(decideFilterAction([block, allow], 'https://ads.example/a.png', { resourceType: 'image', initiatorUrl: 'https://other.example' })).toBe('block');
   });
+
+  it('treats a leading-slash path pattern as literal, not as a regex', () => {
+    // Regression: `/a/?ad=` was read as the regex /a/, which blocked every
+    // URL containing the letter "a" — including https://example.com/.
+    const rule = parseFilterLine('/a/?ad=')!;
+    expect(rule).not.toBeNull();
+    expect(matchesFilterRule(rule, 'https://example.com/', { resourceType: 'mainFrame' })).toBe(false);
+    expect(matchesFilterRule(rule, 'https://cdn.example.com/a/?ad=1', { resourceType: 'image' })).toBe(true);
+  });
+
+  it('still supports real regex filters', () => {
+    const rule = parseFilterLine('/banner\\d+/i')!;
+    expect(matchesFilterRule(rule, 'https://cdn.example/banner123.png', { resourceType: 'image' })).toBe(true);
+    expect(matchesFilterRule(rule, 'https://cdn.example/logo.png', { resourceType: 'image' })).toBe(false);
+  });
 });
 
 describe('privacy request context', () => {

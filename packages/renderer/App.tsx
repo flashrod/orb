@@ -20,6 +20,8 @@ import PermissionPrompt from './components/PermissionPrompt';
 import DownloadsPanel from './components/DownloadsPanel';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { bindMainEvents } from './lib/mainEvents';
+import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
+import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
   MEMORY_GUARD_IDLE_MS,
   MEMORY_GUARD_MAX_LIVE_TABS,
@@ -41,6 +43,9 @@ type DownloadItem = {
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
+// The WebContentsView engine is opt-in until it reaches parity.
+const NATIVE_TABS = nativeTabsEnabled();
+
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -56,6 +61,8 @@ export default function App() {
   const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
   // Per-tab loading state, used for the thin progress bar in the toolbar
   const [tabLoadingStates, setTabLoadingStates] = useState<Record<string, boolean>>({});
+  // Last painted frame of the active native page, shown while shell UI covers it.
+  const [pageSnapshot, setPageSnapshot] = useState<string | null>(null);
   // Downloads panel state
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
@@ -79,14 +86,27 @@ export default function App() {
 
   const webviewRefs = useRef<Record<string, any>>({});
   const splitAreaRef = useRef<HTMLDivElement | null>(null);
+  const pageAreaRef = useRef<HTMLDivElement | null>(null);
   const getActiveWebView = useCallback(() => {
     const selectedId = useTabStore.getState().activeTabId;
     return selectedId ? webviewRefs.current[selectedId] : null;
   }, []);
 
-  const navigateBack = useCallback(() => getActiveWebView()?.navigateBack(), [getActiveWebView]);
-  const navigateForward = useCallback(() => getActiveWebView()?.navigateForward(), [getActiveWebView]);
-  const navigateReload = useCallback(() => getActiveWebView()?.navigateReload(), [getActiveWebView]);
+  const navigateBack = useCallback(() => {
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.back(id); return; }
+    getActiveWebView()?.navigateBack();
+  }, [getActiveWebView]);
+  const navigateForward = useCallback(() => {
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.forward(id); return; }
+    getActiveWebView()?.navigateForward();
+  }, [getActiveWebView]);
+  const navigateReload = useCallback(() => {
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.reload(id); return; }
+    getActiveWebView()?.navigateReload();
+  }, [getActiveWebView]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -375,6 +395,7 @@ export default function App() {
   // inside the budget. Reads stores and refs directly so the timer never needs
   // to be recreated when tab state changes.
   useEffect(() => {
+    if (NATIVE_TABS) return;
     const reclaim = () => {
       const now = Date.now();
       const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
@@ -417,11 +438,49 @@ export default function App() {
   const activeTabLoading = activeTab ? tabLoadingStates[activeTab.id] || false : false;
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
   const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
+  const overlayActive = useAnyShellOverlay();
+  const nativePageVisible = Boolean(
+    activeTab &&
+    activeTab.url !== 'about:blank' &&
+    !overlayActive &&
+    !commandBarOpen &&
+    !settingsOpen &&
+    !downloadsOpen &&
+    !glanceUrl &&
+    !pickerBusy &&
+    !resizingSplit,
+  );
+
+  useEffect(() => {
+    if (nativePageVisible) setPageSnapshot(null);
+  }, [nativePageVisible]);
+
+  useNativeTabBridge({
+    enabled: NATIVE_TABS,
+    tabs,
+    activeTabId,
+    profileForTab: (tab) => {
+      const space = spaces.find((item) => item.id === tab.spaceId);
+      return resolveSpaceProfile(space?.profileId, profiles).id;
+    },
+    pageRef: pageAreaRef,
+    pageVisible: nativePageVisible,
+    onLoadingChange: (tabId, loading) => {
+      setTabLoadingStates((prev) => (prev[tabId] === loading ? prev : { ...prev, [tabId]: loading }));
+    },
+    onSnapshot: (tabId, dataUrl) => {
+      if (tabId === useTabStore.getState().activeTabId) setPageSnapshot(dataUrl);
+    },
+  });
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, tabRailKeyboardRevealed, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
 
   const handlePickElement = async () => {
+    if (NATIVE_TABS) {
+      setPickerNotice('Element picker is not available with native tabs yet.');
+      return;
+    }
     if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
     let hostname = '';
     try {
@@ -471,6 +530,8 @@ export default function App() {
         ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} profileId={pageProfile.id} tabCount={pageTabCount} onNavigate={handleNavigate} />
         : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />;
     }
+    // The native view is the page; the shell only reserves the space.
+    if (NATIVE_TABS) return <div className="absolute inset-0" aria-hidden="true" />;
     return (
       <div
         className="absolute inset-0 flex-1 overflow-hidden"
@@ -546,6 +607,7 @@ export default function App() {
           onReload={navigateReload}
           loadingProgress={activeTabLoading ? 1 : 0}
           onDownloadsToggle={() => setDownloadsOpen((o) => !o)}
+          onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); }}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}
@@ -572,8 +634,13 @@ export default function App() {
         })()}
 
         {/* Web Content */}
-        <div className="orb-frame relative flex-1 overflow-hidden">
-          {splitTabs?.[0] && splitTabs[1] ? <>
+        <div ref={pageAreaRef} data-orb-page-area className="orb-frame relative flex-1 overflow-hidden">
+          {NATIVE_TABS && pageSnapshot && !nativePageVisible ? (
+            <img src={pageSnapshot} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
+          ) : null}
+          {NATIVE_TABS ? (
+            activeTab ? renderTabPage(activeTab, true) : null
+          ) : splitTabs?.[0] && splitTabs[1] ? <>
             <div ref={splitAreaRef} className="absolute inset-0 grid" style={{ gridTemplateColumns: `minmax(0, ${splitRatio}fr) 8px minmax(0, ${1 - splitRatio}fr)` }}>
               {[0, 1].map((pane) => {
                 const tab = splitTabs[pane];

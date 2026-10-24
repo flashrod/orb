@@ -240,6 +240,9 @@ export class AdBlocker {
 
   shouldBlockRequest(url: string, context: FilterRequestContext): boolean {
     if (!this.enabled) return false;
+    // Ad/tracker rules are written for the web. Never touch app-internal
+    // schemes (file:, devtools:, blob:, data:), or the shell can block itself.
+    if (!/^https?:/i.test(url)) return false;
     try {
       const hostname = new URL(url).hostname.toLowerCase();
       const initiatorHost = context.initiatorUrl ? new URL(context.initiatorUrl).hostname.toLowerCase() : '';
@@ -422,6 +425,11 @@ export function initAdBlocker(ses: Electron.Session): void {
       urls: ['<all_urls>'],
     },
     (details, callback) => {
+      // Only web requests are subject to filtering; the shell is file://.
+      if (!details.url.startsWith('http://') && !details.url.startsWith('https://')) {
+        callback({});
+        return;
+      }
       const requestDetails = details as Electron.OnBeforeRequestListenerDetails & { initiator?: string };
       const context: FilterRequestContext = {
         resourceType: details.resourceType,
