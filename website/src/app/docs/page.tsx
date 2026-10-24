@@ -43,7 +43,7 @@ export default function DocsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  ['Engine', 'Chromium via Electron 30.5.1'],
+                  ['Engine', 'Chromium via Electron 45.0.0'],
                   ['Shell', 'Electron + TypeScript'],
                   ['UI', 'React 18 (TSX)'],
                   ['Build', 'Vite 5'],

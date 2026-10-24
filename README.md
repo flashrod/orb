@@ -4,7 +4,7 @@ A calm, private browser for macOS built clean-room from reverse-engineered desig
 
 Orb brings Spaces, Boosts, and a command bar to a privacy-first browser you fully control. Warm monochrome UI, real ad and tracker blocking, and an interface you can restyle completely.
 
-Built with Electron + React + TypeScript + Vite + Tailwind + Zustand. Chromium engine via Electron 30.
+Built with Electron + React + TypeScript + Vite + Tailwind + Zustand. Chromium engine via Electron 45.
 
 ---
 
@@ -30,7 +30,7 @@ Built with Electron + React + TypeScript + Vite + Tailwind + Zustand. Chromium e
 
 | Layer | Choice |
 |-------|--------|
-| Engine | Chromium via Electron 30.5.1 |
+| Engine | Chromium via Electron 45.0.0 |
 | Shell | Electron + TypeScript |
 | UI | React 18 (TSX) |
 | Build | Vite 5 |
@@ -77,7 +77,15 @@ npm run build
 npm run dist
 ```
 
-The Electron binary is not committed to git. A fresh clone requires `npm install` plus the manual Electron install step until postinstall automation is added.
+The Electron binary is not committed to git. Since Electron 42 it downloads itself the first time `npx electron` runs, so `npm install && npm run dev` is enough.
+
+### Benchmarks
+
+```bash
+npm run benchmark
+```
+
+Loads the fixed 20-tab workload in `scripts/benchmark/fixtures.json` and records cold start, tab-load latency, tab-switch latency, memory, idle CPU and memory after hibernation. Results land in `benchmarks/latest.md` and `benchmarks/latest.json`; see `benchmarks/README.md` for the comparison protocol.
 
 ---
 
