@@ -11,3 +11,5 @@ coverage/
 prd.md
 AGENTS.md
 ROADMAP.md
+
+*.tsbuildinfo

@@ -13,12 +13,12 @@ export default function Page() {
     e.preventDefault();
     setStatus('sending');
     try {
-      await fetch('/api/waitlist', {
+      const response = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      setStatus('success');
+      setStatus(response.ok ? 'success' : 'error');
     } catch {
       setStatus('error');
     }

@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 // tests. The Vite dev config lives in vite.config.mts and is unrelated.
 export default defineConfig({
   test: {
-    include: ['packages/**/*.test.ts'],
+    include: ['packages/**/*.test.ts', 'website/src/**/*.test.ts'],
     environment: 'node',
   },
 });
