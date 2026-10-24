@@ -82,7 +82,7 @@ export default function App() {
   const setSplitRatio = useSplitViewStore((state) => state.setRatio);
   const closeSplit = useSplitViewStore((state) => state.close);
   const swapSplit = useSplitViewStore((state) => state.swap);
-  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, customColors, setTabLayout, setCompactMode, setShowTabStrip, setShowNavigation } = useAppearanceStore();
+  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, customColors, setTabLayout, setCompactMode, setShowTabStrip, setShowNavigation, setCompactSideTabs } = useAppearanceStore();
 
   const webviewRefs = useRef<Record<string, any>>({});
   const splitAreaRef = useRef<HTMLDivElement | null>(null);
@@ -586,6 +586,7 @@ export default function App() {
             keyboardRevealed={tabRailKeyboardRevealed}
             onToggleKeyboardReveal={() => setTabRailKeyboardRevealed((revealed) => !revealed)}
             onClose={() => setTabLayout('top')}
+            onCollapse={() => setCompactSideTabs(true)}
             onReload={navigateReload}
             spaceId={activeSpaceId || ''}
           />
@@ -598,7 +599,9 @@ export default function App() {
           setActiveTab={setActiveTab}
           onReload={navigateReload}
         /> : null}
-        {!showTopTabs && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
+        {/* Traffic lights sit over the sidebar, so only inset the content
+            column when there is no sidebar at all. */}
+        {!showTopTabs && !showSideTabs && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
         {showNavigation && !compactMode && <BrowserToolbar
           activeTab={activeTab}
           onNavigate={handleNavigate}

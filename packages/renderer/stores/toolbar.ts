@@ -21,6 +21,13 @@ export const TOOLBAR_ITEMS: { id: ToolbarItemId; label: string }[] = [
 
 const defaultOrder = TOOLBAR_ITEMS.map((item) => item.id);
 
+/**
+ * Secondary controls stay available in Settings → Toolbar but are hidden by
+ * default: the toolbar should read as back / forward / reload / address /
+ * bookmark / downloads / settings.
+ */
+export const DEFAULT_HIDDEN_TOOLBAR_ITEMS: ToolbarItemId[] = ['bookmarks', 'extensions', 'picker', 'glance', 'tabLayout'];
+
 interface ToolbarStore {
   order: ToolbarItemId[];
   hidden: ToolbarItemId[];
@@ -31,7 +38,7 @@ interface ToolbarStore {
 
 export const useToolbarStore = create<ToolbarStore>()(persist((set) => ({
   order: defaultOrder,
-  hidden: [],
+  hidden: DEFAULT_HIDDEN_TOOLBAR_ITEMS,
   move: (id, beforeId) => set((state) => {
     const order = state.order.filter((item) => item !== id);
     const index = beforeId ? order.indexOf(beforeId) : -1;
@@ -42,10 +49,13 @@ export const useToolbarStore = create<ToolbarStore>()(persist((set) => ({
   reset: () => set({ order: defaultOrder, hidden: [] }),
 }), {
   name: 'orb-toolbar',
-  version: 1,
+  version: 2,
   storage: createJSONStorage(() => localStorage),
-  migrate: (state: any) => ({
+  migrate: (state: any, version: number) => ({
     order: Array.isArray(state?.order) ? [...state.order.filter((id: ToolbarItemId) => TOOLBAR_ITEMS.some((item) => item.id === id)), ...(TOOLBAR_ITEMS.map((item) => item.id).filter((id) => !state.order.includes(id)))] : defaultOrder,
-    hidden: Array.isArray(state?.hidden) ? state.hidden.filter((id: ToolbarItemId) => TOOLBAR_ITEMS.some((item) => item.id === id)) : [],
+    // v2 decluttered the default toolbar; keep anything the user already hid.
+    hidden: Array.isArray(state?.hidden)
+      ? [...new Set([...state.hidden.filter((id: ToolbarItemId) => TOOLBAR_ITEMS.some((item) => item.id === id)), ...(version < 2 ? DEFAULT_HIDDEN_TOOLBAR_ITEMS : [])])]
+      : DEFAULT_HIDDEN_TOOLBAR_ITEMS,
   }),
 }));

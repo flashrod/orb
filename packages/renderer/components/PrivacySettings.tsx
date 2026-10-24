@@ -1,16 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Shield, Trash, WarningCircle } from '@phosphor-icons/react';
+import Toggle from './ui/Toggle';
 
 type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
 type FilterList = { id: string; name: string; url: string; enabled: boolean; custom?: boolean; ruleCount: number; error: string | null; lastUpdated: number | null };
 type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[]; filterLists: FilterList[] };
-
-function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: () => void; label: string; disabled?: boolean }) {
-  return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={onChange}
-    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-[var(--orb-accent)]' : 'bg-[var(--orb-border-strong)]'}`}>
-    <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
-  </button>;
-}
 
 const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, thirdPartyCookieBlockingEnabled: true, webRtcProtectionEnabled: true, fingerprintingProtectionEnabled: true, allowlist: [], blockedRequests: [], filterLists: [] };
 

@@ -17,6 +17,7 @@ export function migrateAppearanceSettings(persistedState: unknown, version: numb
     ...(version < 2 ? { bookmarksBarVisible: false } : {}),
     ...(version < 4 ? { showStartPage: true } : {}),
     ...(version < 5 ? { showTabStrip: true, showNavigation: true, compactMode: false } : {}),
+    ...(version < 6 ? { sideTabWidth: 240 } : {}),
   };
 }
 
@@ -26,6 +27,8 @@ interface AppearanceStore {
   density: AppearanceDensity;
   tabLayout: TabLayout;
   sidebarWidth: number;
+  /** Width of the vertical tab rail, in CSS pixels. */
+  sideTabWidth: number;
   sidebarAutoHide: boolean;
   bookmarksBarVisible: boolean;
   showStartPage: boolean;
@@ -40,6 +43,7 @@ interface AppearanceStore {
   setDensity: (density: AppearanceDensity) => void;
   setTabLayout: (layout: TabLayout) => void;
   setSidebarWidth: (width: number) => void;
+  setSideTabWidth: (width: number) => void;
   setSidebarAutoHide: (enabled: boolean) => void;
   setBookmarksBarVisible: (enabled: boolean) => void;
   setShowStartPage: (enabled: boolean) => void;
@@ -60,6 +64,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       density: 'comfortable',
       tabLayout: 'top',
       sidebarWidth: 72,
+      sideTabWidth: 240,
       sidebarAutoHide: false,
       bookmarksBarVisible: false,
       showStartPage: true,
@@ -74,6 +79,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setDensity: (density) => set({ density }),
       setTabLayout: (tabLayout) => set({ tabLayout }),
       setSidebarWidth: (sidebarWidth) => set({ sidebarWidth }),
+      setSideTabWidth: (width) => set({ sideTabWidth: Math.min(440, Math.max(180, Math.round(width))) }),
       setSidebarAutoHide: (sidebarAutoHide) => set({ sidebarAutoHide }),
       setBookmarksBarVisible: (bookmarksBarVisible) => set({ bookmarksBarVisible }),
       setShowStartPage: (showStartPage) => set({ showStartPage }),
@@ -92,7 +98,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
-      version: 5,
+      version: 6,
       migrate: migrateAppearanceSettings,
       storage: createJSONStorage(() => localStorage),
     }

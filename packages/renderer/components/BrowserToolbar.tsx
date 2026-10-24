@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, CursorClick, DotsSixVertical, Eye, Gear, House, Plus, PuzzlePiece, SidebarSimple, Trash, X } from '@phosphor-icons/react';
+import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, BookmarksSimple, CursorClick, DownloadSimple, DotsSixVertical, Eye, Gear, House, Plus, PuzzlePiece, SidebarSimple, Trash, X } from '@phosphor-icons/react';
 import AddressBar from './AddressBar';
 import { useBookmarkStore } from '../stores/bookmarks';
 import { ToolbarItemId, useToolbarStore } from '../stores/toolbar';
@@ -54,7 +54,7 @@ export default function BrowserToolbar({
       case 'reload': return <button type="button" aria-label="Reload" title="Reload" onClick={onReload} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><ArrowClockwise className="h-4 w-4" /></button>;
       case 'address': return <AddressBar activeTab={activeTab} onNavigate={onNavigate} />;
       case 'bookmark': return <button type="button" aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark this page'} title={bookmarked ? 'Remove bookmark' : 'Bookmark this page'} onClick={toggleBookmark} disabled={!activeTab || activeTab.url === 'about:blank'} className={`orb-control flex h-8 w-8 items-center justify-center rounded-md ${bookmarked ? 'orb-accent' : ''} disabled:opacity-35`}><BookmarkSimple weight={bookmarked ? 'fill' : 'regular'} className="h-4 w-4" /></button>;
-      case 'bookmarks': return <button type="button" aria-label={bookmarksBarVisible ? 'Hide bookmarks bar' : 'Show bookmarks bar'} title={bookmarksBarVisible ? 'Hide bookmarks bar' : 'Show bookmarks bar'} onClick={() => setBookmarksBarVisible(!bookmarksBarVisible)} className={`orb-control flex h-8 w-8 items-center justify-center rounded-md ${bookmarksBarVisible ? 'orb-accent' : ''}`}><BookmarkSimple className="h-4 w-4" /></button>;
+      case 'bookmarks': return <button type="button" aria-label={bookmarksBarVisible ? 'Hide bookmarks bar' : 'Show bookmarks bar'} title={bookmarksBarVisible ? 'Hide bookmarks bar' : 'Show bookmarks bar'} onClick={() => setBookmarksBarVisible(!bookmarksBarVisible)} className={`orb-control flex h-8 w-8 items-center justify-center rounded-md ${bookmarksBarVisible ? 'orb-accent' : ''}`}><BookmarksSimple className="h-4 w-4" /></button>;
       case 'extensions': return <div className="relative"><button type="button" aria-label="Extensions" title="Extensions" onClick={() => { setExtensionsOpen(!extensionsOpen); void refreshExtensions(); }} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><PuzzlePiece className="h-4 w-4" /></button>{extensionsOpen && <div className="orb-elevated orb-shadow absolute right-0 top-full z-40 mt-2 w-72 rounded-lg border orb-border p-3">
         <div className="mb-2 flex items-center justify-between"><h3 className="orb-strong text-xs font-semibold">Extensions</h3><button type="button" aria-label="Close extensions" onClick={() => setExtensionsOpen(false)} className="orb-control flex h-6 w-6 items-center justify-center rounded"><X className="h-3.5 w-3.5" /></button></div>
         {extensionError && <p role="alert" className="mb-2 text-[10px] text-red-700">{extensionError}</p>}
@@ -66,7 +66,7 @@ export default function BrowserToolbar({
       case 'glance': return <button type="button" aria-label="Preview hovered link with Glance" title={glanceUrl ? 'Preview hovered link with Glance' : 'Hover a link on the page to preview it'} onClick={onGlance} disabled={!glanceUrl} className="orb-control flex h-8 w-8 items-center justify-center rounded-md disabled:opacity-35"><Eye className="h-4 w-4" /></button>;
       case 'tabLayout': return <button type="button" aria-label={tabLayout === 'top' ? 'Use side tabs' : 'Use top tabs'} title={tabLayout === 'top' ? 'Use side tabs' : 'Use top tabs'} onClick={() => setTabLayout(tabLayout === 'top' ? 'split' : 'top')} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><SidebarSimple className="h-4 w-4" /></button>;
       case 'settings': return <button type="button" aria-label="Settings" title="Settings · ⌘/Ctrl+," onClick={onOpenSettings} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><Gear className="h-4 w-4" /></button>;
-      case 'downloads': return <button type="button" aria-label="Downloads" title="Downloads" onClick={onDownloadsToggle} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><Trash className="h-4 w-4" /></button>;
+      case 'downloads': return <button type="button" aria-label="Downloads" title="Downloads" onClick={onDownloadsToggle} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><DownloadSimple className="h-4 w-4" /></button>;
     }
   };
 

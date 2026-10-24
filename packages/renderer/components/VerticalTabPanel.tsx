@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTabStore } from '../stores/tabs';
-import { CaretDown, FolderSimple, Globe, List, Plus, X } from '@phosphor-icons/react';
+import { CaretDown, FolderSimple, Globe, List, Plus, SidebarSimple, X } from '@phosphor-icons/react';
 import { getTabRailPresentation } from '../lib/tabRail';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
@@ -8,6 +8,7 @@ import { chooseSplitPair } from '../lib/splitView';
 import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
 import { partitionTabsByGroup } from '../lib/tabGroups';
+import { useAppearanceStore } from '../stores/appearance';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -22,6 +23,7 @@ export default function VerticalTabPanel({
   keyboardRevealed = false,
   onToggleKeyboardReveal,
   onClose,
+  onCollapse,
   onReload,
   spaceId,
 }: {
@@ -31,10 +33,13 @@ export default function VerticalTabPanel({
   keyboardRevealed?: boolean;
   onToggleKeyboardReveal?: () => void;
   onClose: () => void;
+  onCollapse?: () => void;
   onReload: () => void;
   spaceId: string;
 }) {
   const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, createGroup, setTabGroup, updateGroup } = useTabStore();
+  const sideTabWidth = useAppearanceStore((state) => state.sideTabWidth);
+  const setSideTabWidth = useAppearanceStore((state) => state.setSideTabWidth);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hovered, setHovered] = useState(false);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
@@ -44,6 +49,8 @@ export default function VerticalTabPanel({
   const presentation = getTabRailPresentation('split', compact, keyboardRevealed, hovered);
   const spaceTabs = orderPinnedTabsFirst(tabs.filter((tab) => tab.spaceId === spaceId));
   const groupedTabs = partitionTabsByGroup(spaceTabs, groups, spaceId);
+  // Must run before the compact early return below, or the hook order changes.
+  useShellOverlay(Boolean(contextTabId && contextPosition));
 
   const handleNewTab = (afterTabId?: string) => {
     addTab({ spaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
@@ -99,17 +106,32 @@ export default function VerticalTabPanel({
 
   const contextTab = contextTabId ? spaceTabs.find((tab) => tab.id === contextTabId) : undefined;
   const closeOthers = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'others') : [];
-  useShellOverlay(Boolean(contextTab && contextPosition));
   const closeRight = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'right') : [];
 
+  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = sideTabWidth;
+    const onMove = (moveEvent: PointerEvent) => setSideTabWidth(startWidth + moveEvent.clientX - startX);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'col-resize';
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   return <>
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={embedded && compact ? { ...(hasMacTrafficLights ? { top: 48, height: 'calc(100% - 48px)' } : {}), width: 232, transform: hovered ? 'scale(1.015)' : 'scale(1)', transformOrigin: 'left center', transition: 'transform 170ms ease-out, box-shadow 170ms ease-out' } : undefined} className={embedded ? compact ? 'orb-sidebar absolute inset-y-0 left-0 z-30 flex h-full w-[232px] flex-col border-r orb-border orb-shadow' : 'orb-sidebar flex h-full w-[232px] shrink-0 flex-col border-r orb-border' : 'fixed inset-0 z-50 flex justify-end'}>
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={embedded ? { ...(compact && hasMacTrafficLights ? { top: 48, height: 'calc(100% - 48px)' } : {}), width: sideTabWidth, ...(compact ? { transform: hovered ? 'scale(1.015)' : 'scale(1)', transformOrigin: 'left center', transition: 'transform 170ms ease-out, box-shadow 170ms ease-out' } : {}) } : undefined} className={embedded ? compact ? 'orb-sidebar absolute inset-y-0 left-0 z-30 flex h-full flex-col border-r orb-border orb-shadow' : 'orb-sidebar relative flex h-full shrink-0 flex-col border-r orb-border' : 'fixed inset-0 z-50 flex justify-end'}>
       {!embedded && <div className="absolute inset-0 bg-stone-950/20 backdrop-blur-[2px]" onClick={onClose} />}
       <aside role={embedded ? undefined : 'dialog'} aria-modal={embedded ? undefined : true} aria-label="Vertical tabs" className={`${embedded ? 'orb-sidebar w-full' : 'orb-surface orb-shadow relative z-10 w-80 border-l orb-border'} flex h-full flex-col`}>
         {embedded && !compact && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
         <div className="flex h-11 items-center justify-between border-b orb-border px-3">
           <h3 className="orb-strong text-sm font-medium">Tabs</h3>
           <div className="flex items-center gap-1">
+            {embedded && onCollapse && <button type="button" aria-label="Collapse tab rail" title="Collapse tab rail · ⌘/Ctrl+Shift+E" onClick={onCollapse} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><SidebarSimple className="h-4 w-4" /></button>}
             <button type="button" aria-label="New tab" title="New tab" onClick={() => handleNewTab()} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><Plus className="h-4 w-4" /></button>
             <button type="button" onClick={onClose} aria-label="Switch to top tabs" title="Switch to top tabs" className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><X className="h-4 w-4" /></button>
           </div>
@@ -128,6 +150,15 @@ export default function VerticalTabPanel({
           </>}
         </div>
       </aside>
+      {embedded && !compact && (
+        <div
+          role="separator"
+          aria-label="Resize tab rail"
+          aria-orientation="vertical"
+          onPointerDown={startResize}
+          className="absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--orb-accent)]/30"
+        />
+      )}
     </div>
     {contextTab && contextPosition && <TabContextMenu
       {...contextPosition}
