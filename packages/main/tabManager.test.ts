@@ -282,6 +282,23 @@ describe('TabManager', () => {
     expect(views[0].bounds).toEqual({ x: 0, y: 5, width: 800, height: 0 });
   });
 
+  it('clears a split-pane bounds override', () => {
+    const { manager, views } = setup();
+    const a = openTab(manager, 'https://a.com');
+    const b = openTab(manager, 'https://b.com');
+    manager.setBounds({ x: 0, y: 0, width: 1000, height: 700 });
+
+    manager.setTabBounds(a.id, { x: 0, y: 0, width: 500, height: 700 });
+    manager.setTabBounds(b.id, { x: 508, y: 0, width: 492, height: 700 });
+    expect(views[0].bounds.width).toBe(500);
+
+    manager.clearTabBounds(b.id);
+
+    expect(views[1].bounds).toEqual({ x: 0, y: 0, width: 1000, height: 700 });
+    // The other pane keeps its override until it is cleared too.
+    expect(views[0].bounds.width).toBe(500);
+  });
+
   it('destroys every view on shutdown', () => {
     const { manager, views } = setup();
     openTab(manager, 'https://a.com');

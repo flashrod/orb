@@ -25,6 +25,9 @@ interface NativeTabBridgeOptions {
   /** Resolves the profile partition a tab should run in. */
   profileForTab: (tab: Tab) => string;
   pageRef: RefObject<HTMLElement | null>;
+  /** The two tabs shown side by side, when split view is open. */
+  splitTabIds?: [string, string] | null;
+  splitRatio?: number;
   /** False while an overlay covers the page area. */
   pageVisible: boolean;
   onLoadingChange?: (tabId: string, loading: boolean) => void;
@@ -46,6 +49,8 @@ export function useNativeTabBridge({
   activeTabId,
   profileForTab,
   pageRef,
+  splitTabIds,
+  splitRatio = 0.5,
   pageVisible,
   onLoadingChange,
   onSnapshot,
@@ -142,6 +147,13 @@ export function useNativeTabBridge({
       }
     });
 
+    const focusSubscription = api.on('orb:tab-focused', (payload) => {
+      const focused = payload as { tabId?: unknown };
+      if (typeof focused?.tabId !== 'string') return;
+      if (!splitTabIds?.includes(focused.tabId)) return;
+      useTabStore.getState().setActiveTab(focused.tabId);
+    });
+
     const snapshotSubscription = api.on('orb:tab-snapshot', (payload) => {
       const snapshot = payload as { tabId: string; dataUrl: string };
       if (typeof snapshot?.tabId === 'string' && typeof snapshot.dataUrl === 'string') {
@@ -151,9 +163,10 @@ export function useNativeTabBridge({
 
     return () => {
       if (subscription) api.off(subscription);
+      if (focusSubscription) api.off(focusSubscription);
       if (snapshotSubscription) api.off(snapshotSubscription);
     };
-  }, [enabled]);
+  }, [enabled, splitTabIds?.[0], splitTabIds?.[1]]);
 
   // Report the page rectangle the native views should occupy.
   useEffect(() => {
@@ -165,7 +178,28 @@ export function useNativeTabBridge({
 
     const report = () => {
       const rect = element.getBoundingClientRect();
-      void api.setBounds({ x: rect.left, y: rect.top, width: rect.width, height: rect.height });
+      const pageBounds = { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+      const first = splitTabIds?.[0];
+      const second = splitTabIds?.[1];
+      if (!first || !second || !activeTabId || (activeTabId !== first && activeTabId !== second)) {
+        void api.setBounds(pageBounds);
+        return;
+      }
+      // Match the shell's split grid: two panes with an 8px draggable divider.
+      const gap = 8;
+      const available = Math.max(0, rect.width - gap);
+      const left = { x: rect.left, y: rect.top, width: available * splitRatio, height: rect.height };
+      const right = {
+        x: rect.left + available * splitRatio + gap,
+        y: rect.top,
+        width: available * (1 - splitRatio),
+        height: rect.height,
+      };
+      const activeIsFirst = activeTabId === first;
+      void api.setBounds(
+        activeIsFirst ? left : right,
+        { id: activeIsFirst ? second : first, bounds: activeIsFirst ? right : left },
+      );
     };
     report();
 
@@ -176,7 +210,7 @@ export function useNativeTabBridge({
       observer.disconnect();
       window.removeEventListener('resize', report);
     };
-  }, [enabled, pageRef]);
+  }, [enabled, pageRef, splitTabIds?.[0], splitTabIds?.[1], splitRatio, activeTabId]);
 
   // Native views sit above the shell, so overlays must hide them.
   useEffect(() => {

@@ -3,6 +3,8 @@ import { useTabStore } from '../stores/tabs';
 import { CaretDown, CaretLeft, CaretRight, FolderSimple, Globe, Plus, X } from '@phosphor-icons/react';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
+import { chooseSplitPair } from '../lib/splitView';
+import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
 import { partitionTabsByGroup } from '../lib/tabGroups';
 import { useAppearanceStore } from '../stores/appearance';
@@ -34,7 +36,7 @@ export default function VerticalTabPanel({
   onReload: () => void;
   spaceId: string;
 }) {
-  const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, setTabGroup, updateGroup, unloadTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, createGroup, setTabGroup, updateGroup, unloadTab } = useTabStore();
   const sideTabWidth = useAppearanceStore((state) => state.sideTabWidth);
   const setSideTabWidth = useAppearanceStore((state) => state.setSideTabWidth);
   const motion = useAppearanceStore((state) => state.motion);
@@ -192,7 +194,14 @@ export default function VerticalTabPanel({
       title={contextTab.title || getHostname(contextTab.url)}
       isPinned={contextTab.isPinned}
       canUnload={contextTab.url !== 'about:blank' && !contextTab.isUnloaded}
+      canSplit={spaceTabs.length > 1}
       canCloseToRight={closeRight.length > 0}
+      onNewTab={() => handleNewTab(contextTab.id)}
+      onNewGroup={() => createGroup(spaceId, contextTab.id)}
+      onSplitView={() => {
+        const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, spaceTabs.map((item) => item.id)) : null;
+        if (pair) useSplitViewStore.getState().open(pair);
+      }}
       onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
       onUnload={() => unloadTab(contextTab.id)}
       onCloseTab={() => closeTab(contextTab.id)}

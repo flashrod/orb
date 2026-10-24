@@ -19,6 +19,7 @@ export class NativeTabHost {
   private readonly ctx: SessionContext;
   private readonly views = new Map<string, WebContentsView>();
   private readonly snapshots = new Map<string, string>();
+  private split: { id: string; bounds: ViewBounds } | null = null;
   private pageVisible = true;
   private desiredPageVisible = true;
   private closed = false;
@@ -48,6 +49,7 @@ export class NativeTabHost {
   }
 
   close(id: string): void {
+    if (this.split?.id === id) this.split = null;
     this.manager.close(id);
     this.snapshots.delete(id);
   }
@@ -72,8 +74,20 @@ export class NativeTabHost {
     this.manager.reorder(ids);
   }
 
-  setBounds(bounds: ViewBounds): void {
+  /**
+   * Sets the page rectangle. When a second pane is supplied the two tabs are
+   * shown side by side (split view); every other view stays hidden.
+   */
+  setBounds(bounds: ViewBounds, secondary?: { id: string; bounds: ViewBounds } | null): void {
+    const previousSplitId = this.split?.id;
     this.manager.setBounds(bounds);
+    if (previousSplitId) this.manager.clearTabBounds(previousSplitId);
+    const activeId = this.manager.getActiveTabId();
+    this.split = secondary && secondary.id !== activeId
+      ? { id: secondary.id, bounds: clampBounds(secondary.bounds) }
+      : null;
+    if (this.split) this.manager.setTabBounds(this.split.id, this.split.bounds);
+    this.applyVisibility();
   }
 
   setTabBounds(id: string, bounds: ViewBounds): void {
@@ -103,6 +117,7 @@ export class NativeTabHost {
 
   async hibernate(id: string): Promise<void> {
     await this.captureSnapshot(id);
+    if (this.split?.id === id) this.split = null;
     this.manager.hibernate(id);
   }
 
@@ -177,6 +192,9 @@ export class NativeTabHost {
       if (favicon) emit({ type: 'page-favicon-updated', favicon });
     });
     contents.on('audio-state-changed', (event) => emit({ type: 'audible-changed', audible: event.audible }));
+    contents.on('focus', () => {
+      if (!this.window.isDestroyed()) this.window.webContents.send('orb:tab-focused', { tabId });
+    });
 
     return {
       loadURL: (nextUrl) => {
@@ -200,7 +218,7 @@ export class NativeTabHost {
     const activeId = this.manager.getActiveTabId();
     for (const [id, view] of this.views) {
       if (view.webContents.isDestroyed()) continue;
-      view.setVisible(this.pageVisible && id === activeId);
+      view.setVisible(this.pageVisible && (id === activeId || id === this.split?.id));
     }
   }
 
@@ -254,6 +272,12 @@ function requireBounds(value: unknown): ViewBounds {
   });
 }
 
+function requireSecondaryBounds(value: unknown): { id: string; bounds: ViewBounds } | null {
+  if (!value || typeof value !== 'object') return null;
+  const secondary = value as Record<string, unknown>;
+  return { id: requireString(secondary.id, 'tab id'), bounds: requireBounds(secondary.bounds) };
+}
+
 /** Registers the tab intents. Every handler is a no-op for unknown windows. */
 export function registerNativeTabHandlers(getHost: HostLookup): void {
   const on = (channel: string, handler: (host: NativeTabHost, ...args: unknown[]) => unknown) => {
@@ -289,7 +313,9 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
     host.reorder(ids.filter((id): id is string => typeof id === 'string'));
     return host.snapshot();
   });
-  on('tabs:set-bounds', (host, bounds) => host.setBounds(requireBounds(bounds)));
+  on('tabs:set-bounds', (host, bounds, secondary) => {
+    host.setBounds(requireBounds(bounds), requireSecondaryBounds(secondary));
+  });
   on('tabs:set-tab-bounds', (host, id, bounds) => host.setTabBounds(requireString(id, 'tab id'), requireBounds(bounds)));
   on('tabs:set-page-visible', (host, visible) => host.setPageVisible(visible === true));
   on('tabs:hibernate', (host, id) => host.hibernate(requireString(id, 'tab id')));

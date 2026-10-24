@@ -4,6 +4,8 @@ import { useTabStore, Tab, TabGroup } from '../stores/tabs';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import { partitionTabsByGroup } from '../lib/tabGroups';
 import TabContextMenu from './TabContextMenu';
+import { chooseSplitPair } from '../lib/splitView';
+import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
@@ -25,7 +27,7 @@ export default function TabBar({
   setActiveTab: (id: string | null) => void;
   onReload: () => void;
 }) {
-  const { removeTab, addTab, moveTab, updateTab, groups, setTabGroup, updateGroup, unloadTab } = useTabStore();
+  const { removeTab, addTab, moveTab, updateTab, groups, createGroup, setTabGroup, updateGroup, unloadTab } = useTabStore();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
   const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null);
@@ -101,7 +103,14 @@ export default function TabBar({
       title={contextTab.title || getHostname(contextTab.url)}
       isPinned={contextTab.isPinned}
       canUnload={contextTab.url !== 'about:blank' && !contextTab.isUnloaded}
+      canSplit={displayTabs.length > 1}
       canCloseToRight={closeRight.length > 0}
+      onNewTab={() => handleNewTab(contextTab.id)}
+      onNewGroup={() => createGroup(activeSpaceId, contextTab.id)}
+      onSplitView={() => {
+        const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, displayTabs.map((item) => item.id)) : null;
+        if (pair) useSplitViewStore.getState().open(pair);
+      }}
       onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
       onUnload={() => unloadTab(contextTab.id)}
       onCloseTab={() => closeTab(contextTab.id)}

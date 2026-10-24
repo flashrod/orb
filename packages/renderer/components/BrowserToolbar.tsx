@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowClockwise, ArrowLeft, ArrowRight, BookmarkSimple, BookmarksSimple, CursorClick, DownloadSimple, DotsSixVertical, Eye, Gear, House, Plus, PuzzlePiece, SidebarSimple, Trash, X } from '@phosphor-icons/react';
+import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowsLeftRight, BookmarkSimple, BookmarksSimple, CursorClick, DownloadSimple, DotsSixVertical, Eye, Gear, House, Plus, PuzzlePiece, SidebarSimple, Trash, X } from '@phosphor-icons/react';
 import AddressBar from './AddressBar';
 import { useBookmarkStore } from '../stores/bookmarks';
 import { ToolbarItemId, useToolbarStore } from '../stores/toolbar';
@@ -10,6 +10,7 @@ type ExtensionInfo = { id: string; name: string; version: string };
 
 export default function BrowserToolbar({
   activeTab, onNavigate, onBack, onForward, onReload, loadingProgress, onPickElement, canPickElement, glanceUrl, onGlance, onDownloadsToggle, onOpenSettings, trafficLightInset = false,
+  splitActive = false, onSwapSplit, onCloseSplit,
 }: {
   activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate: (url: string) => void;
@@ -25,6 +26,10 @@ export default function BrowserToolbar({
   onOpenSettings: () => void;
   /** Reserve room for the macOS traffic lights when the content column starts at x=0. */
   trafficLightInset?: boolean;
+  /** Split view is open; its controls live here because native views cover the page. */
+  splitActive?: boolean;
+  onSwapSplit?: () => void;
+  onCloseSplit?: () => void;
 }) {
   const { order, hidden, move } = useToolbarStore();
   const { setTabLayout, tabLayout, bookmarksBarVisible, setBookmarksBarVisible } = useAppearanceStore();
@@ -82,5 +87,9 @@ export default function BrowserToolbar({
       <button type="button" draggable aria-label={`Drag ${id} toolbar item`} title="Drag to reorder" onDragStart={(event) => { setDragId(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', id); }} onDragEnd={() => setDragId(null)} className="orb-muted flex h-6 w-3 cursor-grab items-center justify-center opacity-0 transition-opacity group-hover:opacity-60 active:cursor-grabbing"><DotsSixVertical className="h-3.5 w-3.5" /></button>
       <div className={`min-w-0 ${id === 'address' ? 'flex-1' : ''}`}>{renderControl(id)}</div>
     </div>)}
+    {splitActive && <div className="ml-1 flex shrink-0 items-center gap-0.5 border-l orb-border pl-1">
+      <button type="button" aria-label="Swap split panes" title="Swap panes" onClick={onSwapSplit} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><ArrowsLeftRight className="h-4 w-4" /></button>
+      <button type="button" aria-label="Close split view" title="Close split view" onClick={onCloseSplit} className="orb-control flex h-8 w-8 items-center justify-center rounded-md"><X className="h-4 w-4" /></button>
+    </div>}
   </div>;
 }

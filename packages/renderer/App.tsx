@@ -200,6 +200,15 @@ export default function App() {
     }
   }, [splitTabIds, tabs, activeTabId, closeSplit, focusSplitPane, replaceSplitTab]);
 
+  // A split pane cannot show a hibernated tab, so opening split view wakes it.
+  useEffect(() => {
+    if (!splitTabIds) return;
+    const store = useTabStore.getState();
+    for (const id of splitTabIds) {
+      if (store.tabs.find((tab) => tab.id === id)?.isUnloaded) store.loadTab(id);
+    }
+  }, [splitTabIds?.[0], splitTabIds?.[1]]);
+
   useEffect(() => {
     if (!resizingSplit) return;
     const moveDivider = (event: PointerEvent) => {
@@ -466,6 +475,11 @@ export default function App() {
     setRailPeek(false);
   }, [compactSideTabs]);
 
+  const nativeSplitIds: [string, string] | null = (() => {
+    if (!splitTabIds || splitTabIds[0] === splitTabIds[1]) return null;
+    return splitTabIds.every((id) => tabs.some((tab) => tab.id === id)) ? [splitTabIds[0], splitTabIds[1]] : null;
+  })();
+
   useNativeTabBridge({
     enabled: NATIVE_TABS,
     tabs,
@@ -475,6 +489,8 @@ export default function App() {
       return resolveSpaceProfile(space?.profileId, profiles).id;
     },
     pageRef: pageAreaRef,
+    splitTabIds: nativeSplitIds,
+    splitRatio,
     pageVisible: nativePageVisible,
     onLoadingChange: (tabId, loading) => {
       setTabLoadingStates((prev) => (prev[tabId] === loading ? prev : { ...prev, [tabId]: loading }));
@@ -637,6 +653,9 @@ export default function App() {
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}
           onGlance={() => { if (glanceCandidate) setGlanceUrl(glanceCandidate.url); }}
+          splitActive={Boolean(nativeSplitIds)}
+          onSwapSplit={swapSplit}
+          onCloseSplit={closeSplit}
         />}
         {bookmarksBarVisible && !compactMode && <BookmarksBar onNavigate={handleNavigate} />}
 
@@ -663,9 +682,7 @@ export default function App() {
           {NATIVE_TABS && pageSnapshot && !nativePageVisible ? (
             <img src={pageSnapshot} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
           ) : null}
-          {NATIVE_TABS ? (
-            activeTab ? renderTabPage(activeTab, true) : null
-          ) : splitTabs?.[0] && splitTabs[1] ? <>
+          {splitTabs?.[0] && splitTabs[1] ? <>
             <div ref={splitAreaRef} className="absolute inset-0 grid" style={{ gridTemplateColumns: `minmax(0, ${splitRatio}fr) 8px minmax(0, ${1 - splitRatio}fr)` }}>
               {[0, 1].map((pane) => {
                 const tab = splitTabs[pane];
@@ -684,11 +701,13 @@ export default function App() {
                 </React.Fragment>;
               })}
             </div>
-            <div className="orb-elevated orb-shadow absolute right-3 top-3 z-20 flex items-center gap-1 rounded-lg border orb-border p-1">
+            {!NATIVE_TABS && <div className="orb-elevated orb-shadow absolute right-3 top-3 z-20 flex items-center gap-1 rounded-lg border orb-border p-1">
               <button type="button" aria-label="Swap split panes" title="Swap panes" onClick={swapSplit} className="orb-control flex h-7 w-7 items-center justify-center rounded"><ArrowsLeftRight className="h-3.5 w-3.5" /></button>
               <button type="button" aria-label="Close split view" title="Close split view" onClick={closeSplit} className="orb-control flex h-7 w-7 items-center justify-center rounded"><X className="h-3.5 w-3.5" /></button>
-            </div>
-          </> : (
+            </div>}
+          </> : NATIVE_TABS ? (
+            activeTab ? renderTabPage(activeTab, true) : null
+          ) : (
             <>
               {mountedTabs.length > 0
                 ? mountedTabs.map((tab) => renderTabPage(tab, tab.id === activeTabId))

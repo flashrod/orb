@@ -44,6 +44,8 @@ export type OrbEventMap = {
   'orb:shortcut': OrbShortcutAction;
   'orb:tabs-state': TabStateSnapshot;
   'orb:tab-snapshot': { tabId: string; dataUrl: string };
+  /** A native page view gained focus (e.g. the user clicked a split pane). */
+  'orb:tab-focused': { tabId: string };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -55,6 +57,7 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:shortcut',
   'orb:tabs-state',
   'orb:tab-snapshot',
+  'orb:tab-focused',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {

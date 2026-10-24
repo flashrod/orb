@@ -188,6 +188,12 @@ export class TabManager {
     this.views.get(id)?.setBounds(clamped);
   }
 
+  /** Drops a split-pane override so the tab follows the page bounds again. */
+  clearTabBounds(id: string): void {
+    if (!this.boundsByTab.delete(id)) return;
+    this.views.get(id)?.setBounds(this.bounds);
+  }
+
   // ------------------------------------------------------------- view events
 
   handleViewEvent(id: string, event: TabViewEvent): void {

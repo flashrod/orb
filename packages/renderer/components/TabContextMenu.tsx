@@ -7,7 +7,11 @@ export interface TabContextMenuProps {
   title: string;
   isPinned: boolean;
   canUnload: boolean;
+  canSplit: boolean;
   canCloseToRight: boolean;
+  onNewTab: () => void;
+  onNewGroup: () => void;
+  onSplitView: () => void;
   onTogglePinned: () => void;
   onUnload: () => void;
   onCloseTab: () => void;
@@ -53,6 +57,10 @@ export default function TabContextMenu(props: TabContextMenuProps) {
   );
 
   return createPortal(<div ref={menuRef} role="menu" aria-label={`Actions for ${props.title}`} style={{ left, top, backgroundColor: 'var(--orb-elevated)' }} className="fixed z-[10000] w-[220px] rounded-lg border orb-border p-1.5 shadow-[0_12px_32px_rgba(41,37,36,0.2)]">
+    {action('New tab to the right', props.onNewTab)}
+    {action('Add to new tab group', props.onNewGroup)}
+    {action('Open in split view', props.onSplitView, !props.canSplit)}
+    <div className="my-1 border-t orb-border" />
     {action(props.isPinned ? 'Unpin tab' : 'Pin tab', props.onTogglePinned)}
     {action('Unload tab', props.onUnload, !props.canUnload)}
     <div className="my-1 border-t orb-border" />

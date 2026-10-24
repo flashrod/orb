@@ -107,7 +107,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     back: (id: string) => ipcRenderer.invoke('tabs:back', id) as Promise<void>,
     forward: (id: string) => ipcRenderer.invoke('tabs:forward', id) as Promise<void>,
     reorder: (ids: string[]) => ipcRenderer.invoke('tabs:reorder', ids) as Promise<TabStateSnapshot | null>,
-    setBounds: (bounds: ViewBounds) => ipcRenderer.invoke('tabs:set-bounds', bounds) as Promise<void>,
+    setBounds: (bounds: ViewBounds, secondary?: { id: string; bounds: ViewBounds } | null) => ipcRenderer.invoke('tabs:set-bounds', bounds, secondary ?? null) as Promise<void>,
     setTabBounds: (id: string, bounds: ViewBounds) => ipcRenderer.invoke('tabs:set-tab-bounds', id, bounds) as Promise<void>,
     setPageVisible: (visible: boolean) => ipcRenderer.invoke('tabs:set-page-visible', visible) as Promise<void>,
     hibernate: (id: string) => ipcRenderer.invoke('tabs:hibernate', id) as Promise<void>,
@@ -175,7 +175,7 @@ declare global {
         back: (id: string) => Promise<void>;
         forward: (id: string) => Promise<void>;
         reorder: (ids: string[]) => Promise<TabStateSnapshot | null>;
-        setBounds: (bounds: ViewBounds) => Promise<void>;
+        setBounds: (bounds: ViewBounds, secondary?: { id: string; bounds: ViewBounds } | null) => Promise<void>;
         setTabBounds: (id: string, bounds: ViewBounds) => Promise<void>;
         setPageVisible: (visible: boolean) => Promise<void>;
         hibernate: (id: string) => Promise<void>;
