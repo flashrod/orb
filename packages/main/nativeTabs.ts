@@ -65,6 +65,10 @@ export class NativeTabHost {
   }
 
   activate(id: string): void {
+    const previous = this.manager.getActiveTabId();
+    // Capture while the outgoing tab is still visible; hidden views paint
+    // nothing, so this is the only reliable moment for a wake frame.
+    if (previous && previous !== id) void this.captureSnapshot(previous);
     this.sendWakeSnapshot(id);
     this.manager.activate(id);
   }
@@ -258,6 +262,7 @@ export class NativeTabHost {
       bounds: this.manager.getBounds(),
       activeTabId: this.manager.getActiveTabId(),
       pageVisible: this.pageVisible,
+      snapshots: [...this.snapshots.keys()],
       views: [...this.views.entries()].map(([id, view]) => ({
         id,
         visible: view.getVisible(),
