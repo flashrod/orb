@@ -10,7 +10,7 @@ export default function Footer() {
           <svg width="20" height="20" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="14" cy="14" r="12" stroke="currentColor" strokeWidth="2" />
             <path d="M14 8a6 6 0 1 0 0 12a6 6 0 0 0 0-12Z" stroke="currentColor" strokeWidth="2" />
-            <path d="M14 14a2 2 0 1 0 0 4a2 2 0 0 0 0-4Z" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M14 14a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5Z" stroke="currentColor" strokeWidth="1.5" />
           </svg>
           <span className="font-serif font-semibold text-orb-text-strong text-xs tracking-tight">
             Orb

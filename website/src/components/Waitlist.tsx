@@ -25,8 +25,8 @@ export default function Waitlist() {
   return (
     <section id="waitlist" className="bg-orb-accent section-padding border-t border-[var(--orb-accent)]">
       <div className="container-max reveal text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white/10 text-white text-[10px] font-medium mb-8">
-          <span className="w-1.5 h-1.5 rounded bg-current animate-pulse"></span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-white/10 text-white text-[10px] font-bold mb-8">
+          <span className="w-2 h-2 rounded bg-current animate-pulse"></span>
           Limited beta spots
         </div>
         <h2 className="text-5xl md:text-7xl font-serif font-semibold text-white mb-4">
@@ -59,7 +59,7 @@ export default function Waitlist() {
         {status === 'error' && (
           <p className="mt-6 text-sm text-orb-text">Something went wrong. Try again.</p>
         )}
-        <div className="mt-12 text-[10px] text-orb-text muted uppercase tracking-widest">
+        <div className="mt-12 text-[10px] text-white/40 uppercase tracking-widest">
           Orb is open source. No tracking, no telemetry, no accounts.
         </div>
       </div>
