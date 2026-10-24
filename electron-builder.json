@@ -1,10 +1,18 @@
 {
   "appId": "org.orb.browser",
   "productName": "Orb",
+  "afterSign": "scripts/notarize.cjs",
   "mac": {
-    "target": ["dmg"],
+    "target": [
+      { "target": "dmg", "arch": ["arm64"] },
+      { "target": "zip", "arch": ["arm64"] }
+    ],
     "category": "public.app-category.productivity",
+    "hardenedRuntime": true,
     "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
     "extendInfo": {
       "NSCameraUsageDescription": "Orb uses the camera only when you allow a site to use it, for example on a video call.",
       "NSMicrophoneUsageDescription": "Orb uses the microphone only when you allow a site to use it, for example on a call or voice recording.",
@@ -14,18 +22,34 @@
       "NSDownloadsFolderUsageDescription": "Orb saves downloads to your Downloads folder."
     }
   },
+  "dmg": {
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
+  },
   "win": {
-    "target": ["nsis"]
+    "target": [
+      { "target": "nsis", "arch": ["x64"] }
+    ],
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   },
   "linux": {
-    "target": ["AppImage"]
+    "target": ["AppImage"],
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   },
   "directories": {
-    "buildResources": "assets",
+    "buildResources": "build",
     "output": "release"
   },
   "files": [
-    "packages/**/*",
+    "dist/**/*",
+    "package.json",
     "node_modules/**/*"
+  ],
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "flashrod",
+      "repo": "orb",
+      "releaseType": "release"
+    }
   ]
 }

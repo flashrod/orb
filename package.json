@@ -9,9 +9,12 @@
   "scripts": {
     "dev:main": "concurrently \"esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --external:sql.js --watch\" \"esbuild packages/preload/webview.ts --bundle --platform=node --format=cjs --outfile=dist/preload/webview.js --external:electron --watch\" \"esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron --watch\"",
     "dev": "concurrently \"vite --config vite.config.mts\" \"npm run dev:main\" \"wait-on http://localhost:5173 && ELECTRON_DEV=true electron dist/main.js\"",
-  "dev:native": "ORB_NATIVE_TABS=1 npm run dev",
+    "dev:native": "ORB_NATIVE_TABS=1 npm run dev",
     "build": "esbuild packages/main/index.ts --bundle --platform=node --format=cjs --outfile=dist/main.js --external:electron --external:sql.js && esbuild packages/preload/index.ts --bundle --platform=node --format=cjs --outfile=dist/preload/index.js --external:electron && esbuild packages/preload/webview.ts --bundle --platform=node --format=cjs --outfile=dist/preload/webview.js --external:electron && vite build",
+    "predist": "npm run build",
     "dist": "electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac --arm64",
+    "dist:win": "npm run build && electron-builder --win --x64",
     "benchmark": "electron scripts/benchmark/run.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -29,6 +32,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/electron": "^1.6.10",
     "@types/react": "^18.3.3",
