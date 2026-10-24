@@ -27,7 +27,7 @@
   }
 
   h1 {
-    font-size: clamp(3rem, 5vw, 5.5rem);
+    font-size: clamp(3.5rem, 6vw, 6.5rem);
     font-weight: 600;
   }
 
@@ -60,14 +60,18 @@
     font-family: inherit;
   }
 
-  .kbd {
-    @apply border border-orb-border bg-orb-canvas rounded-sm px-1.5 py-0.5 text-[10px] font-mono text-orb-text;
+  .code-block {
+    @apply border border-orb-border bg-orb-surface rounded-lg p-4 text-sm font-mono text-orb-text overflow-x-auto my-4;
+  }
+
+  .code-block code {
+    @apply font-mono text-sm;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-orb-text-strong text-white px-8 py-4 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-orb-text-strong text-white px-9 py-4 rounded-lg text-sm font-medium transition-all duration-200;
     box-shadow: none;
   }
 
@@ -76,11 +80,11 @@
   }
 
   .btn-primary:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
   }
 
   .btn-secondary {
-    @apply bg-transparent border border-orb-border text-orb-text-strong px-8 py-4 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-transparent border border-orb-border text-orb-text-strong px-9 py-4 rounded-lg text-sm font-medium transition-all duration-200;
     box-shadow: none;
   }
 
@@ -99,8 +103,8 @@
   }
 
   .section-padding {
-    padding-top: 96px;
-    padding-bottom: 96px;
+    padding-top: 80px;
+    padding-bottom: 80px;
   }
 
   .container-max {
@@ -147,16 +151,6 @@
       color-mix(in srgb, #1f6c9f 8%, transparent),
       transparent 45%
     );
-    opacity: 0.04;
-    animation: drift 20s ease-in-out infinite alternate;
-  }
-
-  @keyframes drift {
-    from {
-      transform: translate(0, 0);
-    }
-    to {
-      transform: translate(30px, 40px);
-    }
+    opacity: 0.03;
   }
 }

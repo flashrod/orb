@@ -22,7 +22,7 @@ export default function Hero() {
           <span className="w-1.5 h-1.5 rounded bg-current animate-pulse"></span>
           Public beta coming soon
         </div>
-        <h1 className="text-5xl md:text-7xl font-serif font-semibold text-orb-text-strong leading-tight mb-8">
+        <h1 className="text-5xl md:text-7xl font-serif font-semibold text-orb-text-strong leading-tight mb-6">
           <LogoMark className="inline-block mr-2 align-bottom" /> Orb
         </h1>
         <p className="text-lg md:text-xl text-orb-text mb-10 max-w-3xl mx-auto leading-relaxed">
@@ -44,7 +44,7 @@ export default function Hero() {
         </div>
         <div className="mt-16 flex flex-wrap justify-center gap-8 text-xs text-orb-text-muted">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg border border-orb-border flex items-center justify-center text-[10px]">⌘T</span>
+            <span className="w-8 h-8 rounded-lg border border-orb-border flex items-center justify-center text-[10px]">Cmd+T</span>
             <span>Command Bar</span>
           </div>
           <div className="flex items-center gap-2">

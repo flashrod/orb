@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-const Logo = () => (
+const LogoMark = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle cx="14" cy="14" r="12" stroke="currentColor" strokeWidth="2" />
     <path d="M14 8a6 6 0 1 0 0 12a6 6 0 0 0 0-12Z" stroke="currentColor" strokeWidth="2" />
@@ -47,7 +47,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Logo />
+            <LogoMark />
             <span className="font-serif font-semibold text-orb-text-strong text-sm tracking-tight">
               Orb
             </span>

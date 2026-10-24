@@ -1,10 +1,9 @@
 'use client';
 
 import { useScrollReveal } from '@/lib/useScrollReveal';
-import { Eye, Lock, Bug, Globe } from '@phosphor-icons/react';
 
 type PrivacyItem = {
-  icon: React.ElementType;
+  icon: string;
   title: string;
   description: string;
   details?: string[];
@@ -12,10 +11,12 @@ type PrivacyItem = {
 
 const privacyItems: PrivacyItem[] = [
   {
-    icon: Eye,
+    icon: `
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="currentColor"/>
+      <circle cx="12" cy="13" r="4" fill="currentColor"/>
+    `,
     title: 'Ad + tracker blocking',
-    description:
-      'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch.',
+    description: 'EasyList, uBlock Origin, EasyPrivacy, and CookieMonster rules compiled at launch.',
     details: [
       'Network rules: ||domain.com^ with $options, $domain=, and ~domain= modifiers',
       'Cosmetic rules: ##selector and ##+regex element hiding',
@@ -24,22 +25,27 @@ const privacyItems: PrivacyItem[] = [
     ],
   },
   {
-    icon: Lock,
+    icon: `
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" strokeWidth="2"/>
+    `,
     title: 'Third-party cookies',
-    description:
-      'Blocked by default with built-in exceptions for common login and payment providers.',
+    description: 'Blocked by default with built-in exceptions for common login and payment providers.',
     details: [
       'Default-deny for third-party Cookie and Set-Cookie headers',
       'Built-in exceptions for SSO and payment providers',
-      'One-click “this site is broken” toggle remembers per site',
+      'One-click "this site is broken" toggle remembers per site',
       'Permission handler prompts before granting sensitive access',
     ],
   },
   {
-    icon: Bug,
+    icon: `
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
+      <path d="M9.09 9.09A6 6 0 0 1 12.51 7l2.14 2.14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M22 12h-4" fill="none" stroke="currentColor" strokeWidth="2"/>
+    `,
     title: 'Fingerprinting protection',
-    description:
-      'Client-hint headers stripped or normalized to low-entropy values.',
+    description: 'Client-hint headers stripped or normalized to low-entropy values.',
     details: [
       'Strips Sec-CH-UA, Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version',
       'Strips X-Client-Data, X-Requested-With',
@@ -48,10 +54,12 @@ const privacyItems: PrivacyItem[] = [
     ],
   },
   {
-    icon: Globe,
+    icon: `
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    `,
     title: 'HTTPS-only mode',
-    description:
-      'HTTP is upgraded to HTTPS automatically with clean fallbacks.',
+    description: 'HTTP upgraded to HTTPS automatically with clean fallbacks.',
     details: [
       'HTTP → HTTPS redirect via redirectURL on all navigations',
       'Per-site exceptions for legacy HTTP-only sites',
@@ -77,13 +85,10 @@ export default function Privacy() {
         </div>
         <div className="grid md:grid-cols-2 gap-6">
           {privacyItems.map((item, i) => {
-            const Icon = item.icon;
             return (
               <div key={item.title} className="card reveal" style={{ animationDelay: `${i * 100}ms` }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
-                    <Icon size={18} weight="bold" />
-                  </div>
+                  <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent" dangerouslySetInnerHTML={{ __html: item.icon }} />
                   <h4 className="text-lg font-semibold">{item.title}</h4>
                 </div>
                 <p className="text-sm text-orb-text mb-4 leading-relaxed">{item.description}</p>
@@ -100,10 +105,8 @@ export default function Privacy() {
             );
           })}
         </div>
-        <div className="mt-10 pt-10 border-t border-orb-border">
-          <h4 className="text-sm font-semibold text-orb-text-strong mb-3 uppercase tracking-widest">
-            The rule
-          </h4>
+        <div className="mt-12 pt-12 border-t border-orb-border">
+          <h4 className="text-sm font-semibold text-orb-text-strong mb-3 uppercase tracking-widest">The rule</h4>
           <p className="text-sm text-orb-text leading-relaxed">
             We never claim a privacy feature until it changes runtime behavior. No hardcoded slop,
             no marketing toggles that do nothing. If a rule is in the list, it is enforced on every
