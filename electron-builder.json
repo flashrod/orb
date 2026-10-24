@@ -4,7 +4,15 @@
   "mac": {
     "target": ["dmg"],
     "category": "public.app-category.productivity",
-    "gatekeeperAssess": false
+    "gatekeeperAssess": false,
+    "extendInfo": {
+      "NSCameraUsageDescription": "Orb uses the camera only when you allow a site to use it, for example on a video call.",
+      "NSMicrophoneUsageDescription": "Orb uses the microphone only when you allow a site to use it, for example on a call or voice recording.",
+      "NSLocationUsageDescription": "Orb shares your location only when you allow a site to use it.",
+      "NSAudioCaptureUsageDescription": "Orb captures system audio only when you allow a site to share audio while screen sharing.",
+      "NSDocumentsFolderUsageDescription": "Orb needs access to the Documents folder only when you download a file there.",
+      "NSDownloadsFolderUsageDescription": "Orb saves downloads to your Downloads folder."
+    }
   },
   "win": {
     "target": ["nsis"]

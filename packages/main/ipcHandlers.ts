@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, session } from 'electron';
+import { ipcMain, dialog, BrowserWindow, session, shell } from 'electron';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { getBoostsDatabase } from './boostsDatabase';
@@ -6,28 +6,68 @@ import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
 import { profilePartition } from '../shared/profiles';
 
+function requireString(value: unknown, label: string, maxLength = 2048): string {
+  if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
+    throw new Error(`Invalid ${label}.`);
+  }
+  return value;
+}
+
+function requireId(value: unknown, label: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
+    throw new Error(`Invalid ${label}.`);
+  }
+  return value;
+}
+
+function requireWebUrl(value: unknown): string {
+  const raw = requireString(value, 'URL');
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error('Invalid URL.');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Only http and https URLs can be opened externally.');
+  }
+  return parsed.toString();
+}
+
+function requireDialogOptions(value: unknown): Electron.OpenDialogOptions | Electron.SaveDialogOptions {
+  if (!value || typeof value !== 'object') throw new Error('Invalid dialog options.');
+  const options = value as Record<string, unknown>;
+  if (options.defaultPath !== undefined && typeof options.defaultPath !== 'string') {
+    throw new Error('Invalid dialog defaultPath.');
+  }
+  if (options.title !== undefined && typeof options.title !== 'string') {
+    throw new Error('Invalid dialog title.');
+  }
+  return value as Electron.OpenDialogOptions;
+}
+
 export function registerIpcHandlers(): void {
   adBlocker.loadPreferences();
   // Get window by webContents ID
   ipcMain.handle('window:get-by-id', (_, webContentsId: number) => {
+    requireId(webContentsId, 'window id');
     const win = windowManager.getWindow(webContentsId);
     return win ? { id: win.webContents.id, url: win.webContents.getURL() } : null;
   });
 
   // Open external link in default browser
   ipcMain.handle('window:open-external', async (_, url: string) => {
-    const { shell } = await import('electron');
-    return shell.openExternal(url);
+    return shell.openExternal(requireWebUrl(url));
   });
 
   // Show save dialog
   ipcMain.handle('dialog:save', async (_, options: any) => {
-    return dialog.showSaveDialog(options);
+    return dialog.showSaveDialog(requireDialogOptions(options) as Electron.SaveDialogOptions);
   });
 
   // Show open dialog
   ipcMain.handle('dialog:open', async (_, options: any) => {
-    return dialog.showOpenDialog(options);
+    return dialog.showOpenDialog(requireDialogOptions(options) as Electron.OpenDialogOptions);
   });
 
   // Get app version

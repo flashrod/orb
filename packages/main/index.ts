@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, type WebContents } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipcHandlers';
 import { adBlocker, initAdBlocker } from './adBlocker';
@@ -56,6 +56,20 @@ function createMainWindow() {
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.show();
+  });
+
+  // The shell is an app UI, not a browser surface. Anything that tries to
+  // navigate it away (a dropped file, a redirect, an injected link) is denied;
+  // real links are handed to the system browser instead.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowed = isDev
+      ? url.startsWith('http://localhost:5173')
+      : url.startsWith('file://');
+    if (allowed) return;
+    event.preventDefault();
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      void shell.openExternal(url);
+    }
   });
 
   mainWindow.on('closed', () => {
