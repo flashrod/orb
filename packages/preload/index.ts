@@ -114,6 +114,8 @@ contextBridge.exposeInMainWorld('orbApi', {
     wake: (id: string) => ipcRenderer.invoke('tabs:wake', id) as Promise<void>,
     applyMemoryBudget: () => ipcRenderer.invoke('tabs:apply-memory-budget') as Promise<string[]>,
     pickElement: (id: string) => ipcRenderer.invoke('tabs:pick-element', id) as Promise<{ selector: string; label: string; score: number } | null>,
+    findInPage: (id: string, text: string, options?: { forward?: boolean; findNext?: boolean }) => ipcRenderer.invoke('tabs:find-in-page', id, text, options ?? {}) as Promise<void>,
+    stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => ipcRenderer.invoke('tabs:stop-find-in-page', id, action ?? 'clearSelection') as Promise<void>,
     applyCss: (id: string, css: string) => ipcRenderer.invoke('tabs:apply-css', id, css) as Promise<void>,
     snapshot: () => ipcRenderer.invoke('tabs:snapshot') as Promise<TabStateSnapshot>,
     getSnapshot: (id: string) => ipcRenderer.invoke('tabs:get-snapshot', id) as Promise<string | null>,
@@ -184,6 +186,8 @@ declare global {
         wake: (id: string) => Promise<void>;
         applyMemoryBudget: () => Promise<string[]>;
         pickElement: (id: string) => Promise<{ selector: string; label: string; score: number } | null>;
+        findInPage: (id: string, text: string, options?: { forward?: boolean; findNext?: boolean }) => Promise<void>;
+        stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => Promise<void>;
         applyCss: (id: string, css: string) => Promise<void>;
         snapshot: () => Promise<TabStateSnapshot>;
         getSnapshot: (id: string) => Promise<string | null>;

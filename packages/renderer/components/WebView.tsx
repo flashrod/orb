@@ -9,6 +9,8 @@ type WebViewHandle = {
   loadUrl: (url: string) => void;
   applyCSS: (css: string) => Promise<void>;
   pickElement: () => Promise<PickedElement | null>;
+  findInPage: (text: string, forward: boolean, findNext: boolean) => void;
+  stopFindInPage: (action: 'clearSelection' | 'keepSelection' | 'activateSelection') => void;
   isAudible: () => boolean;
 };
 
@@ -22,6 +24,7 @@ export default forwardRef<WebViewHandle, {
   onFaviconChange?: (favicon: string) => void;
   onLoadingChange?: (loading: boolean) => void;
   onGlanceLink?: (url: string) => void;
+  onFoundInPage?: (result: { activeMatchOrdinal: number; matches: number }) => void;
 }>(({
   tabId,
   url,
@@ -32,6 +35,7 @@ export default forwardRef<WebViewHandle, {
   onFaviconChange,
   onLoadingChange,
   onGlanceLink,
+  onFoundInPage,
 }: {
   tabId: string;
   url: string;
@@ -42,6 +46,7 @@ export default forwardRef<WebViewHandle, {
   onFaviconChange?: (favicon: string) => void;
   onLoadingChange?: (loading: boolean) => void;
   onGlanceLink?: (url: string) => void;
+  onFoundInPage?: (result: { activeMatchOrdinal: number; matches: number }) => void;
 }, ref) => {
   const webviewRef = useRef<HTMLWebViewElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,6 +122,12 @@ export default forwardRef<WebViewHandle, {
       onLoadingChange?.(false);
     };
 
+    const handleFoundInPage = (event: any) => {
+      const result = event?.result;
+      if (!result) return;
+      onFoundInPage?.({ activeMatchOrdinal: result.activeMatchOrdinal ?? 0, matches: result.matches ?? 0 });
+    };
+
     const handleIpcMessage = (event: any) => {
       if (event.channel === 'orb:glance-link' && typeof event.args?.[0] === 'string') onGlanceLink?.(event.args[0]);
     };
@@ -153,6 +164,7 @@ export default forwardRef<WebViewHandle, {
     webview.addEventListener('did-stop-loading', handleDidStopLoading);
     webview.addEventListener('did-fail-load', handleDidFailLoad);
     webview.addEventListener('ipc-message', handleIpcMessage);
+    webview.addEventListener('found-in-page', handleFoundInPage);
     webview.addEventListener('dom-ready', handleDomReady);
     ;(webview as any).addEventListener('page-favicon-updated', handleFaviconUpdated);
     ;(webview as any).addEventListener('page-title-updated', handleTitleUpdated);
@@ -164,6 +176,7 @@ export default forwardRef<WebViewHandle, {
       webview.removeEventListener('did-stop-loading', handleDidStopLoading);
       webview.removeEventListener('did-fail-load', handleDidFailLoad);
       webview.removeEventListener('ipc-message', handleIpcMessage);
+      webview.removeEventListener('found-in-page', handleFoundInPage);
       webview.removeEventListener('dom-ready', handleDomReady);
       ;(webview as any).removeEventListener('page-favicon-updated', handleFaviconUpdated);
       ;(webview as any).removeEventListener('page-title-updated', handleTitleUpdated);
@@ -177,6 +190,7 @@ export default forwardRef<WebViewHandle, {
     onFaviconChange,
     onLoadingChange,
     onGlanceLink,
+    onFoundInPage,
     clearInsertedCSS,
   ]);
 
@@ -193,6 +207,15 @@ export default forwardRef<WebViewHandle, {
       const webview = webviewRef.current;
       if (!webview || isLoading) return null;
       return pickPageElement(webview);
+    },
+    findInPage: (text, forward, findNext) => {
+      const webview = webviewRef.current as any;
+      if (!webview || !text) return;
+      webview.findInPage(text, { forward, findNext });
+    },
+    stopFindInPage: (action) => {
+      const webview = webviewRef.current as any;
+      webview?.stopFindInPage(action);
     },
   }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
 

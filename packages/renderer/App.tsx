@@ -21,6 +21,7 @@ import DownloadsPanel from './components/DownloadsPanel';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { bindMainEvents } from './lib/mainEvents';
 import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
+import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
   MEMORY_GUARD_IDLE_MS,
@@ -64,6 +65,9 @@ export default function App() {
   const [pageSnapshot, setPageSnapshot] = useState<string | null>(null);
   // Compact rail peek: temporarily widen the rail without leaving compact mode.
   const [railPeek, setRailPeek] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [findResult, setFindResult] = useState<{ active: number; matches: number } | null>(null);
   // Downloads panel state
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
@@ -92,6 +96,46 @@ export default function App() {
     const selectedId = useTabStore.getState().activeTabId;
     return selectedId ? webviewRefs.current[selectedId] : null;
   }, []);
+
+  const runFind = useCallback((text: string, forward: boolean, findNext: boolean) => {
+    if (!text) return;
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) {
+      if (id) void window.orbApi?.tabs.findInPage(id, text, { forward, findNext });
+      return;
+    }
+    getActiveWebView()?.findInPage(text, forward, findNext);
+  }, [getActiveWebView]);
+
+  const closeFind = useCallback(() => {
+    setFindOpen(false);
+    setFindQuery('');
+    setFindResult(null);
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) {
+      if (id) void window.orbApi?.tabs.stopFindInPage(id, 'clearSelection');
+      return;
+    }
+    getActiveWebView()?.stopFindInPage('clearSelection');
+  }, [getActiveWebView]);
+
+  // A new query is a fresh search; Enter/Shift+Enter step through matches.
+  useEffect(() => {
+    if (!findOpen) return;
+    if (!findQuery) {
+      setFindResult(null);
+      return;
+    }
+    runFind(findQuery, true, false);
+  }, [findOpen, findQuery, runFind]);
+
+  // The find bar belongs to the active tab; switching tabs closes it.
+  useEffect(() => {
+    if (!findOpen) return;
+    setFindOpen(false);
+    setFindQuery('');
+    setFindResult(null);
+  }, [activeTabId]);
 
   const navigateBack = useCallback(() => {
     const id = useTabStore.getState().activeTabId;
@@ -285,6 +329,12 @@ export default function App() {
         e.preventDefault();
         useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+        const current = allTabs.find((tab) => tab.id === currentTabId);
+        if (current && current.url !== 'about:blank') setFindOpen(true);
+      }
       if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split') {
         e.preventDefault();
         if (useAppearanceStore.getState().compactSideTabs) setRailPeek((peeked) => !peeked);
@@ -292,6 +342,7 @@ export default function App() {
       }
       if (e.key === 'Escape') {
         setCommandBarOpen(false);
+        if (findOpen) closeFind();
       }
     };
 
@@ -399,7 +450,7 @@ export default function App() {
       window.removeEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
       window.removeEventListener('orb:shortcut', handleShortcut as EventListener);
     };
-  }, [spaces.length, commandBarOpen, handleNavigate]);
+  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind]);
 
   // Forward main-process push events (popups, permissions, downloads, menu
   // shortcuts) into the DOM events the shell already listens for.
@@ -499,6 +550,21 @@ export default function App() {
       if (tabId === useTabStore.getState().activeTabId) setPageSnapshot(dataUrl);
     },
   });
+
+  useEffect(() => {
+    if (!NATIVE_TABS) return;
+    const api = window.orbApi;
+    if (!api) return;
+    const subscription = api.on('orb:find-result', (payload) => {
+      const result = payload as { tabId?: unknown; activeMatchOrdinal?: unknown; matches?: unknown };
+      if (result.tabId !== useTabStore.getState().activeTabId) return;
+      if (typeof result.activeMatchOrdinal !== 'number' || typeof result.matches !== 'number') return;
+      setFindResult({ active: result.activeMatchOrdinal, matches: result.matches });
+    });
+    return () => {
+      if (subscription) api.off(subscription);
+    };
+  }, []);
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, false, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
@@ -588,6 +654,7 @@ export default function App() {
           onTitleChange={(title) => updateTab(tab.id, { title })}
           onFaviconChange={(favicon) => updateTab(tab.id, { favicon })}
           onLoadingChange={(loading) => setTabLoadingStates((prev) => ({ ...prev, [tab.id]: loading }))}
+          onFoundInPage={(result) => setFindResult({ active: result.activeMatchOrdinal, matches: result.matches })}
           onGlanceLink={(url) => {
             const safeUrl = normalizeGlanceUrl(url);
             if (safeUrl) setGlanceCandidate({ url: safeUrl, tabId: tab.id });
@@ -675,6 +742,15 @@ export default function App() {
             setGlanceCandidate(null);
           }} />;
         })()}
+
+        {findOpen && <FindBar
+          query={findQuery}
+          result={findResult}
+          onQueryChange={setFindQuery}
+          onNext={() => runFind(findQuery, true, true)}
+          onPrevious={() => runFind(findQuery, false, true)}
+          onClose={closeFind}
+        />}
 
         {/* Web Content */}
         <div ref={pageAreaRef} data-orb-page-area className="orb-frame relative flex-1 overflow-hidden">

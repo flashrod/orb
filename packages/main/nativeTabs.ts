@@ -157,6 +157,21 @@ export class NativeTabHost {
     });
   }
 
+  findInPage(id: string, text: string, options: { forward?: boolean; findNext?: boolean } = {}): void {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed() || !text) return;
+    view.webContents.findInPage(text, {
+      forward: options.forward !== false,
+      findNext: options.findNext === true,
+    });
+  }
+
+  stopFindInPage(id: string, action: 'clearSelection' | 'keepSelection' | 'activateSelection' = 'clearSelection'): void {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return;
+    view.webContents.stopFindInPage(action);
+  }
+
   /** Applies a Boost's CSS to one tab until the next navigation. */
   async applyCss(id: string, css: string): Promise<void> {
     const view = this.views.get(id);
@@ -237,6 +252,14 @@ export class NativeTabHost {
     contents.on('audio-state-changed', (event) => emit({ type: 'audible-changed', audible: event.audible }));
     contents.on('focus', () => {
       if (!this.window.isDestroyed()) this.window.webContents.send('orb:tab-focused', { tabId });
+    });
+    contents.on('found-in-page', (_event, result) => {
+      if (this.window.isDestroyed()) return;
+      this.window.webContents.send('orb:find-result', {
+        tabId,
+        activeMatchOrdinal: result.activeMatchOrdinal,
+        matches: result.matches,
+      });
     });
 
     return {
@@ -377,6 +400,23 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:wake', (host, id) => host.wake(requireString(id, 'tab id')));
   on('tabs:apply-memory-budget', (host) => host.applyMemoryBudget());
   on('tabs:pick-element', (host, id) => host.pickElement(requireString(id, 'tab id')));
+  on('tabs:find-in-page', (host, id, text, options) => {
+    if (typeof text !== 'string' || text.length === 0 || text.length > 512) return null;
+    const opts = options && typeof options === 'object' ? options as Record<string, unknown> : {};
+    host.findInPage(requireString(id, 'tab id'), text, {
+      forward: opts.forward !== false,
+      findNext: opts.findNext === true,
+    });
+    return null;
+  });
+  on('tabs:stop-find-in-page', (host, id, action) => {
+    const actions = ['clearSelection', 'keepSelection', 'activateSelection'] as const;
+    const value = typeof action === 'string' && (actions as readonly string[]).includes(action)
+      ? action as (typeof actions)[number]
+      : 'clearSelection';
+    host.stopFindInPage(requireString(id, 'tab id'), value);
+    return null;
+  });
   on('tabs:apply-css', (host, id, css) => {
     if (typeof css !== 'string' || css.length > 200_000) throw new Error('Invalid CSS.');
     return host.applyCss(requireString(id, 'tab id'), css);

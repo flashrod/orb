@@ -46,6 +46,8 @@ export type OrbEventMap = {
   'orb:tab-snapshot': { tabId: string; dataUrl: string };
   /** A native page view gained focus (e.g. the user clicked a split pane). */
   'orb:tab-focused': { tabId: string };
+  /** Progress from find-in-page for a native tab. */
+  'orb:find-result': { tabId: string; activeMatchOrdinal: number; matches: number };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -58,6 +60,7 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:tabs-state',
   'orb:tab-snapshot',
   'orb:tab-focused',
+  'orb:find-result',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {
