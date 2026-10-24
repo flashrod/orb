@@ -40,7 +40,7 @@ export default function Navbar() {
     <nav
       className={`fixed inset-x-0 top-0 z-50 ${
         scrolled
-          ? 'border-b border-orb-border bg-orb-canvas/90 backdrop-blur-md'
+          ? 'border-b border-orb-border bg-orb-canvas/95 backdrop-blur-md'
           : 'bg-transparent'
       } transition-all duration-300`}
     >

@@ -27,12 +27,12 @@
   }
 
   h1 {
-    font-size: clamp(3rem, 6vw, 6rem);
+    font-size: clamp(3.5rem, 6vw, 6.5rem);
     font-weight: 700;
   }
 
   h2 {
-    font-size: clamp(2rem, 4vw, 3rem);
+    font-size: clamp(2.25rem, 4vw, 3rem);
     font-weight: 700;
   }
 
@@ -71,7 +71,7 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-orb-text-strong text-white px-10 py-5 rounded-lg text-sm font-medium transition-all duration-200;
+    @apply bg-orb-text-strong text-white px-10 py-5 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
     box-shadow: none;
   }
 
@@ -94,12 +94,12 @@
 
   .card {
     @apply border border-orb-border bg-orb-surface rounded-xl p-8 transition-all duration-300;
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   }
 
   .card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
   }
 
   .section-padding {
