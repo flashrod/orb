@@ -23,14 +23,26 @@ export interface NetworkFilterRule {
   domainAnchor?: string;
   includedDomains: string[];
   excludedDomains: string[];
+  /** Hosts the request itself must match (uBlock `to=`). */
+  includedTargets: string[];
+  /** Hosts that exempt the request (uBlock `denyallow=`). */
+  excludedTargets: string[];
   includedTypes: string[];
   excludedTypes: string[];
   party?: 'first' | 'third';
   regex: RegExp;
 }
 
+const nonNetworkModifiers = new Set([
+  'removeparam', 'queryprune', 'redirect', 'redirect-rule', 'csp', 'permissions',
+  'header', 'set-cookie', 'cookie', 'jsonprune', 'hls', 'mp4', 'replace',
+  'urltransform', 'uritransform', 'inline-script', 'inline-font', 'noop',
+  'empty', 'popup', 'elemhide', 'generichide', 'specifichide', 'genericblock',
+  'badfilter', 'method',
+]);
+
 const resourceOptions = new Set(['document', 'subdocument', 'script', 'stylesheet', 'image', 'object', 'xmlhttprequest', 'xhr', 'font', 'media', 'websocket', 'ping', 'other']);
-const nonDomainOptions = new Set([...resourceOptions, 'third-party', 'match-case', 'important', 'popup', 'popunder', 'generichide', 'specifichide', 'elemhide', 'object-subrequest', 'webrtc', 'empty', 'mp4', 'all']);
+const nonDomainOptions = new Set([...resourceOptions, 'third-party', 'first-party', '3p', '1p', 'match-case', 'important', 'popup', 'popunder', 'generichide', 'specifichide', 'elemhide', 'object-subrequest', 'webrtc', 'empty', 'mp4', 'all']);
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -83,6 +95,8 @@ export function parseFilterLine(line: string): NetworkFilterRule | null {
   }
   const includedDomains: string[] = [];
   const excludedDomains: string[] = [];
+  const includedTargets: string[] = [];
+  const excludedTargets: string[] = [];
   const includedTypes: string[] = [];
   const excludedTypes: string[] = [];
   let party: 'first' | 'third' | undefined;
@@ -93,13 +107,34 @@ export function parseFilterLine(line: string): NetworkFilterRule | null {
     if (!option) continue;
     const negative = option.startsWith('~');
     const normalized = negative ? option.slice(1) : option;
-    if (normalized.startsWith('domain=')) {
+    const modifier = normalized.split('=')[0];
+    // These change behavior we do not implement; treating them as network
+    // blocks would over-block (e.g. removeparam would block the whole URL).
+    if (nonNetworkModifiers.has(modifier)) return null;
+    if (normalized.startsWith('domain=') || normalized.startsWith('from=')) {
       readingDomains = true;
-      const domains = normalized.slice(7).split(/[|]/).filter(Boolean);
+      const domains = normalized.slice(normalized.indexOf('=') + 1).split(/[|]/).filter(Boolean);
       for (const item of domains) {
         const isExcluded = item.startsWith('~');
         const domain = (isExcluded ? item.slice(1) : item).replace(/^\.+|\.+$/g, '');
         if (domain) (isExcluded ? excludedDomains : includedDomains).push(domain);
+      }
+      continue;
+    }
+    if (normalized.startsWith('to=')) {
+      readingDomains = false;
+      for (const item of normalized.slice(3).split('|').filter(Boolean)) {
+        const isExcluded = item.startsWith('~');
+        const domain = (isExcluded ? item.slice(1) : item).replace(/^\.+|\.+$/g, '');
+        if (domain) (isExcluded ? excludedTargets : includedTargets).push(domain);
+      }
+      continue;
+    }
+    if (normalized.startsWith('denyallow=')) {
+      readingDomains = false;
+      for (const item of normalized.slice(10).split('|').filter(Boolean)) {
+        const domain = item.replace(/^\.+|\.+$/g, '');
+        if (domain) excludedTargets.push(domain);
       }
       continue;
     }
@@ -110,7 +145,8 @@ export function parseFilterLine(line: string): NetworkFilterRule | null {
     }
     readingDomains = false;
     if (resourceOptions.has(normalized)) (negative ? excludedTypes : includedTypes).push(normalized === 'xhr' ? 'xmlhttprequest' : normalized);
-    if (normalized === 'third-party') party = negative ? 'first' : 'third';
+    if (normalized === 'third-party' || normalized === '3p') party = negative ? 'first' : 'third';
+    if (normalized === 'first-party' || normalized === '1p') party = negative ? 'third' : 'first';
     if (normalized === 'match-case') matchCase = true;
   }
   const regex = ruleRegex(pattern, undefined, matchCase);
@@ -118,7 +154,8 @@ export function parseFilterLine(line: string): NetworkFilterRule | null {
   const domainAnchorMatch = pattern.match(/^\|\|([^\^/*|]+)/);
   return {
     action, source: line.trim(), domainAnchor: domainAnchorMatch?.[1]?.toLowerCase(),
-    includedDomains, excludedDomains, includedTypes, excludedTypes, party, regex,
+    includedDomains, excludedDomains, includedTargets, excludedTargets,
+    includedTypes, excludedTypes, party, regex,
   };
 }
 
@@ -132,6 +169,8 @@ export function matchesFilterRule(rule: NetworkFilterRule, url: string, context:
   let target: URL;
   try { target = new URL(url); } catch { return false; }
   if (rule.domainAnchor && !hostMatches(target.hostname, rule.domainAnchor)) return false;
+  if (rule.includedTargets.length && !rule.includedTargets.some((domain) => hostMatches(target.hostname, domain))) return false;
+  if (rule.excludedTargets.some((domain) => hostMatches(target.hostname, domain))) return false;
   const type = context.resourceType.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase().replace(/-/g, '_');
   if (rule.includedTypes.length && !rule.includedTypes.includes(type) && !(type === 'sub_frame' && rule.includedTypes.includes('subdocument')) && !(type === 'main_frame' && rule.includedTypes.includes('document')) && !(type === 'xmlhttprequest' && rule.includedTypes.includes('xhr'))) return false;
   if (rule.excludedTypes.includes(type)) return false;
