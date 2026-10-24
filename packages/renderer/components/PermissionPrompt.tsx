@@ -16,10 +16,12 @@ const PERMISSION_LABELS: Record<string, string> = {
 
 export default function PermissionPrompt() {
   const [pending, setPending] = useState<PermissionRequest | null>(null);
+  const [remember, setRemember] = useState(false);
 
   const handlePermissionRequest = useCallback((event: Event) => {
     const customEvent = event as CustomEvent<PermissionRequest>;
     setPending(customEvent.detail);
+    setRemember(false);
   }, []);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function PermissionPrompt() {
 
   if (!pending) return null;
 
-  const respond = (allowed: boolean, remember = false) => {
+  const respond = (allowed: boolean) => {
     window.orbApi?.permissionRespond(pending.id, allowed);
     if (remember) {
       window.orbApi?.setPermission(pending.host, pending.permission, allowed ? 'allow' : 'deny');
@@ -55,18 +57,24 @@ export default function PermissionPrompt() {
           </div>
         </div>
         <div className="flex items-center gap-2 mb-4">
-          <input id="remember" type="checkbox" className="orb-accent-soft orb-accent rounded" />
+          <input
+            id="remember"
+            type="checkbox"
+            checked={remember}
+            onChange={(event) => setRemember(event.target.checked)}
+            className="orb-accent-soft orb-accent rounded"
+          />
           <label htmlFor="remember" className="orb-muted text-xs">Remember this choice</label>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => respond(false, true)}
+            onClick={() => respond(false)}
             className="orb-control flex-1 py-2 rounded-lg"
           >
             Deny
           </button>
           <button
-            onClick={() => respond(true, true)}
+            onClick={() => respond(true)}
             className="flex-1 py-2 rounded-lg bg-[var(--orb-accent)] text-white hover:bg-[var(--orb-accent-soft)]/50 transition-colors"
           >
             Allow

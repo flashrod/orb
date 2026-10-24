@@ -19,6 +19,13 @@ import BookmarksBar from './components/BookmarksBar';
 import PermissionPrompt from './components/PermissionPrompt';
 import DownloadsPanel from './components/DownloadsPanel';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
+import { bindMainEvents } from './lib/mainEvents';
+import {
+  MEMORY_GUARD_IDLE_MS,
+  MEMORY_GUARD_MAX_LIVE_TABS,
+  selectTabsToHibernate,
+  type MemoryGuardTab,
+} from './lib/memoryGuard';
 import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
 import { normalizeGlanceUrl } from './lib/glance';
 type DownloadItem = {
@@ -53,10 +60,10 @@ export default function App() {
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [currentDownloadPath, setCurrentDownloadPath] = useState('');
-  // Memory guard: track last activity per tab for idle hibernation
-  const [tabLastActiveAt, setTabLastActiveAt] = useState<Record<string, number>>({});
-  const MEMORY_GUARD_IDLE_MS = 10 * 60 * 1000; // 10 minutes
-  const MEMORY_GUARD_MAX_LIVE_TABS = 20;
+  // Memory guard: last activity per tab, kept in a ref so the guard timer reads
+  // fresh values without being torn down on every tab switch.
+  const tabLastActiveAtRef = useRef<Record<string, number>>({});
+  const mountedTabIdsRef = useRef<Set<string>>(new Set());
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
@@ -129,9 +136,13 @@ export default function App() {
   // Record last active time for memory guard
   useEffect(() => {
     if (activeTabId) {
-      setTabLastActiveAt((prev) => ({ ...prev, [activeTabId]: Date.now() }));
+      tabLastActiveAtRef.current[activeTabId] = Date.now();
     }
   }, [activeTabId]);
+
+  useEffect(() => {
+    mountedTabIdsRef.current = mountedTabIds;
+  }, [mountedTabIds]);
 
   // Lazily mount the active tab's WebView on first visit; keep it mounted
   // thereafter so switching tabs never reloads the page.
@@ -306,12 +317,17 @@ export default function App() {
       const customEvent = e as CustomEvent<string>;
       const action = customEvent.detail;
       if (action === 'new-tab') handleNewTab();
-      else if (action === 'command-bar') setCommandBarOpen((o) => !o);
+      else if (action === 'new-space') handleNewSpace();
+      else if (action === 'command-bar') setCommandBarOpen(true);
       else if (action === 'focus-address') {
         requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
       }
       else if (action === 'toggle-compact') {
         useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
+      }
+      else if (action === 'settings') {
+        setSettingsSection('appearance');
+        setSettingsOpen(true);
       }
       else if (action === 'close-overlays') {
         setCommandBarOpen(false);
@@ -340,42 +356,6 @@ export default function App() {
     // Initialize download path
     handlePathSet();
 
-    // Memory guard: periodically hibernate idle tabs (never pinned/audible/in-call)
-    useEffect(() => {
-      const timer = setInterval(() => {
-        const now = Date.now();
-        const toHibernate: string[] = [];
-        mountedTabIds.forEach((tabId) => {
-          const tab = tabs.find((t) => t.id === tabId);
-          if (!tab) return;
-          const lastActive = tabLastActiveAt[tabId] || now;
-          const idleMs = now - lastActive;
-          if (idleMs > MEMORY_GUARD_IDLE_MS && !tab.isPinned) {
-            toHibernate.push(tabId);
-          }
-        });
-        // Cap: if over max live tabs, hibernate oldest first
-        const liveMounted = mountedTabIds.size;
-        if (toHibernate.length === 0 && liveMounted > MEMORY_GUARD_MAX_LIVE_TABS) {
-          const sorted = Array.from(mountedTabIds)
-            .map((id) => ({ id, lastActive: tabLastActiveAt[id] || now }))
-            .sort((a, b) => a.lastActive - b.lastActive);
-          while (sorted.length > MEMORY_GUARD_MAX_LIVE_TABS) {
-            const oldest = sorted.shift();
-            if (oldest) toHibernate.push(oldest.id);
-          }
-        }
-        toHibernate.forEach((tabId) => {
-          setMountedTabIds((prev) => {
-            const next = new Set(prev);
-            next.delete(tabId);
-            return next;
-          });
-        });
-      }, 60 * 1000); // check every minute
-      return () => clearInterval(timer);
-    }, [mountedTabIds, tabs, tabLastActiveAt]);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('orb:navigate', handleNavigateEvent as EventListener);
@@ -386,6 +366,48 @@ export default function App() {
       window.removeEventListener('orb:shortcut', handleShortcut as EventListener);
     };
   }, [spaces.length, commandBarOpen, handleNavigate]);
+
+  // Forward main-process push events (popups, permissions, downloads, menu
+  // shortcuts) into the DOM events the shell already listens for.
+  useEffect(() => bindMainEvents(window.orbApi, window), []);
+
+  // Memory guard: hibernate idle background tabs and keep the live-tab count
+  // inside the budget. Reads stores and refs directly so the timer never needs
+  // to be recreated when tab state changes.
+  useEffect(() => {
+    const reclaim = () => {
+      const now = Date.now();
+      const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+      const candidates: MemoryGuardTab[] = allTabs
+        .filter((tab) => mountedTabIdsRef.current.has(tab.id))
+        .map((tab) => ({
+          id: tab.id,
+          isPinned: tab.isPinned,
+          isAudible: Boolean(webviewRefs.current[tab.id]?.isAudible?.()),
+          inCall: false,
+          lastActiveAt: tabLastActiveAtRef.current[tab.id] ?? now,
+          state: 'live',
+        }));
+
+      const toHibernate = selectTabsToHibernate(
+        candidates,
+        now,
+        MEMORY_GUARD_IDLE_MS,
+        MEMORY_GUARD_MAX_LIVE_TABS,
+        currentTabId,
+      );
+      if (toHibernate.length === 0) return;
+
+      setMountedTabIds((prev) => {
+        const next = new Set(prev);
+        for (const tabId of toHibernate) next.delete(tabId);
+        return next;
+      });
+    };
+
+    const timer = window.setInterval(reclaim, 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const spaceTabs = activeSpaceId
     ? tabs.filter((t: { spaceId: string }) => t.spaceId === activeSpaceId)

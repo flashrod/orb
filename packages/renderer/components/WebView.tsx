@@ -9,6 +9,7 @@ type WebViewHandle = {
   loadUrl: (url: string) => void;
   applyCSS: (css: string) => Promise<void>;
   pickElement: () => Promise<PickedElement | null>;
+  isAudible: () => boolean;
 };
 
 export default forwardRef<WebViewHandle, {
@@ -116,9 +117,6 @@ export default forwardRef<WebViewHandle, {
       onLoadingChange?.(false);
     };
 
-    const handleNewWindow = (e: any) => {
-      e.preventDefault();
-    };
     const handleIpcMessage = (event: any) => {
       if (event.channel === 'orb:glance-link' && typeof event.args?.[0] === 'string') onGlanceLink?.(event.args[0]);
     };
@@ -154,7 +152,6 @@ export default forwardRef<WebViewHandle, {
     webview.addEventListener('did-navigate-in-page', handleNavigation);
     webview.addEventListener('did-stop-loading', handleDidStopLoading);
     webview.addEventListener('did-fail-load', handleDidFailLoad);
-    webview.addEventListener('new-window', handleNewWindow);
     webview.addEventListener('ipc-message', handleIpcMessage);
     webview.addEventListener('dom-ready', handleDomReady);
     ;(webview as any).addEventListener('page-favicon-updated', handleFaviconUpdated);
@@ -166,7 +163,6 @@ export default forwardRef<WebViewHandle, {
       webview.removeEventListener('did-navigate-in-page', handleNavigation);
       webview.removeEventListener('did-stop-loading', handleDidStopLoading);
       webview.removeEventListener('did-fail-load', handleDidFailLoad);
-      webview.removeEventListener('new-window', handleNewWindow);
       webview.removeEventListener('ipc-message', handleIpcMessage);
       webview.removeEventListener('dom-ready', handleDomReady);
       ;(webview as any).removeEventListener('page-favicon-updated', handleFaviconUpdated);
@@ -192,6 +188,7 @@ export default forwardRef<WebViewHandle, {
     loadUrl,
     applyCSS,
     isLoading,
+    isAudible: () => Boolean((webviewRef.current as any)?.isCurrentlyAudible?.()),
     pickElement: async () => {
       const webview = webviewRef.current;
       if (!webview || isLoading) return null;
@@ -213,7 +210,6 @@ export default forwardRef<WebViewHandle, {
         ref={webviewRef}
         className="w-full h-full"
         partition={profilePartition(profileId)}
-        allowpopups
       />
     </div>
   );
