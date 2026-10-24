@@ -96,6 +96,7 @@ export function registerIpcHandlers(): void {
 
   // Focus window
   ipcMain.handle('window:focus', (_, webContentsId: number) => {
+    requireId(webContentsId, 'window id');
     const win = windowManager.getWindow(webContentsId);
     if (win) {
       win.focus();
@@ -199,15 +200,21 @@ export function registerIpcHandlers(): void {
 
   // Ad blocker: import uBlock Origin filter list from file
   ipcMain.handle('adblocker:import-ublock-list', async (_, filePath: string) => {
-    const count = await adBlocker.importUblockList(filePath);
+    const count = await adBlocker.importUblockList(requireString(filePath, 'file path'));
     return { imported: count, total: adBlocker.getRuleCount() };
   });
 
   // Per-domain Boosts are kept in the app's SQLite database, never in site storage.
   ipcMain.handle('boosts:get-all', async () => (await getBoostsDatabase()).getAll());
-  ipcMain.handle('boosts:save', async (_, boost: NewBoost) => (await getBoostsDatabase()).save(boost));
+  ipcMain.handle('boosts:save', async (_, boost: NewBoost) => {
+    if (!boost || typeof boost !== 'object') throw new Error('Invalid Boost.');
+    requireString(boost.domain, 'Boost domain', 255);
+    if (typeof boost.css !== 'string' || typeof boost.js !== 'string') throw new Error('Invalid Boost body.');
+    if (typeof boost.enabled !== 'boolean') throw new Error('Invalid Boost enabled flag.');
+    return (await getBoostsDatabase()).save(boost);
+  });
   ipcMain.handle('boosts:delete', async (_, id: string) => {
-    (await getBoostsDatabase()).delete(id);
+    (await getBoostsDatabase()).delete(requireString(id, 'Boost id', 128));
     return { deleted: true };
   });
 
@@ -220,7 +227,7 @@ export function registerIpcHandlers(): void {
     return installExtension(result.filePaths[0]);
   });
   ipcMain.handle('extensions:remove', async (_, id: string) => {
-    await removeExtension(id);
+    await removeExtension(requireString(id, 'extension id', 256));
     return { removed: true };
   });
 }
