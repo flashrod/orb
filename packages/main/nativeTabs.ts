@@ -1,11 +1,14 @@
 import path from 'node:path';
-import { BrowserWindow, WebContentsView, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, Menu, WebContentsView, app, clipboard, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { TabManager, type TabView, type TabViewEvent } from './tabManager';
 import { orbSessionFor, type SessionContext } from './sessions';
 import { profilePartition } from '../shared/profiles';
 import { clampBounds, type TabOpenInput, type TabStateSnapshot, type ViewBounds } from '../shared/tabModel';
 import { initAdBlocker } from './adBlocker';
 import { PrewarmPool } from './prewarmPool';
+import { buildPageContextMenu } from './pageContextMenu';
+import { selectTabsToHibernate } from '../shared/tabLifecycle';
+import type { TabMemorySample } from '../shared/memory';
 import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
 
 const PRELOAD_DIR = path.join(__dirname, 'preload');
@@ -174,6 +177,36 @@ export class NativeTabHost {
     });
   }
 
+  /** Per-tab renderer memory, for the performance panel. */
+  memory(): TabMemorySample[] {
+    const metrics = new Map(app.getAppMetrics().map((metric) => [metric.pid, metric.memory.workingSetSize * 1024]));
+    return [...this.views.entries()].map(([id, view]) => {
+      const pid = view.webContents.isDestroyed() ? null : view.webContents.getOSProcessId();
+      return { id, pid, bytes: pid ? metrics.get(pid) ?? 0 : 0 };
+    });
+  }
+
+  /** Hibernates every background tab that is safe to reclaim. */
+  hibernateBackground(): string[] {
+    const snapshot = this.manager.snapshot();
+    const ids = selectTabsToHibernate(
+      snapshot.tabs.map((tab) => ({
+        id: tab.id,
+        isPinned: tab.isPinned,
+        isAudible: tab.isAudible,
+        inCall: false,
+        lastActiveAt: tab.lastActiveAt,
+        state: tab.lifecycle === 'hibernated' ? 'hibernated' as const : 'live' as const,
+      })),
+      Date.now(),
+      0,
+      Number.MAX_SAFE_INTEGER,
+      snapshot.activeTabId,
+    );
+    for (const id of ids) void this.hibernate(id);
+    return ids;
+  }
+
   findInPage(id: string, text: string, options: { forward?: boolean; findNext?: boolean } = {}): void {
     const view = this.views.get(id);
     if (!view || view.webContents.isDestroyed() || !text) return;
@@ -286,6 +319,21 @@ export class NativeTabHost {
     contents.on('audio-state-changed', (event) => emit({ type: 'audible-changed', audible: event.audible }));
     contents.on('focus', () => {
       if (!this.window.isDestroyed()) this.window.webContents.send('orb:tab-focused', { tabId });
+    });
+    contents.on('context-menu', (_event, params) => {
+      if (this.window.isDestroyed()) return;
+      const template = buildPageContextMenu(params, {
+        openInNewTab: (url) => this.window.webContents.send('orb:popup-requested', { url }),
+        copyText: (text) => clipboard.writeText(text),
+        saveImage: (url) => contents.downloadURL(url),
+        goBack: () => contents.navigationHistory.goBack(),
+        goForward: () => contents.navigationHistory.goForward(),
+        reload: () => contents.reload(),
+        inspect: () => contents.inspectElement(params.x, params.y),
+        canGoBack: contents.navigationHistory.canGoBack(),
+        canGoForward: contents.navigationHistory.canGoForward(),
+      });
+      Menu.buildFromTemplate(template).popup({ window: this.window });
     });
     contents.on('found-in-page', (_event, result) => {
       if (this.window.isDestroyed()) return;
@@ -444,6 +492,8 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:wake', (host, id) => host.wake(requireString(id, 'tab id')));
   on('tabs:apply-memory-budget', (host) => host.applyMemoryBudget());
   on('tabs:pick-element', (host, id) => host.pickElement(requireString(id, 'tab id')));
+  on('tabs:memory', (host) => host.memory());
+  on('tabs:hibernate-background', (host) => host.hibernateBackground());
   on('tabs:find-in-page', (host, id, text, options) => {
     if (typeof text !== 'string' || text.length === 0 || text.length > 512) return null;
     const opts = options && typeof options === 'object' ? options as Record<string, unknown> : {};

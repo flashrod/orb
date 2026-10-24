@@ -115,6 +115,8 @@ contextBridge.exposeInMainWorld('orbApi', {
     applyMemoryBudget: () => ipcRenderer.invoke('tabs:apply-memory-budget') as Promise<string[]>,
     pickElement: (id: string) => ipcRenderer.invoke('tabs:pick-element', id) as Promise<{ selector: string; label: string; score: number } | null>,
     findInPage: (id: string, text: string, options?: { forward?: boolean; findNext?: boolean }) => ipcRenderer.invoke('tabs:find-in-page', id, text, options ?? {}) as Promise<void>,
+    memory: () => ipcRenderer.invoke('tabs:memory') as Promise<{ id: string; pid: number | null; bytes: number }[]>,
+    hibernateBackground: () => ipcRenderer.invoke('tabs:hibernate-background') as Promise<string[]>,
     stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => ipcRenderer.invoke('tabs:stop-find-in-page', id, action ?? 'clearSelection') as Promise<void>,
     applyCss: (id: string, css: string) => ipcRenderer.invoke('tabs:apply-css', id, css) as Promise<void>,
     snapshot: () => ipcRenderer.invoke('tabs:snapshot') as Promise<TabStateSnapshot>,
@@ -187,6 +189,8 @@ declare global {
         applyMemoryBudget: () => Promise<string[]>;
         pickElement: (id: string) => Promise<{ selector: string; label: string; score: number } | null>;
         findInPage: (id: string, text: string, options?: { forward?: boolean; findNext?: boolean }) => Promise<void>;
+        memory: () => Promise<{ id: string; pid: number | null; bytes: number }[]>;
+        hibernateBackground: () => Promise<string[]>;
         stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => Promise<void>;
         applyCss: (id: string, css: string) => Promise<void>;
         snapshot: () => Promise<TabStateSnapshot>;

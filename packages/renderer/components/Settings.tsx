@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowCounterClockwise, BookmarkSimple, Check, Code, DotsSixVertical, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, BookmarkSimple, Check, Code, DotsSixVertical, Gauge, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
 import { MotionPreference, PaletteToken, useAppearanceStore } from '../stores/appearance';
 import BoostsEditor from './BoostsEditor';
 import { TOOLBAR_ITEMS, ToolbarItemId, useToolbarStore } from '../stores/toolbar';
@@ -8,13 +8,15 @@ import { SEARCH_PROVIDERS } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 import BookmarksManager from './BookmarksManager';
 import PrivacySettings from './PrivacySettings';
+import PerformanceSettings from './PerformanceSettings';
 import Toggle from './ui/Toggle';
 
-type SettingsSection = 'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles' | 'bookmarks';
+type SettingsSection = 'appearance' | 'privacy' | 'performance' | 'boosts' | 'toolbar' | 'profiles' | 'bookmarks';
 
 const sections: { id: SettingsSection; title: string; note: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'appearance', title: 'Appearance', note: 'Colors and browser layout', Icon: SlidersHorizontal },
   { id: 'privacy', title: 'Privacy & Shields', note: 'Blocking and protections', Icon: Shield },
+  { id: 'performance', title: 'Performance', note: 'Tab memory and hibernation', Icon: Gauge },
   { id: 'boosts', title: 'Boosts', note: 'Per-site customizations', Icon: Code },
   { id: 'toolbar', title: 'Toolbar', note: 'Choose and arrange controls', Icon: Rows },
   { id: 'profiles', title: 'Profiles & Workspaces', note: 'Separate browsing contexts', Icon: UsersThree },
@@ -209,6 +211,8 @@ export default function Settings({ onClose, onNavigate, activeUrl, initialSectio
             )}
 
             {section === 'privacy' && <PrivacySettings activeUrl={activeUrl} />}
+
+            {section === 'performance' && <PerformanceSettings />}
 
             {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor /></div>}
 
