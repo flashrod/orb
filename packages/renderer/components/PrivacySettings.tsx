@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Shield, Trash, WarningCircle } from '@phosphor-icons/react';
 import Toggle from './ui/Toggle';
+import { groupPermissions, permissionLabel, type PermissionEntry } from '../lib/permissionsView';
 
 type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
 type FilterList = { id: string; name: string; url: string; enabled: boolean; custom?: boolean; ruleCount: number; error: string | null; lastUpdated: number | null };
@@ -15,6 +16,9 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
+  const [permissionBusy, setPermissionBusy] = useState(false);
+  const [permissionNotice, setPermissionNotice] = useState('');
   const activeDomain = (() => { try { return new URL(activeUrl || '').hostname; } catch { return ''; } })();
 
   const refresh = async () => {
@@ -24,7 +28,47 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
       setError('');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not read privacy status.'); }
   };
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { void refresh(); void refreshPermissions(); }, []);
+
+  const refreshPermissions = async () => {
+    try {
+      const entries = await window.orbApi.getPermissions();
+      setPermissions(Array.isArray(entries) ? entries as PermissionEntry[] : []);
+    } catch {
+      // A missing registry only means there are no saved choices yet.
+    }
+  };
+
+  const updatePermission = async (host: string, permission: string, state: 'allow' | 'deny' | 'ask') => {
+    setPermissionBusy(true);
+    setPermissionNotice('');
+    try {
+      if (state === 'ask') await window.orbApi.removePermission(host, permission);
+      else await window.orbApi.setPermission(host, permission, state);
+      await refreshPermissions();
+      setPermissionNotice(state === 'ask'
+        ? `${permissionLabel(permission)} for ${host} will ask again.`
+        : `${permissionLabel(permission)} for ${host} is now ${state === 'allow' ? 'allowed' : 'blocked'}.`);
+    } finally {
+      setPermissionBusy(false);
+    }
+  };
+
+  const resetPermissions = async () => {
+    setPermissionBusy(true);
+    setPermissionNotice('');
+    try {
+      for (const entry of permissions) {
+        await window.orbApi.removePermission(entry.host, entry.permission);
+      }
+      await refreshPermissions();
+      setPermissionNotice('All site permission choices were reset.');
+    } finally {
+      setPermissionBusy(false);
+    }
+  };
+
+  const permissionGroups = groupPermissions(permissions);
 
   const update = async (action: () => Promise<unknown>) => {
     setBusy(true); setError(''); setNotice('');
@@ -59,6 +103,37 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
       <div className="space-y-2">
         {rows.map((row) => <div key={row.label} className="orb-elevated flex items-center justify-between gap-4 rounded-lg border orb-border p-4"><div className="flex min-w-0 items-center gap-3"><div className="orb-accent-soft orb-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-md"><Shield className="h-4 w-4" /></div><div><p className="orb-strong text-xs font-medium">{row.label}</p><p className="orb-muted mt-1 text-[11px]">{row.description}</p></div></div><Toggle checked={row.checked} onChange={row.toggle} label={row.label} disabled={busy} /></div>)}
       </div>
+    </section>
+
+    <section className="border-t orb-border pt-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="orb-strong text-xs font-semibold">Site permissions</h3>
+          <p className="orb-muted mt-1 text-[11px]">Camera, microphone, location, notifications and screen sharing you have decided for each site.</p>
+        </div>
+        {permissions.length > 0 && <button type="button" disabled={permissionBusy} onClick={() => void resetPermissions()} className="orb-control rounded-md border orb-border px-2.5 py-1.5 text-[10px] disabled:opacity-50">Reset all</button>}
+      </div>
+      {permissionGroups.length === 0
+        ? <div className="orb-elevated orb-muted mt-3 rounded-md border orb-border px-3 py-4 text-[11px]">No saved choices yet. Sites will ask before using sensitive features.</div>
+        : <div className="mt-3 space-y-2">{permissionGroups.map((group) => <div key={group.host} className="orb-elevated rounded-lg border orb-border p-3">
+          <p className="orb-strong truncate text-xs" title={group.host}>{group.host}</p>
+          <div className="mt-2 space-y-1.5">{group.entries.map((entry) => <div key={entry.permission} className="flex items-center gap-2">
+            <span className="orb-muted min-w-0 flex-1 truncate text-[11px]">{permissionLabel(entry.permission)}</span>
+            <select
+              aria-label={`${permissionLabel(entry.permission)} for ${group.host}`}
+              value={entry.state}
+              disabled={permissionBusy}
+              onChange={(event) => void updatePermission(group.host, entry.permission, event.target.value as 'allow' | 'deny' | 'ask')}
+              className="orb-control h-7 rounded-md border orb-border bg-transparent px-1.5 text-[11px]"
+            >
+              <option value="allow">Allow</option>
+              <option value="deny">Block</option>
+              <option value="ask">Ask</option>
+            </select>
+            <button type="button" aria-label={`Forget ${permissionLabel(entry.permission)} for ${group.host}`} disabled={permissionBusy} onClick={() => void updatePermission(group.host, entry.permission, 'ask')} className="orb-control rounded px-2 py-1 text-[10px] disabled:opacity-50">Forget</button>
+          </div>)}</div>
+        </div>)}</div>}
+      {permissionNotice && <p role="status" className="orb-accent-soft orb-strong mt-3 rounded-md px-3 py-2 text-xs">{permissionNotice}</p>}
     </section>
     <section className="border-t orb-border pt-5">
       <h3 className="orb-strong text-xs font-semibold">Site exceptions</h3><p className="orb-muted mt-1 text-[11px]">Turn off network blocking for a site when a page needs it to work.</p>
