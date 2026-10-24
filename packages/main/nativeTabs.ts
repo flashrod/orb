@@ -29,6 +29,7 @@ export class NativeTabHost {
   private readonly ctx: SessionContext;
   private readonly views = new Map<string, WebContentsView>();
   private readonly snapshots = new Map<string, string>();
+  private readonly scrollPositions = new Map<string, number>();
   private readonly prewarm: PrewarmPool<PrewarmedView>;
   private split: { id: string; bounds: ViewBounds } | null = null;
   private pageVisible = true;
@@ -72,6 +73,7 @@ export class NativeTabHost {
     if (this.split?.id === id) this.split = null;
     this.manager.close(id);
     this.snapshots.delete(id);
+    this.scrollPositions.delete(id);
   }
 
   navigate(id: string, url: string): void {
@@ -136,6 +138,11 @@ export class NativeTabHost {
   }
 
   async hibernate(id: string): Promise<void> {
+    const view = this.views.get(id);
+    if (view && !view.webContents.isDestroyed()) {
+      const scrollY = await view.webContents.executeJavaScript('window.scrollY').catch(() => 0);
+      if (typeof scrollY === 'number' && scrollY > 0) this.scrollPositions.set(id, scrollY);
+    }
     await this.captureSnapshot(id);
     if (this.split?.id === id) this.split = null;
     this.manager.hibernate(id);
@@ -335,6 +342,14 @@ export class NativeTabHost {
       });
       Menu.buildFromTemplate(template).popup({ window: this.window });
     });
+    const restoreScroll = this.scrollPositions.get(tabId);
+    if (restoreScroll) {
+      this.scrollPositions.delete(tabId);
+      contents.once('did-finish-load', () => {
+        const y = Math.max(0, Math.floor(restoreScroll));
+        void contents.executeJavaScript(`window.scrollTo(0, ${y})`).catch(() => undefined);
+      });
+    }
     contents.on('found-in-page', (_event, result) => {
       if (this.window.isDestroyed()) return;
       this.window.webContents.send('orb:find-result', {
@@ -407,6 +422,7 @@ export class NativeTabHost {
     this.manager.destroy();
     this.views.clear();
     this.snapshots.clear();
+    this.scrollPositions.clear();
   }
 }
 
