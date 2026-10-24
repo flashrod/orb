@@ -4,7 +4,7 @@ import { useScrollReveal } from '@/lib/useScrollReveal';
 
 function EyeIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <circle cx="12" cy="13" r="4" />
     </svg>
@@ -13,7 +13,7 @@ function EyeIcon() {
 
 function LockIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
@@ -22,7 +22,7 @@ function LockIcon() {
 
 function BugIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="13" r="3" />
       <path d="M5 18h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1z" />
     </svg>
@@ -31,10 +31,10 @@ function BugIcon() {
 
 function GlobeIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-      <line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" strokeWidth="2" />
-      <path d="M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" stroke="#0F0F0F" strokeWidth="2" />
+      <line x1="12" y1="2" x2="12" y2="22" stroke="#0F0F0F" strokeWidth="2" />
+      <path d="M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="#0F0F0F" strokeWidth="2" />
     </svg>
   );
 }
@@ -98,13 +98,13 @@ export default function Privacy() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section id="privacy" className="bg-orb-canvas section-padding border-t border-orb-border">
+    <section id="privacy" className="bg-[#F0EEE6] section-padding border-t border-[#CFC7BA]">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
         <div className="flex items-start justify-between mb-10">
           <div>
             <div className="section-number">[ 02 ]</div>
             <h2 className="section-title">Privacy that isn't slop</h2>
-            <p className="text-orb-text max-w-2xl">
+            <p className="text-[#2A2A2A] max-w-2xl">
               Most browsers treat privacy as a toggle. Orb treats it as the default.
             </p>
           </div>
@@ -115,17 +115,17 @@ export default function Privacy() {
             return (
               <div key={item.title} className="card reveal" style={{ animationDelay: `${i * 100}ms` }}>
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
+                  <div className="w-8 h-8 rounded-md bg-[#A0522D]15 flex items-center justify-center text-[#A0522D]">
                     <Icon />
                   </div>
                   <h4 className="text-lg font-semibold">{item.title}</h4>
                 </div>
-                <p className="text-sm text-orb-text mb-4 leading-relaxed">{item.description}</p>
+                <p className="text-sm text-[#2A2A2A] mb-4 leading-relaxed">{item.description}</p>
                 {item.details && (
-                  <ul className="text-[11px] text-orb-text-muted space-y-1.5">
+                  <ul className="text-[11px] text-[#6E6B65] space-y-1.5">
                     {item.details.map((d, j) => (
                       <li key={j} className="flex items-start gap-1.5">
-                        <span className="text-orb-accent">•</span> {d}
+                        <span className="text-[#A0522D]">•</span> {d}
                       </li>
                     ))}
                   </ul>
@@ -134,9 +134,9 @@ export default function Privacy() {
             );
           })}
         </div>
-        <div className="mt-12 pt-12 border-t border-orb-border">
-          <h4 className="text-sm font-semibold text-orb-text-strong mb-3 uppercase tracking-widest">The rule</h4>
-          <p className="text-sm text-orb-text leading-relaxed">
+        <div className="mt-12 pt-12 border-t border-[#CFC7BA]">
+          <h4 className="text-sm font-semibold text-[#0F0F0F] mb-3 uppercase tracking-widest">The rule</h4>
+          <p className="text-sm text-[#2A2A2A] leading-relaxed">
             We never claim a privacy feature until it changes runtime behavior. No hardcoded slop,
             no marketing toggles that do nothing. If a rule is in the list, it is enforced on every
             request.

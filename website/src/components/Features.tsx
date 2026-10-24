@@ -12,7 +12,7 @@ type Feature = {
 
 function SpacesIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 3H3c-1.1 0-2 .9-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-1 16H4V4h16v16zM8 10h4l3 3-3 3H8z" />
     </svg>
   );
@@ -20,17 +20,17 @@ function SpacesIcon() {
 
 function GlobeIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-      <line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" strokeWidth="2" />
-      <path d="M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="currentColor" strokeWidth="2" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" stroke="#0F0F0F" strokeWidth="2" />
+      <line x1="12" y1="2" x2="12" y2="22" stroke="#0F0F0F" strokeWidth="2" />
+      <path d="M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" stroke="#0F0F0F" strokeWidth="2" />
     </svg>
   );
 }
 
 function ShieldIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
@@ -38,7 +38,7 @@ function ShieldIcon() {
 
 function SplitViewIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="3" width="7" height="7" />
       <rect x="14" y="3" width="7" height="7" />
       <rect x="3" y="14" width="7" height="7" />
@@ -49,7 +49,7 @@ function SplitViewIcon() {
 
 function TabGroupsIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F0F0F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 3h18v18H3zM7 7h2v2H7zM15 7h2v2h-2zM15 15h2v2h-2zM7 15h2v2H7z" />
     </svg>
   );
@@ -108,13 +108,13 @@ export default function Features() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section id="features" className="section-padding border-t border-orb-border">
+    <section id="features" className="section-padding border-t border-[#CFC7BA]">
       <div ref={ref} className={`container-max ${isVisible ? 'visible' : ''} reveal`}>
         <div className="flex items-start justify-between mb-10">
           <div>
             <div className="section-number">[ 01 ]</div>
             <h2 className="section-title">Built for focus</h2>
-            <p className="text-orb-text max-w-2xl">
+            <p className="text-[#2A2A2A] max-w-2xl">
               Orb is a calm browser. No dark patterns, no hidden telemetry.
             </p>
           </div>
@@ -129,12 +129,12 @@ export default function Features() {
                 style={{ animationDelay: `${features.indexOf(feature) * 100}ms` }}
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-md bg-orb-accent-soft flex items-center justify-center text-orb-accent">
+                  <div className="w-8 h-8 rounded-md bg-[#A0522D]15 flex items-center justify-center text-[#A0522D]">
                     <Icon />
                   </div>
                   <h3 className="text-lg font-semibold">{feature.title}</h3>
                 </div>
-                <p className="text-sm text-orb-text leading-relaxed">{feature.description}</p>
+                <p className="text-sm text-[#2A2A2A] leading-relaxed">{feature.description}</p>
               </div>
             );
           })}

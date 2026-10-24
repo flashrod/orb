@@ -8,11 +8,10 @@
   }
 
   body {
-    @apply bg-orb-canvas text-orb-text antialiased;
+    @apply bg-[#F0EEE6] text-[#0F0F0F] antialiased;
     font-family: var(--font-sans);
     line-height: 1.55;
     margin: 0;
-    color: var(--orb-text);
     overflow-x: hidden;
   }
 
@@ -23,7 +22,7 @@
     font-family: var(--font-serif);
     letter-spacing: -0.025em;
     line-height: 1.05;
-    color: var(--orb-text-strong);
+    color: #0F0F0F;
   }
 
   h1 {
@@ -48,7 +47,7 @@
   }
 
   p {
-    color: var(--orb-text);
+    color: #2A2A2A;
   }
 
   a {
@@ -61,7 +60,7 @@
   }
 
   .code-block {
-    @apply border border-orb-border bg-orb-surface rounded-lg p-4 text-sm font-mono text-orb-text overflow-x-auto my-4;
+    @apply border border-[#CFC7BA] bg-white rounded-lg p-4 text-sm font-mono text-[#0F0F0F] overflow-x-auto my-4;
   }
 
   .code-block code {
@@ -71,7 +70,7 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-orb-text-strong text-white px-10 py-5 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
+    @apply bg-[#0F0F0F] text-white px-10 py-5 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
     box-shadow: none;
   }
 
@@ -84,22 +83,22 @@
   }
 
   .btn-secondary {
-    @apply bg-transparent border border-orb-border text-orb-text-strong px-10 py-4 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
+    @apply bg-transparent border border-[#CFC7BA] px-10 py-4 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
     box-shadow: none;
   }
 
   .btn-secondary:hover {
-    @apply bg-orb-hover;
+    @apply bg-[#F0EEE6];
   }
 
   .card {
-    @apply border border-orb-border bg-orb-surface rounded-xl p-8 transition-all duration-300;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    @apply border border-[#CFC7BA] bg-white rounded-xl p-8 transition-all duration-300;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
 
   .card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
   }
 
   .section-padding {
@@ -114,7 +113,7 @@
   }
 
   .section-number {
-    @apply text-[10px] text-orb-accent font-mono font-bold uppercase tracking-widest mb-4;
+    @apply text-[10px] text-[#A0522D] font-mono font-bold uppercase tracking-widest mb-4;
   }
 
   .section-title {
@@ -143,7 +142,7 @@
     z-index: -1;
     background: radial-gradient(
       900px circle at 20% 25%,
-      color-mix(in srgb, var(--orb-accent) 12%, transparent),
+      color-mix(in srgb, #A0522D 12%, transparent),
       transparent 45%
     ),
     radial-gradient(
