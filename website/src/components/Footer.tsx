@@ -16,7 +16,7 @@ export default function Footer() {
             Orb
           </span>
         </div>
-        <div className="flex flex-col md:flex-row items-center gap-6 text-[10px] text-[#6E6B65] uppercase tracking-widest">
+        <div className="flex items-center gap-6 text-[10px] text-[#6E6B65] uppercase tracking-widest">
           <div className="flex items-center gap-12">
             <Link
               href="https://github.com/flashrod/orb"
@@ -25,14 +25,6 @@ export default function Footer() {
               className="hover:text-[#A0522D] transition-colors"
             >
               GitHub
-            </Link>
-            <Link
-              href="https://github.com/flashrod/orb/blob/main/README.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#A0522D] transition-colors"
-            >
-              README
             </Link>
           </div>
           <p className="whitespace-nowrap">

@@ -38,6 +38,11 @@ export interface TabOpenInput {
   url: string;
   spaceId: string;
   profileId: string;
+  /**
+   * Lets the renderer own tab ids so its persisted store and the main-process
+   * manager agree on identity. Omitted ids are generated.
+   */
+  id?: string;
   isPinned?: boolean;
   /** Defaults to true: a newly opened tab becomes the active tab. */
   activate?: boolean;

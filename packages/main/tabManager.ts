@@ -83,9 +83,10 @@ export class TabManager {
   // ---------------------------------------------------------------- intents
 
   open(input: TabOpenInput): TabRecord {
+    if (input.id && this.tabs.has(input.id)) return this.tabs.get(input.id)!;
     const now = this.now();
     const tab: TabRecord = {
-      id: this.newId(),
+      id: input.id ?? this.newId(),
       spaceId: input.spaceId,
       profileId: input.profileId,
       url: normalizeUrl(input.url),
@@ -242,10 +243,10 @@ export class TabManager {
   }
 
   /**
-   * Applies the memory budget. Returns the ids that were hibernated so the
-   * caller can capture snapshots first if it wants to.
+   * Returns the tabs the memory budget would reclaim right now, without
+   * touching them, so the caller can capture a snapshot first.
    */
-  applyMemoryBudget(): string[] {
+  planMemoryBudget(): string[] {
     const now = this.now();
     const candidates = this.list()
       .filter((tab) => tab.lifecycle === 'live')
@@ -265,6 +266,12 @@ export class TabManager {
       this.maxLiveTabs,
       this.activeTabId,
     );
+    return ids;
+  }
+
+  /** Reclaims the tabs chosen by `planMemoryBudget`. */
+  applyMemoryBudget(): string[] {
+    const ids = this.planMemoryBudget();
     for (const id of ids) this.hibernate(id);
     return ids;
   }

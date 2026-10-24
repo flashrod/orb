@@ -5,6 +5,8 @@
  * else is rejected, so the renderer can never ask for an arbitrary IPC channel.
  */
 
+import type { TabStateSnapshot } from './tabModel';
+
 export type OrbPopupRequest = { url: string };
 
 export type OrbPermissionRequest = {
@@ -33,11 +35,15 @@ export type OrbShortcutAction =
   | 'settings'
   | 'close-overlays';
 
+export type { TabStateSnapshot } from './tabModel';
+
 export type OrbEventMap = {
   'orb:popup-requested': OrbPopupRequest;
   'orb:permission-request': OrbPermissionRequest;
   'orb:download-updated': OrbDownloadUpdate;
   'orb:shortcut': OrbShortcutAction;
+  'orb:tabs-state': TabStateSnapshot;
+  'orb:tab-snapshot': { tabId: string; dataUrl: string };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -47,6 +53,8 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:permission-request',
   'orb:download-updated',
   'orb:shortcut',
+  'orb:tabs-state',
+  'orb:tab-snapshot',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {

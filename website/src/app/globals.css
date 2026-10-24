@@ -12,13 +12,11 @@
     font-family: var(--font-sans);
     line-height: 1.55;
     margin: 0;
+    color: #0F0F0F;
     overflow-x: hidden;
   }
 
-  h1,
-  h2,
-  h3,
-  h4 {
+  h1, h2, h3, h4 {
     font-family: var(--font-serif);
     letter-spacing: -0.025em;
     line-height: 1.05;
@@ -28,22 +26,6 @@
   h1 {
     font-size: clamp(3.5rem, 6vw, 6.5rem);
     font-weight: 700;
-  }
-
-  h2 {
-    font-size: clamp(2.25rem, 4vw, 3rem);
-    font-weight: 700;
-  }
-
-  h3 {
-    font-size: clamp(1.5rem, 3vw, 2rem);
-    font-weight: 600;
-  }
-
-  h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
   }
 
   p {
@@ -57,14 +39,6 @@
 
   button {
     font-family: inherit;
-  }
-
-  .code-block {
-    @apply border border-[#CFC7BA] bg-white rounded-lg p-4 text-sm font-mono text-[#0F0F0F] overflow-x-auto my-4;
-  }
-
-  .code-block code {
-    @apply font-mono text-sm;
   }
 }
 
@@ -81,26 +55,9 @@
   .btn-primary:active {
     transform: scale(0.97);
   }
+}
 
-  .btn-secondary {
-    @apply bg-transparent border border-[#CFC7BA] px-10 py-4 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
-    box-shadow: none;
-  }
-
-  .btn-secondary:hover {
-    @apply bg-[#F0EEE6];
-  }
-
-  .card {
-    @apply border border-[#CFC7BA] bg-white rounded-xl p-8 transition-all duration-300;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  }
-
-  .card:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    transform: translateY(-3px);
-  }
-
+@layer components {
   .section-padding {
     padding-top: 100px;
     padding-bottom: 100px;
@@ -110,46 +67,5 @@
     max-width: 90rem;
     margin-left: auto;
     margin-right: auto;
-  }
-
-  .section-number {
-    @apply text-[10px] text-[#A0522D] font-mono font-bold uppercase tracking-widest mb-4;
-  }
-
-  .section-title {
-    @apply text-3xl md:text-4xl mb-6;
-  }
-
-  .reveal {
-    opacity: 0;
-    transform: translateY(16px);
-    transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
-      transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .ambient-blob {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: -1;
-    background: radial-gradient(
-      900px circle at 20% 25%,
-      color-mix(in srgb, #A0522D 12%, transparent),
-      transparent 45%
-    ),
-    radial-gradient(
-      800px circle at 80% 75%,
-      color-mix(in srgb, #1f6c9f 8%, transparent),
-      transparent 40%
-    );
-    opacity: 0.06;
   }
 }
