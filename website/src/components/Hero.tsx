@@ -25,7 +25,7 @@ export default function Hero() {
         <h1 className="text-6xl md:text-8xl font-serif font-bold text-orb-text-strong leading-tight mb-8">
           <LogoMark className="inline-block mr-3 align-bottom" /> Orb
         </h1>
-        <p className="text-xl md:text-2xl text-orb-text mb-12 max-w-4xl mx-auto leading-relaxed">
+        <p className="text-xl md:text-2xl text-orb-text mb-10 max-w-4xl mx-auto leading-relaxed">
           A calm browser for every platform. Orb keeps your tabs, bookmarks, and history separate by
           context. Real ad and tracker blocking with EasyList and uBlock rules.
         </p>
