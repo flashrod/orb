@@ -9,7 +9,7 @@ import { useShellOverlay } from '../stores/shellOverlay';
 type ExtensionInfo = { id: string; name: string; version: string };
 
 export default function BrowserToolbar({
-  activeTab, onNavigate, onBack, onForward, onReload, loadingProgress, onPickElement, canPickElement, glanceUrl, onGlance, onDownloadsToggle, onOpenSettings,
+  activeTab, onNavigate, onBack, onForward, onReload, loadingProgress, onPickElement, canPickElement, glanceUrl, onGlance, onDownloadsToggle, onOpenSettings, trafficLightInset = false,
 }: {
   activeTab: { id: string; url: string; title: string } | undefined;
   onNavigate: (url: string) => void;
@@ -23,6 +23,8 @@ export default function BrowserToolbar({
   onGlance: () => void;
   onDownloadsToggle: () => void;
   onOpenSettings: () => void;
+  /** Reserve room for the macOS traffic lights when the content column starts at x=0. */
+  trafficLightInset?: boolean;
 }) {
   const { order, hidden, move } = useToolbarStore();
   const { setTabLayout, tabLayout, bookmarksBarVisible, setBookmarksBarVisible } = useAppearanceStore();
@@ -70,7 +72,7 @@ export default function BrowserToolbar({
     }
   };
 
-  return <div aria-label="Browser toolbar" className="orb-surface flex h-[52px] shrink-0 items-center gap-0.5 border-b orb-border px-2 relative">
+  return <div aria-label="Browser toolbar" className={`orb-surface relative flex h-[52px] shrink-0 items-center gap-0.5 border-b orb-border ${trafficLightInset ? 'pl-[78px] pr-2' : 'px-2'}`}>
     {loadingProgress > 0 && (
       <div className="absolute top-0 left-0 w-full h-0.5 bg-[var(--orb-accent)]">
         <div className="h-full w-[var(--progress-width)] bg-[var(--orb-accent-soft)] transition-all duration-300" style={{ width: `${Math.min(loadingProgress * 100, 100)}%` }} />

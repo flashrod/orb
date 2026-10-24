@@ -611,6 +611,7 @@ export default function App() {
           loadingProgress={activeTabLoading ? 1 : 0}
           onDownloadsToggle={() => setDownloadsOpen((o) => !o)}
           onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); }}
+          trafficLightInset={hasMacTrafficLights && showSideTabs && compactSideTabs}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}

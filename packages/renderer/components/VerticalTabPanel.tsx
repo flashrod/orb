@@ -40,6 +40,7 @@ export default function VerticalTabPanel({
   const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, createGroup, setTabGroup, updateGroup } = useTabStore();
   const sideTabWidth = useAppearanceStore((state) => state.sideTabWidth);
   const setSideTabWidth = useAppearanceStore((state) => state.setSideTabWidth);
+  const motion = useAppearanceStore((state) => state.motion);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [hovered, setHovered] = useState(false);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
@@ -98,11 +99,9 @@ export default function VerticalTabPanel({
 
   if (!isOpen) return null;
 
-  if (embedded && compact && presentation.collapsedHandle) {
-    return <div style={hasMacTrafficLights ? { top: 48 } : undefined} onMouseEnter={() => setHovered(true)} className="absolute inset-y-0 left-0 z-30 flex w-[18px] items-start justify-center pt-2">
-      <button type="button" onClick={onToggleKeyboardReveal} aria-label="Reveal compact vertical tabs" title="Reveal vertical tabs · ⌘/Ctrl+Shift+E" className="orb-sidebar orb-control flex h-9 w-[18px] items-center justify-center rounded-r-md border border-l-0 orb-border"><List className="h-3.5 w-3.5" /></button>
-    </div>;
-  }
+  const collapsed = embedded && presentation.collapsedHandle;
+  const calmTransition = motion === 'off' ? 'none' : 'width 300ms cubic-bezier(0.32, 0.72, 0, 1)';
+  const fadeTransition = motion === 'off' ? 'none' : 'opacity 220ms ease-out';
 
   const contextTab = contextTabId ? spaceTabs.find((tab) => tab.id === contextTabId) : undefined;
   const closeOthers = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'others') : [];
@@ -124,14 +123,35 @@ export default function VerticalTabPanel({
   };
 
   return <>
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={embedded ? { ...(compact && hasMacTrafficLights ? { top: 48, height: 'calc(100% - 48px)' } : {}), width: sideTabWidth, ...(compact ? { transform: hovered ? 'scale(1.015)' : 'scale(1)', transformOrigin: 'left center', transition: 'transform 170ms ease-out, box-shadow 170ms ease-out' } : {}) } : undefined} className={embedded ? compact ? 'orb-sidebar absolute inset-y-0 left-0 z-30 flex h-full flex-col border-r orb-border orb-shadow' : 'orb-sidebar relative flex h-full shrink-0 flex-col border-r orb-border' : 'fixed inset-0 z-50 flex justify-end'}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={embedded ? { width: compact ? 18 : sideTabWidth, transition: calmTransition } : undefined}
+      className={embedded
+        ? 'orb-sidebar relative z-30 flex h-full shrink-0 flex-col border-r orb-border'
+        : 'fixed inset-0 z-50 flex justify-end'}
+    >
       {!embedded && <div className="absolute inset-0 bg-stone-950/20 backdrop-blur-[2px]" onClick={onClose} />}
-      <aside role={embedded ? undefined : 'dialog'} aria-modal={embedded ? undefined : true} aria-label="Vertical tabs" className={`${embedded ? 'orb-sidebar w-full' : 'orb-surface orb-shadow relative z-10 w-80 border-l orb-border'} flex h-full flex-col`}>
+      <aside
+        role={embedded ? undefined : 'dialog'}
+        aria-modal={embedded ? undefined : true}
+        aria-label="Vertical tabs"
+        aria-hidden={collapsed || undefined}
+        style={embedded && compact ? {
+          top: hasMacTrafficLights ? 48 : 0,
+          height: hasMacTrafficLights ? 'calc(100% - 48px)' : '100%',
+          width: sideTabWidth,
+          opacity: collapsed ? 0 : 1,
+          pointerEvents: collapsed ? 'none' : undefined,
+          transition: fadeTransition,
+        } : { transition: fadeTransition }}
+        className={`${embedded ? `orb-sidebar ${compact ? 'absolute left-0 z-40 orb-shadow' : 'w-full'}` : 'orb-surface orb-shadow relative z-10 w-80 border-l orb-border'} flex h-full flex-col`}
+      >
         {embedded && !compact && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
         <div className="flex h-11 items-center justify-between border-b orb-border px-3">
           <h3 className="orb-strong text-sm font-medium">Tabs</h3>
           <div className="flex items-center gap-1">
-            {embedded && onCollapse && <button type="button" aria-label="Collapse tab rail" title="Collapse tab rail · ⌘/Ctrl+Shift+E" onClick={onCollapse} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><SidebarSimple className="h-4 w-4" /></button>}
+            {embedded && onCollapse && <button type="button" aria-label="Collapse tab rail" title="Collapse tab rail · ⌘/Ctrl+Shift+E" onClick={() => { setHovered(false); onCollapse(); }} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><SidebarSimple className="h-4 w-4" /></button>}
             <button type="button" aria-label="New tab" title="New tab" onClick={() => handleNewTab()} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><Plus className="h-4 w-4" /></button>
             <button type="button" onClick={onClose} aria-label="Switch to top tabs" title="Switch to top tabs" className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><X className="h-4 w-4" /></button>
           </div>
@@ -150,6 +170,14 @@ export default function VerticalTabPanel({
           </>}
         </div>
       </aside>
+      {embedded && compact && (
+        <div
+          style={{ top: hasMacTrafficLights ? 48 : 0, bottom: 0, transition: fadeTransition }}
+          className={`absolute left-0 z-40 flex w-[18px] items-start justify-center pt-2 ${collapsed ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+        >
+          <button type="button" onClick={onToggleKeyboardReveal} aria-label="Reveal compact vertical tabs" title="Reveal vertical tabs · ⌘/Ctrl+Shift+E" className="orb-sidebar orb-control flex h-9 w-[18px] items-center justify-center rounded-r-md border border-l-0 orb-border"><List className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
       {embedded && !compact && (
         <div
           role="separator"
