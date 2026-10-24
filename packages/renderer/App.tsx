@@ -412,6 +412,11 @@ export default function App() {
     window.addEventListener('orb:new-space', handleNewSpace);
     window.addEventListener('orb:popup-requested', handlePopupRequestedEvent);
 
+    // A link that launched the app arrives once the shell is listening.
+    void window.orbApi?.takeLaunchUrl?.().then((url) => {
+      if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
+    }).catch(() => undefined);
+
     const handleShortcut = (e: Event) => {
       const customEvent = e as CustomEvent<string>;
       const action = customEvent.detail;

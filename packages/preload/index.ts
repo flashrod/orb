@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('orbApi', {
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  takeLaunchUrl: () => ipcRenderer.invoke('app:take-launch-url') as Promise<string | null>,
 
   // Ad blocker
   toggleAdBlocker: (enabled: boolean) =>
@@ -145,6 +146,7 @@ declare global {
       saveDialog: (options: any) => Promise<any>;
       openDialog: (options: any) => Promise<any>;
       getAppVersion: () => Promise<string>;
+      takeLaunchUrl: () => Promise<string | null>;
       toggleAdBlocker: (enabled: boolean) => Promise<void>;
       getAdBlockerStatus: () => Promise<any>;
       toggleTrackerBlocking: (enabled: boolean) => Promise<{ trackerBlockingEnabled: boolean; trackerRuleCount: number }>;

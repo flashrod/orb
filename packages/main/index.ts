@@ -9,6 +9,7 @@ import { createMenu } from './menu';
 import { PermissionStore, type PermissionName, type PermissionState } from './permissions';
 import { DownloadStore } from './downloads';
 import { HistoryStore, fileHistoryStorage } from './historyStore';
+import { findOpenUrl } from './cli';
 import {
   broadcast,
   isOrbPartition,
@@ -30,6 +31,42 @@ const DEFAULT_PARTITION = 'persist:orb';
 let mainWindow: BrowserWindow | null = null;
 let sessionContext: SessionContext | null = null;
 const nativeHosts = new WeakMap<BrowserWindow, NativeTabHost>();
+
+// A browser should own its URLs: a second launch hands the link to the
+// running instance instead of starting a second process.
+const singleInstance = app.requestSingleInstanceLock();
+if (!singleInstance) {
+  app.quit();
+}
+
+let pendingLaunchUrl: string | null = null;
+
+function deliverLaunchUrl(url: string): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    pendingLaunchUrl = url;
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send('orb:popup-requested', { url });
+}
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  const target = findOpenUrl([url]);
+  if (target) deliverLaunchUrl(target);
+});
+
+app.on('second-instance', (_event, argv) => {
+  const target = findOpenUrl(argv);
+  if (target) deliverLaunchUrl(target);
+  else if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
 
 function createMainWindow(ctx: SessionContext) {
   mainWindow = new BrowserWindow({
@@ -118,6 +155,8 @@ function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input):
 }
 
 app.whenReady().then(async () => {
+  if (!singleInstance) return;
+
   // Per-site permission choices, persisted under userData.
   const permissionStore = new PermissionStore();
   await permissionStore.load();
@@ -151,6 +190,12 @@ app.whenReady().then(async () => {
     if (!pending) return { ok: false };
     pending.resolve(allowed);
     return { ok: true };
+  });
+
+  ipcMain.handle('app:take-launch-url', () => {
+    const url = pendingLaunchUrl;
+    pendingLaunchUrl = null;
+    return url;
   });
 
   ipcMain.handle('history:query', (_, text: unknown, limit: unknown) =>
