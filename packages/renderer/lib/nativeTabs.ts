@@ -52,6 +52,7 @@ export function useNativeTabBridge({
 }: NativeTabBridgeOptions): void {
   const openedIds = useRef(new Set<string>());
   const sentUrls = useRef(new Map<string, string>());
+  const unloadedIds = useRef(new Set<string>());
   const profileForTabRef = useRef(profileForTab);
   profileForTabRef.current = profileForTab;
   const onLoadingChangeRef = useRef(onLoadingChange);
@@ -74,7 +75,7 @@ export function useNativeTabBridge({
     }
 
     for (const tab of tabs) {
-      if (tab.url === 'about:blank') continue;
+      if (tab.url === 'about:blank' || tab.isUnloaded) continue;
       if (openedIds.current.has(tab.id)) {
         if (sentUrls.current.get(tab.id) === tab.url) continue;
         sentUrls.current.set(tab.id, tab.url);
@@ -100,6 +101,22 @@ export function useNativeTabBridge({
     if (!openedIds.current.has(activeTabId)) return;
     void window.orbApi?.tabs.activate(activeTabId);
   }, [enabled, activeTabId]);
+
+  // Unloading a tab destroys its native view; the store keeps the tab itself.
+  useEffect(() => {
+    if (!enabled) return;
+    const api = window.orbApi?.tabs;
+    if (!api) return;
+    for (const tab of tabs) {
+      if (tab.isUnloaded) {
+        if (unloadedIds.current.has(tab.id)) continue;
+        unloadedIds.current.add(tab.id);
+        void api.hibernate(tab.id);
+      } else if (unloadedIds.current.delete(tab.id) && tab.id === activeTabId) {
+        void api.activate(tab.id);
+      }
+    }
+  }, [enabled, tabs, activeTabId]);
 
   // Main -> renderer page metadata.
   useEffect(() => {

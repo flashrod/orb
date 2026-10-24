@@ -10,6 +10,8 @@ export interface Tab {
   favicon: string;
   isPinned: boolean;
   groupId?: string | null;
+  /** Unloaded tabs keep their identity and URL but have no live renderer. */
+  isUnloaded?: boolean;
   isActive: boolean;
   createdAt: number;
   updatedAt: number;
@@ -32,6 +34,8 @@ interface TabStore {
   removeTab: (id: string) => void;
   setActiveTab: (id: string | null) => void;
   updateTab: (id: string, partial: Partial<Tab>) => void;
+  unloadTab: (id: string) => void;
+  loadTab: (id: string) => void;
   moveTab: (tabId: string, newSpaceId: string, index: number) => void;
   getTabsForSpace: (spaceId: string) => Tab[];
   createGroup: (spaceId: string, tabId: string, name?: string) => string | null;
@@ -85,6 +89,16 @@ export const useTabStore = create<TabStore>()(persist((set, get) => ({
       const groupIds = new Set(tabs.map((tab) => tab.groupId).filter((groupId): groupId is string => Boolean(groupId)));
       return { tabs, groups: state.groups.filter((group) => groupIds.has(group.id)) };
     }),
+
+  unloadTab: (id: string) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab: Tab) => tab.id === id ? { ...tab, isUnloaded: true, updatedAt: Date.now() } : tab),
+    })),
+
+  loadTab: (id: string) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab: Tab) => tab.id === id ? { ...tab, isUnloaded: false, updatedAt: Date.now() } : tab),
+    })),
 
   moveTab: (tabId: string, newSpaceId: string, index: number) =>
     set((state) => {

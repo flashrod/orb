@@ -54,7 +54,6 @@ export default function App() {
   const [pickerNotice, setPickerNotice] = useState('');
   const [glanceCandidate, setGlanceCandidate] = useState<{ url: string; tabId: string } | null>(null);
   const [glanceUrl, setGlanceUrl] = useState<string | null>(null);
-  const [tabRailKeyboardRevealed, setTabRailKeyboardRevealed] = useState(false);
   const [resizingSplit, setResizingSplit] = useState(false);
   // Tracks which tabs have a WebView mounted. Once mounted, a tab stays mounted
   // even when inactive so switching tabs never reloads the page.
@@ -63,6 +62,8 @@ export default function App() {
   const [tabLoadingStates, setTabLoadingStates] = useState<Record<string, boolean>>({});
   // Last painted frame of the active native page, shown while shell UI covers it.
   const [pageSnapshot, setPageSnapshot] = useState<string | null>(null);
+  // Compact rail peek: temporarily widen the rail without leaving compact mode.
+  const [railPeek, setRailPeek] = useState(false);
   // Downloads panel state
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
@@ -73,7 +74,7 @@ export default function App() {
   const mountedTabIdsRef = useRef<Set<string>>(new Set());
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
-  const { activeTabId, tabs, setActiveTab, updateTab } = useTabStore();
+  const { activeTabId, tabs, setActiveTab, updateTab, loadTab } = useTabStore();
   const splitTabIds = useSplitViewStore((state) => state.tabIds);
   const splitRatio = useSplitViewStore((state) => state.ratio);
   const activePane = useSplitViewStore((state) => state.activePane);
@@ -168,6 +169,9 @@ export default function App() {
   // thereafter so switching tabs never reloads the page.
   useEffect(() => {
     if (!activeTabId) return;
+    // Activating an unloaded tab wakes it again.
+    const tab = useTabStore.getState().tabs.find((item) => item.id === activeTabId);
+    if (tab?.isUnloaded) useTabStore.getState().loadTab(activeTabId);
     setMountedTabIds((prev) => {
       if (prev.has(activeTabId)) return prev;
       return new Set([...prev, activeTabId]);
@@ -272,9 +276,10 @@ export default function App() {
         e.preventDefault();
         useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
       }
-      if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split' && useAppearanceStore.getState().compactSideTabs) {
+      if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split') {
         e.preventDefault();
-        setTabRailKeyboardRevealed((revealed) => !revealed);
+        if (useAppearanceStore.getState().compactSideTabs) setRailPeek((peeked) => !peeked);
+        else useAppearanceStore.getState().setCompactSideTabs(true);
       }
       if (e.key === 'Escape') {
         setCommandBarOpen(false);
@@ -433,7 +438,8 @@ export default function App() {
   const spaceTabs = activeSpaceId
     ? tabs.filter((t: { spaceId: string }) => t.spaceId === activeSpaceId)
     : [];
-  const mountedTabs = spaceTabs.filter((tab) => mountedTabIds.has(tab.id));
+  // Unloaded tabs keep no live page, except the active one which shows a placeholder.
+  const mountedTabs = spaceTabs.filter((tab) => mountedTabIds.has(tab.id) && (!tab.isUnloaded || tab.id === activeTabId));
   const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeTabLoading = activeTab ? tabLoadingStates[activeTab.id] || false : false;
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
@@ -455,6 +461,11 @@ export default function App() {
     if (nativePageVisible) setPageSnapshot(null);
   }, [nativePageVisible]);
 
+  // Entering or leaving compact mode always starts from the collapsed rail.
+  useEffect(() => {
+    setRailPeek(false);
+  }, [compactSideTabs]);
+
   useNativeTabBridge({
     enabled: NATIVE_TABS,
     tabs,
@@ -472,7 +483,7 @@ export default function App() {
       if (tabId === useTabStore.getState().activeTabId) setPageSnapshot(dataUrl);
     },
   });
-  const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, tabRailKeyboardRevealed, false);
+  const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, false, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
 
@@ -530,6 +541,16 @@ export default function App() {
         ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} profileId={pageProfile.id} tabCount={pageTabCount} onNavigate={handleNavigate} />
         : <div className="orb-frame absolute inset-0" aria-label="Blank new tab" />;
     }
+    if (tab.isUnloaded) {
+      const host = (() => { try { return new URL(tab.url).hostname; } catch { return tab.url; } })();
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+          <p className="orb-strong text-sm font-medium">Tab unloaded</p>
+          <p className="orb-muted max-w-sm truncate text-xs">{tab.title || host}</p>
+          <button type="button" onClick={() => useTabStore.getState().loadTab(tab.id)} className="orb-control mt-1 rounded-md border orb-border px-3 py-1.5 text-xs">Load tab</button>
+        </div>
+      );
+    }
     // The native view is the page; the shell only reserves the space.
     if (NATIVE_TABS) return <div className="absolute inset-0" aria-hidden="true" />;
     return (
@@ -583,10 +604,10 @@ export default function App() {
             isOpen
             embedded
             compact={compactSideTabs}
-            keyboardRevealed={tabRailKeyboardRevealed}
-            onToggleKeyboardReveal={() => setTabRailKeyboardRevealed((revealed) => !revealed)}
+            peeked={railPeek}
+            onExpand={() => setRailPeek(true)}
             onClose={() => setTabLayout('top')}
-            onCollapse={() => setCompactSideTabs(true)}
+            onCollapse={() => { setCompactSideTabs(true); setRailPeek(false); }}
             onReload={navigateReload}
             spaceId={activeSpaceId || ''}
           />

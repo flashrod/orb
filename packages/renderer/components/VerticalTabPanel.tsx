@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { useTabStore } from '../stores/tabs';
-import { CaretDown, FolderSimple, Globe, List, Plus, SidebarSimple, X } from '@phosphor-icons/react';
-import { getTabRailPresentation } from '../lib/tabRail';
+import { CaretDown, CaretLeft, CaretRight, FolderSimple, Globe, Plus, X } from '@phosphor-icons/react';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import TabContextMenu from './TabContextMenu';
-import { chooseSplitPair } from '../lib/splitView';
-import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
 import { partitionTabsByGroup } from '../lib/tabGroups';
 import { useAppearanceStore } from '../stores/appearance';
@@ -20,8 +17,8 @@ export default function VerticalTabPanel({
   isOpen,
   embedded = false,
   compact = false,
-  keyboardRevealed = false,
-  onToggleKeyboardReveal,
+  peeked = false,
+  onExpand,
   onClose,
   onCollapse,
   onReload,
@@ -30,24 +27,23 @@ export default function VerticalTabPanel({
   isOpen: boolean;
   embedded?: boolean;
   compact?: boolean;
-  keyboardRevealed?: boolean;
-  onToggleKeyboardReveal?: () => void;
+  peeked?: boolean;
+  onExpand?: () => void;
   onClose: () => void;
   onCollapse?: () => void;
   onReload: () => void;
   spaceId: string;
 }) {
-  const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, createGroup, setTabGroup, updateGroup } = useTabStore();
+  const { tabs, activeTabId, setActiveTab, removeTab, moveTab, addTab, updateTab, groups, setTabGroup, updateGroup, unloadTab } = useTabStore();
   const sideTabWidth = useAppearanceStore((state) => state.sideTabWidth);
   const setSideTabWidth = useAppearanceStore((state) => state.setSideTabWidth);
   const motion = useAppearanceStore((state) => state.motion);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [hovered, setHovered] = useState(false);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
   const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupDraft, setGroupDraft] = useState('');
-  const presentation = getTabRailPresentation('split', compact, keyboardRevealed, hovered);
+  const [resizing, setResizing] = useState(false);
   const spaceTabs = orderPinnedTabsFirst(tabs.filter((tab) => tab.spaceId === spaceId));
   const groupedTabs = partitionTabsByGroup(spaceTabs, groups, spaceId);
   // Must run before the compact early return below, or the hook order changes.
@@ -99,16 +95,16 @@ export default function VerticalTabPanel({
 
   if (!isOpen) return null;
 
-  const collapsed = embedded && presentation.collapsedHandle;
+  const collapsed = embedded && compact && !peeked;
   const calmTransition = motion === 'off' ? 'none' : 'width 300ms cubic-bezier(0.32, 0.72, 0, 1)';
   const fadeTransition = motion === 'off' ? 'none' : 'opacity 220ms ease-out';
 
   const contextTab = contextTabId ? spaceTabs.find((tab) => tab.id === contextTabId) : undefined;
-  const closeOthers = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'others') : [];
   const closeRight = contextTab ? getTabsToClose(spaceTabs, contextTab.id, 'right') : [];
 
   const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
+    setResizing(true);
     const startX = event.clientX;
     const startWidth = sideTabWidth;
     const onMove = (moveEvent: PointerEvent) => setSideTabWidth(startWidth + moveEvent.clientX - startX);
@@ -116,6 +112,7 @@ export default function VerticalTabPanel({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       document.body.style.cursor = '';
+      setResizing(false);
     };
     document.body.style.cursor = 'col-resize';
     window.addEventListener('pointermove', onMove);
@@ -124,11 +121,9 @@ export default function VerticalTabPanel({
 
   return <>
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={embedded ? { width: compact ? 18 : sideTabWidth, transition: calmTransition } : undefined}
+      style={embedded ? { width: collapsed ? 18 : sideTabWidth, transition: resizing ? 'none' : calmTransition } : undefined}
       className={embedded
-        ? 'orb-sidebar relative z-30 flex h-full shrink-0 flex-col border-r orb-border'
+        ? 'orb-sidebar relative z-30 flex h-full shrink-0 flex-col overflow-hidden border-r orb-border'
         : 'fixed inset-0 z-50 flex justify-end'}
     >
       {!embedded && <div className="absolute inset-0 bg-stone-950/20 backdrop-blur-[2px]" onClick={onClose} />}
@@ -137,21 +132,21 @@ export default function VerticalTabPanel({
         aria-modal={embedded ? undefined : true}
         aria-label="Vertical tabs"
         aria-hidden={collapsed || undefined}
-        style={embedded && compact ? {
-          top: hasMacTrafficLights ? 48 : 0,
-          height: hasMacTrafficLights ? 'calc(100% - 48px)' : '100%',
+        style={embedded ? {
           width: sideTabWidth,
           opacity: collapsed ? 0 : 1,
           pointerEvents: collapsed ? 'none' : undefined,
           transition: fadeTransition,
         } : { transition: fadeTransition }}
-        className={`${embedded ? `orb-sidebar ${compact ? 'absolute left-0 z-40 orb-shadow' : 'w-full'}` : 'orb-surface orb-shadow relative z-10 w-80 border-l orb-border'} flex h-full flex-col`}
+        className={`${embedded ? 'orb-sidebar flex h-full flex-col' : 'orb-surface orb-shadow relative z-10 w-80 border-l orb-border'} flex h-full flex-col`}
       >
-        {embedded && !compact && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
-        <div className="flex h-11 items-center justify-between border-b orb-border px-3">
-          <h3 className="orb-strong text-sm font-medium">Tabs</h3>
-          <div className="flex items-center gap-1">
-            {embedded && onCollapse && <button type="button" aria-label="Collapse tab rail" title="Collapse tab rail · ⌘/Ctrl+Shift+E" onClick={() => { setHovered(false); onCollapse(); }} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><SidebarSimple className="h-4 w-4" /></button>}
+        {embedded && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
+        <div className="flex h-11 items-center justify-between border-b orb-border px-2">
+          <div className="flex min-w-0 items-center gap-1">
+            {embedded && onCollapse && <button type="button" aria-label="Collapse tab rail" title="Collapse tab rail · ⌘/Ctrl+Shift+E" onClick={onCollapse} className="orb-control flex h-7 w-7 shrink-0 items-center justify-center rounded-md"><CaretLeft className="h-4 w-4" /></button>}
+            <h3 className="orb-strong truncate px-1 text-sm font-medium">Tabs</h3>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <button type="button" aria-label="New tab" title="New tab" onClick={() => handleNewTab()} className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><Plus className="h-4 w-4" /></button>
             <button type="button" onClick={onClose} aria-label="Switch to top tabs" title="Switch to top tabs" className="orb-control flex h-7 w-7 items-center justify-center rounded-md"><X className="h-4 w-4" /></button>
           </div>
@@ -175,40 +170,32 @@ export default function VerticalTabPanel({
           style={{ top: hasMacTrafficLights ? 48 : 0, bottom: 0, transition: fadeTransition }}
           className={`absolute left-0 z-40 flex w-[18px] items-start justify-center pt-2 ${collapsed ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
         >
-          <button type="button" onClick={onToggleKeyboardReveal} aria-label="Reveal compact vertical tabs" title="Reveal vertical tabs · ⌘/Ctrl+Shift+E" className="orb-sidebar orb-control flex h-9 w-[18px] items-center justify-center rounded-r-md border border-l-0 orb-border"><List className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={onExpand} aria-label="Expand tab rail" title="Expand tab rail · ⌘/Ctrl+Shift+E" className="orb-sidebar orb-control flex h-9 w-[18px] items-center justify-center rounded-r-md border border-l-0 orb-border"><CaretRight className="h-3.5 w-3.5" /></button>
         </div>
       )}
-      {embedded && !compact && (
+      {embedded && !collapsed && (
         <div
           role="separator"
           aria-label="Resize tab rail"
           aria-orientation="vertical"
+          title="Drag to resize"
           onPointerDown={startResize}
-          className="absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-[var(--orb-accent)]/30"
-        />
+          className="group absolute inset-y-0 right-0 z-20 w-2 cursor-col-resize"
+        >
+          <span className="absolute inset-y-0 right-0 w-px bg-transparent transition-colors group-hover:bg-[var(--orb-accent)]" />
+          <span className="absolute left-1/2 top-1/2 hidden h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--orb-border-strong)] group-hover:block" />
+        </div>
       )}
     </div>
     {contextTab && contextPosition && <TabContextMenu
       {...contextPosition}
       title={contextTab.title || getHostname(contextTab.url)}
       isPinned={contextTab.isPinned}
-      groupName={contextTab.groupId ? groups.find((group) => group.id === contextTab.groupId)?.name || null : null}
-      canToggleGroup={!contextTab.isPinned || Boolean(contextTab.groupId)}
-      canReload={activeTabId === contextTab.id}
-      canSplit={spaceTabs.length > 1}
-      canCloseOthers={closeOthers.length > 0}
+      canUnload={contextTab.url !== 'about:blank' && !contextTab.isUnloaded}
       canCloseToRight={closeRight.length > 0}
-      onNewTab={() => handleNewTab(contextTab.id)}
-      onReload={onReload}
-      onSplitView={() => {
-        const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, spaceTabs.map((item) => item.id)) : null;
-        if (pair) useSplitViewStore.getState().open(pair);
-      }}
-      onToggleGroup={() => contextTab.groupId ? setTabGroup(contextTab.id, null) : createGroup(spaceId, contextTab.id)}
-      onDuplicate={() => addTab({ spaceId: contextTab.spaceId, url: contextTab.url, title: contextTab.title, favicon: contextTab.favicon, isPinned: contextTab.isPinned, isActive: true })}
       onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
+      onUnload={() => unloadTab(contextTab.id)}
       onCloseTab={() => closeTab(contextTab.id)}
-      onCloseOthers={() => handleCloseMany(closeOthers)}
       onCloseToRight={() => handleCloseMany(closeRight)}
       onDismiss={() => { setContextTabId(null); setContextPosition(null); }}
     />}

@@ -4,8 +4,6 @@ import { useTabStore, Tab, TabGroup } from '../stores/tabs';
 import { getTabsToClose, isLastTabToClose, orderPinnedTabsFirst } from '../lib/tabActions';
 import { partitionTabsByGroup } from '../lib/tabGroups';
 import TabContextMenu from './TabContextMenu';
-import { chooseSplitPair } from '../lib/splitView';
-import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
@@ -27,7 +25,7 @@ export default function TabBar({
   setActiveTab: (id: string | null) => void;
   onReload: () => void;
 }) {
-  const { removeTab, addTab, moveTab, updateTab, groups, createGroup, setTabGroup, updateGroup } = useTabStore();
+  const { removeTab, addTab, moveTab, updateTab, groups, setTabGroup, updateGroup, unloadTab } = useTabStore();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [contextTabId, setContextTabId] = useState<string | null>(null);
   const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null);
@@ -84,9 +82,7 @@ export default function TabBar({
   </div>;
 
   const contextTab = contextTabId ? displayTabs.find((item) => item.id === contextTabId) : undefined;
-  const closeOthers = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'others') : [];
   const closeRight = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'right') : [];
-  const contextGroup = contextTab?.groupId ? groups.find((group) => group.id === contextTab.groupId)?.name || null : null;
   useShellOverlay(Boolean(contextTab && contextPosition));
 
   return <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights ? 'pl-[112px] pr-3' : 'px-3'}`}>
@@ -104,23 +100,11 @@ export default function TabBar({
       {...contextPosition}
       title={contextTab.title || getHostname(contextTab.url)}
       isPinned={contextTab.isPinned}
-      groupName={contextGroup}
-      canToggleGroup={!contextTab.isPinned || Boolean(contextGroup)}
-      canReload={activeTabId === contextTab.id}
-      canSplit={displayTabs.length > 1}
-      canCloseOthers={closeOthers.length > 0}
+      canUnload={contextTab.url !== 'about:blank' && !contextTab.isUnloaded}
       canCloseToRight={closeRight.length > 0}
-      onNewTab={() => handleNewTab(contextTab.id)}
-      onReload={onReload}
-      onSplitView={() => {
-        const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, displayTabs.map((item) => item.id)) : null;
-        if (pair) useSplitViewStore.getState().open(pair);
-      }}
-      onToggleGroup={() => contextTab.groupId ? setTabGroup(contextTab.id, null) : createGroup(activeSpaceId, contextTab.id)}
-      onDuplicate={() => addTab({ spaceId: activeSpaceId, url: contextTab.url, title: contextTab.title, favicon: contextTab.favicon, isPinned: contextTab.isPinned, isActive: true })}
       onTogglePinned={() => updateTab(contextTab.id, { isPinned: !contextTab.isPinned })}
+      onUnload={() => unloadTab(contextTab.id)}
       onCloseTab={() => closeTab(contextTab.id)}
-      onCloseOthers={() => handleCloseMany(closeOthers)}
       onCloseToRight={() => handleCloseMany(closeRight)}
       onDismiss={() => { setContextTabId(null); setContextPosition(null); }}
     />}
