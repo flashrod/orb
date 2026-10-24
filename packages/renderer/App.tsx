@@ -504,10 +504,6 @@ export default function App() {
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
 
   const handlePickElement = async () => {
-    if (NATIVE_TABS) {
-      setPickerNotice('Element picker is not available with native tabs yet.');
-      return;
-    }
     if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
     let hostname = '';
     try {
@@ -522,7 +518,9 @@ export default function App() {
     setPickerBusy(true);
     setPickerNotice('Move over an element and click to create a hide rule. Press Esc to cancel.');
     try {
-      const selection = await getActiveWebView()?.pickElement();
+      const selection = NATIVE_TABS
+        ? await window.orbApi?.tabs.pickElement(activeTab.id)
+        : await getActiveWebView()?.pickElement();
       if (!selection) {
         setPickerNotice('Element picker closed.');
         return;
@@ -539,7 +537,8 @@ export default function App() {
       }
       const error = useBoostStore.getState().error;
       if (error) throw new Error(error);
-      await getActiveWebView()?.applyCSS(rule);
+      if (NATIVE_TABS) await window.orbApi?.tabs.applyCss(activeTab.id, rule);
+      else await getActiveWebView()?.applyCSS(rule);
       setPickerNotice(`Saved and hid “${selection.label || selection.selector}” on ${hostname}.`);
     } catch (error) {
       setPickerNotice(error instanceof Error ? error.message : 'Could not save this Boost.');

@@ -5,6 +5,7 @@ import { orbSessionFor, type SessionContext } from './sessions';
 import { profilePartition } from '../shared/profiles';
 import { clampBounds, type TabOpenInput, type TabStateSnapshot, type ViewBounds } from '../shared/tabModel';
 import { initAdBlocker } from './adBlocker';
+import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
 
 const PRELOAD_DIR = path.join(__dirname, 'preload');
 
@@ -123,6 +124,48 @@ export class NativeTabHost {
 
   wake(id: string): void {
     this.manager.wake(id);
+  }
+
+  /**
+   * Runs the element picker inside the tab's page. A WebContentsView has no
+   * <webview> host, so the page bridge reports the choice over IPC instead of
+   * resolving the executeJavaScript promise.
+   */
+  async pickElement(id: string): Promise<PickedElement | null> {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return null;
+    const contents = view.webContents;
+
+    return new Promise<PickedElement | null>((resolve) => {
+      let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const finish = (value: PickedElement | null) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        ipcMain.removeListener('orb:page-picked-element', onPicked);
+        resolve(value);
+      };
+      const onPicked = (event: Electron.IpcMainEvent, payload: unknown) => {
+        if (event.sender !== contents) return;
+        finish(asPickedElement(payload));
+      };
+
+      timer = setTimeout(() => finish(null), 65_000);
+      ipcMain.on('orb:page-picked-element', onPicked);
+      void contents.executeJavaScript(PICK_ELEMENT_SCRIPT, true).catch(() => finish(null));
+    });
+  }
+
+  /** Applies a Boost's CSS to one tab until the next navigation. */
+  async applyCss(id: string, css: string): Promise<void> {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed() || !css.trim()) return;
+    try {
+      await view.webContents.insertCSS(css);
+    } catch {
+      // Best effort: a failed Boost only costs styling.
+    }
   }
 
   /** Captures snapshots for the tabs the memory budget is about to reclaim. */
@@ -272,6 +315,18 @@ function requireBounds(value: unknown): ViewBounds {
   });
 }
 
+function asPickedElement(value: unknown): PickedElement | null {
+  if (!value || typeof value !== 'object') return null;
+  const result = value as Record<string, unknown>;
+  const selector = result.selector;
+  if (typeof selector !== 'string' || selector.length === 0) return null;
+  return {
+    selector,
+    label: typeof result.label === 'string' ? result.label : selector,
+    score: typeof result.score === 'number' ? result.score : 0,
+  };
+}
+
 function requireSecondaryBounds(value: unknown): { id: string; bounds: ViewBounds } | null {
   if (!value || typeof value !== 'object') return null;
   const secondary = value as Record<string, unknown>;
@@ -321,6 +376,11 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:hibernate', (host, id) => host.hibernate(requireString(id, 'tab id')));
   on('tabs:wake', (host, id) => host.wake(requireString(id, 'tab id')));
   on('tabs:apply-memory-budget', (host) => host.applyMemoryBudget());
+  on('tabs:pick-element', (host, id) => host.pickElement(requireString(id, 'tab id')));
+  on('tabs:apply-css', (host, id, css) => {
+    if (typeof css !== 'string' || css.length > 200_000) throw new Error('Invalid CSS.');
+    return host.applyCss(requireString(id, 'tab id'), css);
+  });
   on('tabs:snapshot', (host) => host.snapshot());
   on('tabs:get-snapshot', (host, id) => host.getSnapshot(requireString(id, 'tab id')) ?? null);
   on('tabs:debug-state', (host) => host.debugState());

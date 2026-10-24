@@ -113,6 +113,8 @@ contextBridge.exposeInMainWorld('orbApi', {
     hibernate: (id: string) => ipcRenderer.invoke('tabs:hibernate', id) as Promise<void>,
     wake: (id: string) => ipcRenderer.invoke('tabs:wake', id) as Promise<void>,
     applyMemoryBudget: () => ipcRenderer.invoke('tabs:apply-memory-budget') as Promise<string[]>,
+    pickElement: (id: string) => ipcRenderer.invoke('tabs:pick-element', id) as Promise<{ selector: string; label: string; score: number } | null>,
+    applyCss: (id: string, css: string) => ipcRenderer.invoke('tabs:apply-css', id, css) as Promise<void>,
     snapshot: () => ipcRenderer.invoke('tabs:snapshot') as Promise<TabStateSnapshot>,
     getSnapshot: (id: string) => ipcRenderer.invoke('tabs:get-snapshot', id) as Promise<string | null>,
     debugState: () => ipcRenderer.invoke('tabs:debug-state') as Promise<unknown>,
@@ -181,6 +183,8 @@ declare global {
         hibernate: (id: string) => Promise<void>;
         wake: (id: string) => Promise<void>;
         applyMemoryBudget: () => Promise<string[]>;
+        pickElement: (id: string) => Promise<{ selector: string; label: string; score: number } | null>;
+        applyCss: (id: string, css: string) => Promise<void>;
         snapshot: () => Promise<TabStateSnapshot>;
         getSnapshot: (id: string) => Promise<string | null>;
         debugState: () => Promise<unknown>;
