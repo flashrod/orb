@@ -569,10 +569,21 @@ function asPickedElement(value: unknown): PickedElement | null {
   const result = value as Record<string, unknown>;
   const selector = result.selector;
   if (typeof selector !== 'string' || selector.length === 0) return null;
+  const candidates = Array.isArray(result.candidates)
+    ? result.candidates
+        .filter((candidate): candidate is Record<string, unknown> => Boolean(candidate) && typeof candidate === 'object')
+        .map((candidate) => ({
+          selector: typeof candidate.selector === 'string' ? candidate.selector : '',
+          score: typeof candidate.score === 'number' ? candidate.score : 0,
+        }))
+        .filter((candidate) => candidate.selector.length > 0)
+        .slice(0, 5)
+    : [];
   return {
     selector,
     label: typeof result.label === 'string' ? result.label : selector,
     score: typeof result.score === 'number' ? result.score : 0,
+    ...(candidates.length ? { candidates } : {}),
   };
 }
 
