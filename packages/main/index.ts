@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipcHandlers';
 import { registerCertificateErrorHandler } from './certificates';
+import { bindMediaKeys } from './mediaKeys';
 import { NativeTabHost, registerNativeTabHandlers } from './nativeTabs';
 import { adBlocker, initAdBlocker } from './adBlocker';
 import { stripTrackingParams } from '../shared/privacy';
@@ -149,6 +150,7 @@ app.whenReady().then(async () => {
   if (!singleInstance) return;
 
   registerCertificateErrorHandler();
+  bindMediaKeys();
 
   // Per-site permission choices, persisted under userData.
   const permissionStore = new PermissionStore();

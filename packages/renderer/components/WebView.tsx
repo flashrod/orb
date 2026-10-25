@@ -1,6 +1,11 @@
 import React, { forwardRef, useEffect, useRef, useState, useCallback, useImperativeHandle } from 'react';
 import { pickPageElement, PickedElement } from '../lib/elementPicker';
 import { profilePartition } from '../lib/profiles';
+import {
+  TOGGLE_MEDIA_PLAYBACK_SCRIPT,
+  TOGGLE_PIP_SCRIPT,
+  type MediaActionResult,
+} from '../../shared/media';
 
 type WebViewHandle = {
   navigateBack: () => void;
@@ -14,6 +19,8 @@ type WebViewHandle = {
   isAudible: () => boolean;
   print: () => void;
   printToPDF: (options: { printBackground?: boolean; preferCSSPageSize?: boolean }) => Promise<Uint8Array>;
+  togglePictureInPicture: () => Promise<MediaActionResult>;
+  toggleMediaPlayback: () => Promise<MediaActionResult>;
 };
 
 export default forwardRef<WebViewHandle, {
@@ -227,6 +234,16 @@ export default forwardRef<WebViewHandle, {
       const webview = webviewRef.current as any;
       if (!webview) return Promise.reject(new Error('Nothing to export yet.'));
       return webview.printToPDF(options);
+    },
+    togglePictureInPicture: () => {
+      const webview = webviewRef.current as any;
+      if (!webview) return Promise.resolve({ ok: false, error: 'This tab is not loaded.' });
+      return webview.executeJavaScript(TOGGLE_PIP_SCRIPT, true);
+    },
+    toggleMediaPlayback: () => {
+      const webview = webviewRef.current as any;
+      if (!webview) return Promise.resolve({ ok: false, error: 'This tab is not loaded.' });
+      return webview.executeJavaScript(TOGGLE_MEDIA_PLAYBACK_SCRIPT, true);
     },
   }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
 

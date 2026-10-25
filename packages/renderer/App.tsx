@@ -25,6 +25,7 @@ import { captureSession, SESSION_SNAPSHOT_KEY } from './lib/sessionSnapshot';
 import { stripTrackingParams } from '../shared/privacy';
 import { tidyTitle } from '../shared/siteBehavior';
 import { pdfFilename } from '../shared/pdf';
+import { canUsePictureInPicture } from '../shared/media';
 import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
@@ -135,6 +136,42 @@ export default function App() {
       else if (result?.error) throw new Error(result.error);
     } catch (error) {
       setPickerNotice(error instanceof Error ? error.message : 'Could not export this page.');
+    }
+  }, []);
+
+  const togglePictureInPicture = useCallback(async () => {
+    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+    const current = allTabs.find((tab) => tab.id === currentTabId);
+    if (!current || current.url === 'about:blank') return;
+    if (!canUsePictureInPicture(current.url)) {
+      setPickerNotice('Picture-in-picture is disabled for this site.');
+      return;
+    }
+
+    try {
+      const result = NATIVE_TABS
+        ? await window.orbApi?.tabs.togglePictureInPicture(current.id)
+        : await webviewRefs.current[current.id]?.togglePictureInPicture();
+      if (!result) throw new Error('Could not reach the page.');
+      if (!result.ok) setPickerNotice(result.error || 'Could not start picture-in-picture.');
+    } catch (error) {
+      setPickerNotice(error instanceof Error ? error.message : 'Could not start picture-in-picture.');
+    }
+  }, []);
+
+  const toggleMediaPlayback = useCallback(async () => {
+    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+    const current = allTabs.find((tab) => tab.id === currentTabId);
+    if (!current || current.url === 'about:blank') return;
+
+    try {
+      const result = NATIVE_TABS
+        ? await window.orbApi?.tabs.toggleMediaPlayback(current.id)
+        : await webviewRefs.current[current.id]?.toggleMediaPlayback();
+      if (!result) throw new Error('Could not reach the page.');
+      if (!result.ok) setPickerNotice(result.error || 'Could not control media on this page.');
+    } catch (error) {
+      setPickerNotice(error instanceof Error ? error.message : 'Could not control media on this page.');
     }
   }, []);
 
@@ -489,6 +526,8 @@ export default function App() {
       else if (action === 'find') openFind();
       else if (action === 'print') printActive();
       else if (action === 'save-pdf') void exportActivePdf();
+      else if (action === 'toggle-pip') void togglePictureInPicture();
+      else if (action === 'media-play-pause') void toggleMediaPlayback();
       else if (action === 'focus-address') {
         requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
       }
@@ -539,7 +578,7 @@ export default function App() {
       window.removeEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
       window.removeEventListener('orb:shortcut', handleShortcut as EventListener);
     };
-  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind]);
+  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind, exportActivePdf, togglePictureInPicture, toggleMediaPlayback]);
 
   // Forward main-process push events (popups, permissions, downloads, menu
   // shortcuts) into the DOM events the shell already listens for.

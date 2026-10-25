@@ -75,6 +75,9 @@ export function createMenu(): void {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { role: 'resetZoom' },
+        { type: 'separator' },
+        { label: 'Picture in Picture', click: () => dispatch('toggle-pip') },
+        { label: 'Play/Pause Media', click: () => dispatch('media-play-pause') },
       ],
     },
     {

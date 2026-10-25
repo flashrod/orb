@@ -37,6 +37,8 @@ export type OrbShortcutAction =
   | 'find'
   | 'print'
   | 'save-pdf'
+  | 'toggle-pip'
+  | 'media-play-pause'
   | 'close-overlays';
 
 export type { TabStateSnapshot } from './tabModel';

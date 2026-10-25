@@ -11,6 +11,12 @@ import { selectTabsToHibernate } from '../shared/tabLifecycle';
 import { stripTrackingParams } from '../shared/privacy';
 import type { TabMemorySample } from '../shared/memory';
 import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
+import {
+  canUsePictureInPicture,
+  TOGGLE_MEDIA_PLAYBACK_SCRIPT,
+  TOGGLE_PIP_SCRIPT,
+  type MediaActionResult,
+} from '../shared/media';
 
 const PRELOAD_DIR = path.join(__dirname, 'preload');
 
@@ -213,6 +219,23 @@ export class NativeTabHost {
       preferCSSPageSize: true,
     });
     return new Uint8Array(pdf);
+  }
+
+  async togglePictureInPicture(id: string): Promise<MediaActionResult> {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return { ok: false, error: 'This tab is not loaded.' };
+    if (!canUsePictureInPicture(view.webContents.getURL())) {
+      return { ok: false, error: 'Picture-in-picture is disabled for this site.' };
+    }
+    const result = await view.webContents.executeJavaScript(TOGGLE_PIP_SCRIPT, true);
+    return result ?? { ok: false, error: 'The page did not respond.' };
+  }
+
+  async toggleMediaPlayback(id: string): Promise<MediaActionResult> {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return { ok: false, error: 'This tab is not loaded.' };
+    const result = await view.webContents.executeJavaScript(TOGGLE_MEDIA_PLAYBACK_SCRIPT, true);
+    return result ?? { ok: false, error: 'The page did not respond.' };
   }
 
   /** Hibernates every background tab that is safe to reclaim. */
@@ -540,6 +563,8 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:pick-element', (host, id) => host.pickElement(requireString(id, 'tab id')));
   on('tabs:print', (host, id) => host.print(requireString(id, 'tab id')));
   on('tabs:print-to-pdf', (host, id) => host.printToPDF(requireString(id, 'tab id')));
+  on('tabs:toggle-picture-in-picture', (host, id) => host.togglePictureInPicture(requireString(id, 'tab id')));
+  on('tabs:toggle-media-playback', (host, id) => host.toggleMediaPlayback(requireString(id, 'tab id')));
   on('tabs:memory', (host) => host.memory());
   on('tabs:hibernate-background', (host) => host.hibernateBackground());
   on('tabs:find-in-page', (host, id, text, options) => {
