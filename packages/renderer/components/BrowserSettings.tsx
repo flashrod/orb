@@ -4,7 +4,7 @@ import { defaultBrowserHelp } from '../../shared/defaultBrowser';
 
 type DefaultBrowserStatus = { isDefault: boolean; platform: string };
 
-export default function BrowserSettings() {
+export default function BrowserSettings({ onExportPdf }: { onExportPdf?: () => void }) {
   const [status, setStatus] = useState<DefaultBrowserStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -92,9 +92,19 @@ export default function BrowserSettings() {
           <h2 className="orb-strong text-sm font-semibold">Page tools</h2>
           <p className="orb-muted mt-1 text-xs">Export the current page without leaving Orb.</p>
         </div>
-        <div className="orb-elevated rounded-md border orb-border px-3 py-2.5">
-          <p className="orb-strong text-xs font-medium">Save page as PDF</p>
-          <p className="orb-muted mt-1 text-[10px]">Use File → Save Page as PDF. Printing is still ⌘P.</p>
+        <div className="orb-elevated flex items-center justify-between gap-4 rounded-md border orb-border px-3 py-2.5">
+          <div>
+            <p className="orb-strong text-xs font-medium">Save page as PDF</p>
+            <p className="orb-muted mt-1 text-[10px]">Export the current page with its layout and images. Printing is still ⌘P.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onExportPdf}
+            disabled={!onExportPdf}
+            className="orb-control shrink-0 rounded-md border orb-border px-3 py-1.5 text-xs disabled:opacity-50"
+          >
+            Save PDF…
+          </button>
         </div>
       </section>
     </div>

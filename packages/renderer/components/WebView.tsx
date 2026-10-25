@@ -13,6 +13,7 @@ type WebViewHandle = {
   stopFindInPage: (action: 'clearSelection' | 'keepSelection' | 'activateSelection') => void;
   isAudible: () => boolean;
   print: () => void;
+  printToPDF: (options: { printBackground?: boolean; preferCSSPageSize?: boolean }) => Promise<Uint8Array>;
 };
 
 export default forwardRef<WebViewHandle, {
@@ -221,6 +222,11 @@ export default forwardRef<WebViewHandle, {
     print: () => {
       const webview = webviewRef.current as any;
       webview?.print();
+    },
+    printToPDF: (options) => {
+      const webview = webviewRef.current as any;
+      if (!webview) return Promise.reject(new Error('Nothing to export yet.'));
+      return webview.printToPDF(options);
     },
   }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
 

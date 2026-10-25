@@ -36,6 +36,7 @@ export type OrbShortcutAction =
   | 'default-browser'
   | 'find'
   | 'print'
+  | 'save-pdf'
   | 'close-overlays';
 
 export type { TabStateSnapshot } from './tabModel';

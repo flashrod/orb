@@ -12,6 +12,7 @@ export interface ExposedApi {
   clearProfileData: (profileId: string) => Promise<{ cleared: boolean }>;
   saveDialog: (options: any) => Promise<any>;
   openDialog: (options: any) => Promise<any>;
+  savePdf: (data: Uint8Array, suggestedName: string) => Promise<{ saved: boolean; path?: string; error?: string }>;
   getAppVersion: () => Promise<string>;
   takeLaunchUrl?: () => Promise<string | null>;
   getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;
@@ -67,6 +68,7 @@ export const exposedApi: ExposedApi = {
   clearProfileData: async () => ({ cleared: true }),
   saveDialog: async () => Promise.resolve({}),
   openDialog: async () => Promise.resolve({}),
+  savePdf: async () => ({ saved: false }),
   getAppVersion: async () => '0.1.0',
   getDefaultBrowserStatus: async () => ({ isDefault: false, platform: 'darwin' }),
   setDefaultBrowser: async () => ({ isDefault: false, platform: 'darwin' }),

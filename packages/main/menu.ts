@@ -44,6 +44,7 @@ export function createMenu(): void {
         },
         { type: 'separator' },
         { label: 'Print…', accelerator: 'CmdOrCtrl+P', click: () => dispatch('print') },
+        { label: 'Save Page as PDF…', accelerator: 'CmdOrCtrl+Shift+S', click: () => dispatch('save-pdf') },
         { type: 'separator' },
         { role: 'close' },
       ],

@@ -6,6 +6,7 @@ import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
 import { profilePartition } from '../shared/profiles';
 import { getDefaultBrowserStatus, openDefaultBrowserSettings, requestDefaultBrowser } from './defaultBrowser';
+import { savePdfBuffer } from './pdf';
 
 function requireString(value: unknown, label: string, maxLength = 2048): string {
   if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
@@ -79,6 +80,14 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:default-browser-status', () => getDefaultBrowserStatus());
   ipcMain.handle('app:set-default-browser', () => requestDefaultBrowser());
   ipcMain.handle('app:open-default-browser-settings', () => openDefaultBrowserSettings());
+
+  ipcMain.handle('pdf:save', async (event, data: unknown, suggestedName: unknown) => {
+    if (!(data instanceof Uint8Array) || data.byteLength === 0 || data.byteLength > 200 * 1024 * 1024) {
+      throw new Error('Invalid PDF data.');
+    }
+    const name = typeof suggestedName === 'string' ? suggestedName : 'page';
+    return savePdfBuffer(Buffer.from(data), name, BrowserWindow.fromWebContents(event.sender));
+  });
 
   // Toggle dev tools
   ipcMain.handle('window:toggle-devtools', (event) => {

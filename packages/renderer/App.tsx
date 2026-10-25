@@ -24,6 +24,7 @@ import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
 import { captureSession, SESSION_SNAPSHOT_KEY } from './lib/sessionSnapshot';
 import { stripTrackingParams } from '../shared/privacy';
 import { tidyTitle } from '../shared/siteBehavior';
+import { pdfFilename } from '../shared/pdf';
 import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
@@ -116,6 +117,25 @@ export default function App() {
       return;
     }
     webviewRefs.current[current.id]?.print();
+  }, []);
+
+  const exportActivePdf = useCallback(async () => {
+    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+    const current = allTabs.find((tab) => tab.id === currentTabId);
+    if (!current || current.url === 'about:blank') return;
+
+    try {
+      const data = NATIVE_TABS
+        ? await window.orbApi?.tabs.printToPDF(current.id)
+        : await webviewRefs.current[current.id]?.printToPDF({ printBackground: true, preferCSSPageSize: true });
+      if (!data || data.byteLength === 0) throw new Error('Nothing to export yet.');
+
+      const result = await window.orbApi?.savePdf(data, pdfFilename(current.title, current.url));
+      if (result?.saved) setPickerNotice(`Saved PDF to ${result.path}`);
+      else if (result?.error) throw new Error(result.error);
+    } catch (error) {
+      setPickerNotice(error instanceof Error ? error.message : 'Could not export this page.');
+    }
   }, []);
 
   const runFind = useCallback((text: string, forward: boolean, findNext: boolean) => {
@@ -468,6 +488,7 @@ export default function App() {
       else if (action === 'command-bar') setCommandBarOpen(true);
       else if (action === 'find') openFind();
       else if (action === 'print') printActive();
+      else if (action === 'save-pdf') void exportActivePdf();
       else if (action === 'focus-address') {
         requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
       }
@@ -866,7 +887,7 @@ export default function App() {
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} />}
-        {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onClose={() => setSettingsOpen(false)} />}
+        {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
         <PermissionPrompt />
         {downloadsOpen && (

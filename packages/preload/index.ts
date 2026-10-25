@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('orbApi', {
   // Dialogs
   saveDialog: (options: any) => ipcRenderer.invoke('dialog:save', options),
   openDialog: (options: any) => ipcRenderer.invoke('dialog:open', options),
+  savePdf: (data: Uint8Array, suggestedName: string) => ipcRenderer.invoke('pdf:save', data, suggestedName),
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
@@ -125,6 +126,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     pickElement: (id: string) => ipcRenderer.invoke('tabs:pick-element', id) as Promise<{ selector: string; label: string; score: number } | null>,
     findInPage: (id: string, text: string, options?: { forward?: boolean; findNext?: boolean }) => ipcRenderer.invoke('tabs:find-in-page', id, text, options ?? {}) as Promise<void>,
     print: (id: string) => ipcRenderer.invoke('tabs:print', id) as Promise<void>,
+    printToPDF: (id: string) => ipcRenderer.invoke('tabs:print-to-pdf', id) as Promise<Uint8Array | null>,
     memory: () => ipcRenderer.invoke('tabs:memory') as Promise<{ id: string; pid: number | null; bytes: number }[]>,
     hibernateBackground: () => ipcRenderer.invoke('tabs:hibernate-background') as Promise<string[]>,
     stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => ipcRenderer.invoke('tabs:stop-find-in-page', id, action ?? 'clearSelection') as Promise<void>,
@@ -149,6 +151,7 @@ declare global {
       clearProfileData: (profileId: string) => Promise<{ cleared: boolean }>;
       saveDialog: (options: any) => Promise<any>;
       openDialog: (options: any) => Promise<any>;
+      savePdf: (data: Uint8Array, suggestedName: string) => Promise<{ saved: boolean; path?: string; error?: string }>;
       getAppVersion: () => Promise<string>;
       takeLaunchUrl: () => Promise<string | null>;
       getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;
@@ -208,6 +211,7 @@ declare global {
         pickElement: (id: string) => Promise<{ selector: string; label: string; score: number } | null>;
         findInPage: (id: string, text: string, options?: { forward?: boolean; findNext?: boolean }) => Promise<void>;
         print: (id: string) => Promise<void>;
+        printToPDF: (id: string) => Promise<Uint8Array | null>;
         memory: () => Promise<{ id: string; pid: number | null; bytes: number }[]>;
         hibernateBackground: () => Promise<string[]>;
         stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => Promise<void>;

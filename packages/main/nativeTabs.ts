@@ -204,6 +204,17 @@ export class NativeTabHost {
     view.webContents.print({ printBackground: true });
   }
 
+  /** Renders a tab to PDF data for the save dialog. */
+  async printToPDF(id: string): Promise<Uint8Array | null> {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return null;
+    const pdf = await view.webContents.printToPDF({
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
+    return new Uint8Array(pdf);
+  }
+
   /** Hibernates every background tab that is safe to reclaim. */
   hibernateBackground(): string[] {
     const snapshot = this.manager.snapshot();
@@ -528,6 +539,7 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:apply-memory-budget', (host) => host.applyMemoryBudget());
   on('tabs:pick-element', (host, id) => host.pickElement(requireString(id, 'tab id')));
   on('tabs:print', (host, id) => host.print(requireString(id, 'tab id')));
+  on('tabs:print-to-pdf', (host, id) => host.printToPDF(requireString(id, 'tab id')));
   on('tabs:memory', (host) => host.memory());
   on('tabs:hibernate-background', (host) => host.hibernateBackground());
   on('tabs:find-in-page', (host, id, text, options) => {
