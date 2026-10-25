@@ -49,6 +49,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; if (location.hash && location.hash !== '#top') { var id = location.hash.slice(1); requestAnimationFrame(function () { document.getElementById(id)?.scrollIntoView(); }); } else { window.scrollTo(0, 0); }",
+          }}
+        />
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
