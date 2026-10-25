@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BoostRecord, NewBoost } from '../../shared/boosts';
+import { bestBoostForDomain, BoostRecord, NewBoost } from '../../shared/boosts';
 
 export type Boost = BoostRecord;
 
@@ -73,6 +73,6 @@ export const useBoostStore = create<BoostStore>((set, get) => ({
   },
 
   getBoostForDomain: (domain: string) => {
-    return get().boosts.find((boost) => boost.domain === domain.toLowerCase());
+    return bestBoostForDomain(get().boosts, domain);
   },
 }));

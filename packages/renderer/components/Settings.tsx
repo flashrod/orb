@@ -62,7 +62,7 @@ function SectionHeading({ title, detail }: { title: string; detail: string }) {
   return <div className="mb-4"><h2 className="orb-strong text-sm font-semibold">{title}</h2><p className="orb-muted mt-1 text-xs">{detail}</p></div>;
 }
 
-export default function Settings({ onClose, onNavigate, activeUrl, initialSection = 'appearance', onExportPdf }: { onClose: () => void; onNavigate: (url: string) => void; activeUrl?: string; initialSection?: SettingsSection; onExportPdf?: () => void }) {
+export default function Settings({ onClose, onNavigate, activeUrl, initialSection = 'appearance', onExportPdf, onPreviewBoost }: { onClose: () => void; onNavigate: (url: string) => void; activeUrl?: string; initialSection?: SettingsSection; onExportPdf?: () => void; onPreviewBoost?: (boost: { domain: string; css: string; js: string }) => void }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const { searchProvider, setSearchProvider } = useBrowserPreferencesStore();
   const { order, hidden, move, toggleHidden, reset } = useToolbarStore();
@@ -222,7 +222,7 @@ export default function Settings({ onClose, onNavigate, activeUrl, initialSectio
 
             {section === 'history' && <HistorySettings />}
 
-            {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor /></div>}
+            {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor onPreview={onPreviewBoost} /></div>}
 
             {section === 'profiles' && <ProfilesWorkspacesSettings />}
 

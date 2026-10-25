@@ -129,6 +129,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     printToPDF: (id: string) => ipcRenderer.invoke('tabs:print-to-pdf', id) as Promise<Uint8Array | null>,
     togglePictureInPicture: (id: string) => ipcRenderer.invoke('tabs:toggle-picture-in-picture', id) as Promise<{ ok: boolean; active?: boolean; error?: string }>,
     toggleMediaPlayback: (id: string) => ipcRenderer.invoke('tabs:toggle-media-playback', id) as Promise<{ ok: boolean; playing?: boolean; error?: string }>,
+    executeBoostJavaScript: (id: string, code: string) => ipcRenderer.invoke('tabs:execute-boost-javascript', id, code) as Promise<void>,
     memory: () => ipcRenderer.invoke('tabs:memory') as Promise<{ id: string; pid: number | null; bytes: number }[]>,
     hibernateBackground: () => ipcRenderer.invoke('tabs:hibernate-background') as Promise<string[]>,
     stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => ipcRenderer.invoke('tabs:stop-find-in-page', id, action ?? 'clearSelection') as Promise<void>,
@@ -216,6 +217,7 @@ declare global {
         printToPDF: (id: string) => Promise<Uint8Array | null>;
         togglePictureInPicture: (id: string) => Promise<{ ok: boolean; active?: boolean; error?: string }>;
         toggleMediaPlayback: (id: string) => Promise<{ ok: boolean; playing?: boolean; error?: string }>;
+        executeBoostJavaScript: (id: string, code: string) => Promise<void>;
         memory: () => Promise<{ id: string; pid: number | null; bytes: number }[]>;
         hibernateBackground: () => Promise<string[]>;
         stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => Promise<void>;

@@ -1,6 +1,7 @@
 import React, { forwardRef, useEffect, useRef, useState, useCallback, useImperativeHandle } from 'react';
 import { pickPageElement, PickedElement } from '../lib/elementPicker';
 import { profilePartition } from '../lib/profiles';
+import { useBoostStore } from '../stores/boosts';
 import {
   TOGGLE_MEDIA_PLAYBACK_SCRIPT,
   TOGGLE_PIP_SCRIPT,
@@ -21,6 +22,7 @@ type WebViewHandle = {
   printToPDF: (options: { printBackground?: boolean; preferCSSPageSize?: boolean }) => Promise<Uint8Array>;
   togglePictureInPicture: () => Promise<MediaActionResult>;
   toggleMediaPlayback: () => Promise<MediaActionResult>;
+  executeJavaScript: (code: string) => Promise<unknown>;
 };
 
 export default forwardRef<WebViewHandle, {
@@ -114,6 +116,12 @@ export default forwardRef<WebViewHandle, {
       onUrlChange?.(currentUrl);
     };
 
+    const handleInPageNavigation = (event: any) => {
+      const wv = webview as any;
+      const currentUrl = event?.url || (wv.getURL ? wv.getURL() : '');
+      onUrlChange?.(currentUrl);
+    };
+
     const handleDidStopLoading = () => {
       setIsLoading(false);
       onLoadingChange?.(false);
@@ -141,7 +149,8 @@ export default forwardRef<WebViewHandle, {
       if (event.channel === 'orb:glance-link' && typeof event.args?.[0] === 'string') onGlanceLink?.(event.args[0]);
     };
     const handleDomReady = () => {
-      void (webview as any).executeJavaScript(`(() => {
+      const wv = webview as any;
+      void wv.executeJavaScript(`(() => {
         if (window.__orbGlanceLinkTracking) return;
         window.__orbGlanceLinkTracking = true;
         document.addEventListener('pointerover', (event) => {
@@ -149,7 +158,21 @@ export default forwardRef<WebViewHandle, {
           const anchor = target instanceof Element ? target.closest('a[href]') : null;
           if (anchor && window.orbPageApi?.suggestGlanceLink) window.orbPageApi.suggestGlanceLink(anchor.href);
         }, true);
-      })()`);
+      })()`).catch(() => undefined);
+
+      void (async () => {
+        try {
+          const boostStore = useBoostStore.getState();
+          if (!boostStore.loaded) await boostStore.loadBoosts();
+          const host = new URL(wv.getURL()).hostname;
+          const boost = useBoostStore.getState().getBoostForDomain(host);
+          if (!boost?.enabled) return;
+          if (boost.css.trim()) await applyCSS(boost.css);
+          if (boost.js.trim()) await wv.executeJavaScript(boost.js, true);
+        } catch {
+          // A broken Boost should never block the page itself.
+        }
+      })();
     };
 
     const handleFaviconUpdated = (event: any, faviconUrls: string[]) => {
@@ -169,7 +192,7 @@ export default forwardRef<WebViewHandle, {
 
     webview.addEventListener('did-start-loading', handleDidStartLoading);
     webview.addEventListener('did-navigate', handleNavigation);
-    webview.addEventListener('did-navigate-in-page', handleNavigation);
+    webview.addEventListener('did-navigate-in-page', handleInPageNavigation);
     webview.addEventListener('did-stop-loading', handleDidStopLoading);
     webview.addEventListener('did-fail-load', handleDidFailLoad);
     webview.addEventListener('ipc-message', handleIpcMessage);
@@ -181,7 +204,7 @@ export default forwardRef<WebViewHandle, {
     return () => {
       webview.removeEventListener('did-start-loading', handleDidStartLoading);
       webview.removeEventListener('did-navigate', handleNavigation);
-      webview.removeEventListener('did-navigate-in-page', handleNavigation);
+      webview.removeEventListener('did-navigate-in-page', handleInPageNavigation);
       webview.removeEventListener('did-stop-loading', handleDidStopLoading);
       webview.removeEventListener('did-fail-load', handleDidFailLoad);
       webview.removeEventListener('ipc-message', handleIpcMessage);
@@ -201,6 +224,7 @@ export default forwardRef<WebViewHandle, {
     onGlanceLink,
     onFoundInPage,
     clearInsertedCSS,
+    applyCSS,
   ]);
 
   // Expose navigation methods to parent
@@ -244,6 +268,11 @@ export default forwardRef<WebViewHandle, {
       const webview = webviewRef.current as any;
       if (!webview) return Promise.resolve({ ok: false, error: 'This tab is not loaded.' });
       return webview.executeJavaScript(TOGGLE_MEDIA_PLAYBACK_SCRIPT, true);
+    },
+    executeJavaScript: (code) => {
+      const webview = webviewRef.current as any;
+      if (!webview) return Promise.reject(new Error('This tab is not loaded.'));
+      return webview.executeJavaScript(code, true);
     },
   }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
 

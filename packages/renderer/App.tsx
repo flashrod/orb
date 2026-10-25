@@ -26,6 +26,7 @@ import { stripTrackingParams } from '../shared/privacy';
 import { tidyTitle } from '../shared/siteBehavior';
 import { pdfFilename } from '../shared/pdf';
 import { canUsePictureInPicture } from '../shared/media';
+import { boostMatchesDomain } from '../shared/boosts';
 import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
@@ -172,6 +173,41 @@ export default function App() {
       if (!result.ok) setPickerNotice(result.error || 'Could not control media on this page.');
     } catch (error) {
       setPickerNotice(error instanceof Error ? error.message : 'Could not control media on this page.');
+    }
+  }, []);
+
+  const previewBoost = useCallback(async (boost: { domain: string; css: string; js: string }) => {
+    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+    const current = allTabs.find((tab) => tab.id === currentTabId);
+    if (!current || current.url === 'about:blank') {
+      setPickerNotice('Open a website before previewing a Boost.');
+      return;
+    }
+
+    let host = '';
+    try {
+      host = new URL(current.url).hostname;
+    } catch {
+      setPickerNotice('This page does not support Boosts.');
+      return;
+    }
+    if (!boostMatchesDomain(boost.domain, host)) {
+      setPickerNotice(`Open a page on ${boost.domain} to preview this Boost.`);
+      return;
+    }
+
+    try {
+      if (NATIVE_TABS) {
+        if (boost.css.trim()) await window.orbApi?.tabs.applyCss(current.id, boost.css);
+        if (boost.js.trim()) await window.orbApi?.tabs.executeBoostJavaScript(current.id, boost.js);
+      } else {
+        const view = webviewRefs.current[current.id];
+        if (boost.css.trim()) await view?.applyCSS(boost.css);
+        if (boost.js.trim()) await view?.executeJavaScript(boost.js);
+      }
+      setPickerNotice(`Previewing the Boost for ${boost.domain}. Reload the page to reset it.`);
+    } catch (error) {
+      setPickerNotice(error instanceof Error ? error.message : 'Could not preview this Boost.');
     }
   }, []);
 
@@ -926,7 +962,7 @@ export default function App() {
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} />}
-        {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onClose={() => setSettingsOpen(false)} />}
+        {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onPreviewBoost={previewBoost} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
         <PermissionPrompt />
         {downloadsOpen && (

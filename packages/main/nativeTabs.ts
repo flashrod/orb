@@ -1,8 +1,10 @@
 import path from 'node:path';
-import { BrowserWindow, Menu, WebContentsView, app, clipboard, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, Menu, WebContentsView, app, clipboard, ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import { TabManager, type TabView, type TabViewEvent } from './tabManager';
 import { orbSessionFor, type SessionContext } from './sessions';
 import { profilePartition } from '../shared/profiles';
+import { bestBoostForDomain } from '../shared/boosts';
+import { getBoostsDatabase } from './boostsDatabase';
 import { clampBounds, type TabOpenInput, type TabStateSnapshot, type ViewBounds } from '../shared/tabModel';
 import { initAdBlocker } from './adBlocker';
 import { PrewarmPool } from './prewarmPool';
@@ -37,6 +39,8 @@ export class NativeTabHost {
   private readonly views = new Map<string, WebContentsView>();
   private readonly snapshots = new Map<string, string>();
   private readonly scrollPositions = new Map<string, number>();
+  private readonly insertedCssKeys = new Map<string, string[]>();
+  private readonly appliedBoosts = new Map<string, string>();
   private readonly prewarm: PrewarmPool<PrewarmedView>;
   private split: { id: string; bounds: ViewBounds } | null = null;
   private pageVisible = true;
@@ -238,6 +242,13 @@ export class NativeTabHost {
     return result ?? { ok: false, error: 'The page did not respond.' };
   }
 
+  /** Runs a Boost's JavaScript in a tab for the live editor preview. */
+  async executeBoostJavaScript(id: string, code: string): Promise<void> {
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed() || !code.trim()) return;
+    await view.webContents.executeJavaScript(code, true);
+  }
+
   /** Hibernates every background tab that is safe to reclaim. */
   hibernateBackground(): string[] {
     const snapshot = this.manager.snapshot();
@@ -275,14 +286,57 @@ export class NativeTabHost {
     view.webContents.stopFindInPage(action);
   }
 
-  /** Applies a Boost's CSS to one tab until the next navigation. */
+  /** Applies a Boost's CSS to one tab until the next full navigation. */
   async applyCss(id: string, css: string): Promise<void> {
     const view = this.views.get(id);
     if (!view || view.webContents.isDestroyed() || !css.trim()) return;
     try {
-      await view.webContents.insertCSS(css);
+      const key = await view.webContents.insertCSS(css);
+      const keys = this.insertedCssKeys.get(id) ?? [];
+      keys.push(key);
+      this.insertedCssKeys.set(id, keys);
     } catch {
       // Best effort: a failed Boost only costs styling.
+    }
+  }
+
+  private async clearInsertedCss(id: string): Promise<void> {
+    const keys = this.insertedCssKeys.get(id) ?? [];
+    this.insertedCssKeys.delete(id);
+    const view = this.views.get(id);
+    if (!view || view.webContents.isDestroyed()) return;
+    await Promise.all(keys.map((key) => view.webContents.removeInsertedCSS(key).catch(() => undefined)));
+  }
+
+  /** Applies the active Boost for the page that just finished loading. */
+  private async applyBoost(tabId: string, contents: WebContents): Promise<void> {
+    if (contents.isDestroyed()) return;
+    let host = '';
+    try {
+      host = new URL(contents.getURL()).hostname;
+    } catch {
+      return;
+    }
+    if (!host) return;
+
+    try {
+      const boosts = (await getBoostsDatabase()).getAll().filter((boost) => boost.enabled);
+      const boost = bestBoostForDomain(boosts, host);
+      if (!boost) return;
+
+      const appliedKey = `${contents.getURL()}|${boost.id}|${boost.updatedAt}`;
+      if (this.appliedBoosts.get(tabId) === appliedKey) return;
+      this.appliedBoosts.set(tabId, appliedKey);
+
+      if (boost.css.trim()) {
+        const key = await contents.insertCSS(boost.css);
+        const keys = this.insertedCssKeys.get(tabId) ?? [];
+        keys.push(key);
+        this.insertedCssKeys.set(tabId, keys);
+      }
+      if (boost.js.trim()) await contents.executeJavaScript(boost.js, true);
+    } catch {
+      // A broken Boost should never block the page itself.
     }
   }
 
@@ -365,6 +419,15 @@ export class NativeTabHost {
     contents.on('did-stop-loading', () => emit({ type: 'did-stop-loading', ...history() }));
     contents.on('did-navigate', () => emit({ type: 'did-navigate', url: contents.getURL(), ...history() }));
     contents.on('did-navigate-in-page', () => emit({ type: 'did-navigate', url: contents.getURL(), ...history() }));
+    contents.on('did-start-navigation', (_event, _url, isInPlace, isMainFrame) => {
+      if (isMainFrame && !isInPlace) {
+        this.appliedBoosts.delete(tabId);
+        void this.clearInsertedCss(tabId);
+      }
+    });
+    contents.on('dom-ready', () => {
+      void this.applyBoost(tabId, contents);
+    });
     contents.on('page-title-updated', (_event, title) => emit({ type: 'page-title-updated', title }));
     contents.on('page-favicon-updated', (_event, favicons) => {
       const favicon = Array.isArray(favicons) ? favicons[0] : '';
@@ -424,6 +487,8 @@ export class NativeTabHost {
       goForward: () => contents.navigationHistory.goForward(),
       destroy: () => {
         this.views.delete(tabId);
+        this.insertedCssKeys.delete(tabId);
+        this.appliedBoosts.delete(tabId);
         if (!this.window.isDestroyed()) this.window.contentView.removeChildView(view);
         if (!contents.isDestroyed()) contents.close();
       },
@@ -565,6 +630,10 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:print-to-pdf', (host, id) => host.printToPDF(requireString(id, 'tab id')));
   on('tabs:toggle-picture-in-picture', (host, id) => host.togglePictureInPicture(requireString(id, 'tab id')));
   on('tabs:toggle-media-playback', (host, id) => host.toggleMediaPlayback(requireString(id, 'tab id')));
+  on('tabs:execute-boost-javascript', (host, id, code) => {
+    if (typeof code !== 'string' || code.length > 1_000_000) throw new Error('Invalid Boost JavaScript.');
+    return host.executeBoostJavaScript(requireString(id, 'tab id'), code);
+  });
   on('tabs:memory', (host) => host.memory());
   on('tabs:hibernate-background', (host) => host.hibernateBackground());
   on('tabs:find-in-page', (host, id, text, options) => {
