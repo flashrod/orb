@@ -33,6 +33,7 @@ export type OrbShortcutAction =
   | 'focus-address'
   | 'toggle-compact'
   | 'settings'
+  | 'default-browser'
   | 'find'
   | 'print'
   | 'close-overlays';

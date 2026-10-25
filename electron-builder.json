@@ -1,6 +1,12 @@
 {
   "appId": "org.orb.browser",
   "productName": "Orb",
+  "protocols": [
+    {
+      "name": "Web URL",
+      "schemes": ["http", "https"]
+    }
+  ],
   "afterSign": "scripts/notarize.cjs",
   "mac": {
     "target": [

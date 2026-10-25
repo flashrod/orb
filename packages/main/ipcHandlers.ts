@@ -5,6 +5,7 @@ import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
 import { profilePartition } from '../shared/profiles';
+import { getDefaultBrowserStatus, openDefaultBrowserSettings, requestDefaultBrowser } from './defaultBrowser';
 
 function requireString(value: unknown, label: string, maxLength = 2048): string {
   if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
@@ -74,6 +75,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:get-version', () => {
     return process.env.npm_package_version || '0.1.0';
   });
+
+  ipcMain.handle('app:default-browser-status', () => getDefaultBrowserStatus());
+  ipcMain.handle('app:set-default-browser', () => requestDefaultBrowser());
+  ipcMain.handle('app:open-default-browser-settings', () => openDefaultBrowserSettings());
 
   // Toggle dev tools
   ipcMain.handle('window:toggle-devtools', (event) => {

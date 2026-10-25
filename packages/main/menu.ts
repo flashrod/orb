@@ -18,6 +18,7 @@ export function createMenu(): void {
         { role: 'about' },
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => dispatch('settings') },
+        { label: 'Set Orb as Default Browser…', click: () => dispatch('default-browser') },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },

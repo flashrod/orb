@@ -53,7 +53,7 @@ const NATIVE_TABS = nativeTabsEnabled();
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsSection, setSettingsSection] = useState<'appearance' | 'privacy' | 'boosts' | 'toolbar' | 'profiles'>('appearance');
+  const [settingsSection, setSettingsSection] = useState<'appearance' | 'browser' | 'privacy' | 'boosts' | 'toolbar' | 'profiles'>('appearance');
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
   const [glanceCandidate, setGlanceCandidate] = useState<{ url: string; tabId: string } | null>(null);
@@ -476,6 +476,10 @@ export default function App() {
       }
       else if (action === 'settings') {
         setSettingsSection('appearance');
+        setSettingsOpen(true);
+      }
+      else if (action === 'default-browser') {
+        setSettingsSection('browser');
         setSettingsOpen(true);
       }
       else if (action === 'close-overlays') {

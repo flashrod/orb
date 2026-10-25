@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowCounterClockwise, BookmarkSimple, Check, ClockCounterClockwise, Code, DotsSixVertical, Gauge, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, BookmarkSimple, Check, ClockCounterClockwise, Code, DotsSixVertical, Gauge, Globe, Rows, Shield, SidebarSimple, SlidersHorizontal, UsersThree, X } from '@phosphor-icons/react';
 import { MotionPreference, PaletteToken, useAppearanceStore } from '../stores/appearance';
 import BoostsEditor from './BoostsEditor';
 import { TOOLBAR_ITEMS, ToolbarItemId, useToolbarStore } from '../stores/toolbar';
@@ -10,12 +10,14 @@ import BookmarksManager from './BookmarksManager';
 import PrivacySettings from './PrivacySettings';
 import PerformanceSettings from './PerformanceSettings';
 import HistorySettings from './HistorySettings';
+import BrowserSettings from './BrowserSettings';
 import Toggle from './ui/Toggle';
 
-type SettingsSection = 'appearance' | 'privacy' | 'performance' | 'history' | 'boosts' | 'toolbar' | 'profiles' | 'bookmarks';
+type SettingsSection = 'appearance' | 'browser' | 'privacy' | 'performance' | 'history' | 'boosts' | 'toolbar' | 'profiles' | 'bookmarks';
 
 const sections: { id: SettingsSection; title: string; note: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'appearance', title: 'Appearance', note: 'Colors and browser layout', Icon: SlidersHorizontal },
+  { id: 'browser', title: 'Browser', note: 'Default browser and page tools', Icon: Globe },
   { id: 'privacy', title: 'Privacy & Shields', note: 'Blocking and protections', Icon: Shield },
   { id: 'performance', title: 'Performance', note: 'Tab memory and hibernation', Icon: Gauge },
   { id: 'history', title: 'History', note: 'Visits and autocomplete', Icon: ClockCounterClockwise },
@@ -211,6 +213,8 @@ export default function Settings({ onClose, onNavigate, activeUrl, initialSectio
                 </section>
               </div>
             )}
+
+            {section === 'browser' && <BrowserSettings />}
 
             {section === 'privacy' && <PrivacySettings activeUrl={activeUrl} />}
 
