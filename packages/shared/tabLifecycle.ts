@@ -3,8 +3,9 @@
  * main-process TabManager. Pure functions only.
  */
 
-export type TabState = 'live' | 'throttled' | 'hibernated';
+import { isKeepalive, isSuspensionExempt } from './siteBehavior';
 
+export type TabState = 'live' | 'throttled' | 'hibernated';
 export interface MemoryGuardTab {
   id: string;
   isPinned: boolean;
@@ -12,6 +13,8 @@ export interface MemoryGuardTab {
   inCall: boolean;
   lastActiveAt: number;
   state: TabState;
+  /** Current URL, used to keep communication and editor tabs alive. */
+  url?: string;
 }
 
 /** Background tabs idle for this long are hibernated. */
@@ -22,7 +25,8 @@ export const MEMORY_GUARD_MAX_LIVE_TABS = 20;
 
 /**
  * A tab may only be hibernated when it is live, unprotected and idle.
- * Protected: pinned, audible, in a call, or currently focused by the user.
+ * Protected: pinned, audible, in a call, a keepalive site, or currently
+ * focused by the user.
  */
 export function shouldHibernate(
   tab: MemoryGuardTab,
@@ -31,11 +35,15 @@ export function shouldHibernate(
   activeTabId?: string | null,
 ): boolean {
   if (tab.state !== 'live') return false;
-  if (tab.isPinned) return false;
-  if (tab.isAudible) return false;
-  if (tab.inCall) return false;
+  if (isProtectedTab(tab)) return false;
   if (activeTabId && tab.id === activeTabId) return false;
   return now - tab.lastActiveAt > idleThresholdMs;
+}
+
+function isProtectedTab(tab: MemoryGuardTab): boolean {
+  if (tab.isPinned || tab.isAudible || tab.inCall) return true;
+  if (!tab.url) return false;
+  return isKeepalive(tab.url) || isSuspensionExempt(tab.url);
 }
 
 /**
@@ -66,7 +74,7 @@ export function selectTabsToHibernate(
     for (const tab of oldestFirst) {
       if (live <= maxLiveTabs) break;
       if (selected.has(tab.id)) continue;
-      if (tab.isPinned || tab.isAudible || tab.inCall) continue;
+      if (isProtectedTab(tab)) continue;
       if (activeTabId && tab.id === activeTabId) continue;
       selected.add(tab.id);
       live -= 1;

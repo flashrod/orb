@@ -8,6 +8,7 @@ import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
 import { partitionTabsByGroup } from '../lib/tabGroups';
 import { useAppearanceStore } from '../stores/appearance';
+import { tidyTitle } from '../../shared/siteBehavior';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -70,6 +71,7 @@ export default function VerticalTabPanel({
 
   const renderTab = (tab: (typeof spaceTabs)[number], isPinned: boolean) => {
     const hostname = getHostname(tab.url);
+    const title = tidyTitle(tab.url, tab.title) || hostname;
     return <div
       key={tab.id}
       draggable
@@ -80,18 +82,18 @@ export default function VerticalTabPanel({
       onAuxClick={(event) => { if (event.button === 1) closeTab(tab.id); }}
       onContextMenu={(event) => { event.preventDefault(); setContextTabId(tab.id); setContextPosition({ x: event.clientX, y: event.clientY }); }}
       className={`orb-vertical-row group relative flex cursor-pointer items-center rounded-lg transition-colors ${isPinned ? 'h-9 w-9 justify-center p-1' : 'min-h-10 gap-3 px-3 py-2'} ${draggingId === tab.id ? 'opacity-40' : ''} ${activeTabId === tab.id ? 'orb-accent-soft orb-strong' : 'orb-control'}`}
-      title={`${tab.title || hostname} · ${hostname}`}
+      title={`${title} · ${hostname}`}
     >
       {tab.favicon ? <img src={tab.favicon} alt="" className="h-4 w-4 shrink-0 rounded-sm" onError={(event) => (event.currentTarget.style.visibility = 'hidden')} /> : <span className="orb-accent-soft orb-accent flex h-5 w-5 shrink-0 items-center justify-center rounded-md"><Globe className="h-3 w-3" /></span>}
       {!isPinned && <>
-        <button type="button" role="tab" aria-selected={activeTabId === tab.id} onClick={() => setActiveTab(tab.id)} aria-label={tab.title || hostname} className="flex min-w-0 flex-1 flex-col text-left">
-          <span className="orb-strong truncate text-sm">{tab.title || hostname}</span>
+        <button type="button" role="tab" aria-selected={activeTabId === tab.id} onClick={() => setActiveTab(tab.id)} aria-label={title} className="flex min-w-0 flex-1 flex-col text-left">
+          <span className="orb-strong truncate text-sm">{title}</span>
           <span className="orb-muted truncate text-xs">{hostname}</span>
         </button>
-        <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} className="orb-control flex h-6 w-6 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"><X className="h-3 w-3" /></button>
+        <button type="button" aria-label={`Close ${title}`} onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} className="orb-control flex h-6 w-6 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"><X className="h-3 w-3" /></button>
       </>}
-      {isPinned && <button type="button" role="tab" aria-selected={activeTabId === tab.id} aria-label={`Pinned tab: ${tab.title || hostname}`} onClick={() => setActiveTab(tab.id)} className="absolute inset-0 rounded-lg" />}
-      {isPinned && <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} className="orb-control absolute -right-1 -top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"><X className="h-2.5 w-2.5" /></button>}
+      {isPinned && <button type="button" role="tab" aria-selected={activeTabId === tab.id} aria-label={`Pinned tab: ${title}`} onClick={() => setActiveTab(tab.id)} className="absolute inset-0 rounded-lg" />}
+      {isPinned && <button type="button" aria-label={`Close ${title}`} onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} className="orb-control absolute -right-1 -top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"><X className="h-2.5 w-2.5" /></button>}
     </div>;
   };
 

@@ -6,6 +6,8 @@ import { useProfileStore } from '../stores/profiles';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 import { resolveAddressOrSearch } from '../lib/navigation';
 import { countRestorableTabs, restoreLastSession } from '../lib/restoreSession';
+import { dedupHostKey, shouldDedupByHost } from '../lib/commandBar';
+import { tidyTitle } from '../../shared/siteBehavior';
 
 interface CommandResult {
   id: string;
@@ -93,7 +95,7 @@ export default function CommandBar({
     const lower = q.toLowerCase().trim();
     const results: CommandResult[] = [];
 
-    // 1. Open tabs (dedup by host - show most recent tab per host)
+    // 1. Open tabs (collapse only hosts where duplicate tabs are noise)
     const tabResults = buildTabResults(lower);
     results.push(...tabResults);
 
@@ -234,13 +236,16 @@ export default function CommandBar({
       if (!tab.title.toLowerCase().includes(q) && !tab.url.toLowerCase().includes(q)) continue;
 
       const host = new URL(tab.url).hostname;
-      if (seenHosts.has(host)) continue; // dedup by host
-      seenHosts.add(host);
+      if (shouldDedupByHost(host)) {
+        const key = dedupHostKey(host);
+        if (seenHosts.has(key)) continue;
+        seenHosts.add(key);
+      }
 
       results.push({
         id: `tab-${tab.id}`,
         type: 'tab',
-        title: tab.title || host,
+        title: tidyTitle(tab.url, tab.title) || host,
         subtitle: host,
         icon: getIcon('globe', 'w-4 h-4'),
         action: () => {

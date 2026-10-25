@@ -215,6 +215,7 @@ export class NativeTabHost {
         inCall: false,
         lastActiveAt: tab.lastActiveAt,
         state: tab.lifecycle === 'hibernated' ? 'hibernated' as const : 'live' as const,
+        url: tab.url,
       })),
       Date.now(),
       0,

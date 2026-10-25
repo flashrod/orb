@@ -23,6 +23,7 @@ import { bindMainEvents } from './lib/mainEvents';
 import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
 import { captureSession, SESSION_SNAPSHOT_KEY } from './lib/sessionSnapshot';
 import { stripTrackingParams } from '../shared/privacy';
+import { tidyTitle } from '../shared/siteBehavior';
 import FindBar from './components/FindBar';
 import { useAnyShellOverlay } from './stores/shellOverlay';
 import {
@@ -536,6 +537,7 @@ export default function App() {
           inCall: false,
           lastActiveAt: tabLastActiveAtRef.current[tab.id] ?? now,
           state: 'live',
+          url: tab.url,
         }));
 
       const toHibernate = selectTabsToHibernate(
@@ -684,10 +686,11 @@ export default function App() {
     }
     if (tab.isUnloaded) {
       const host = (() => { try { return new URL(tab.url).hostname; } catch { return tab.url; } })();
+      const title = tidyTitle(tab.url, tab.title) || host;
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
           <p className="orb-strong text-sm font-medium">Tab unloaded</p>
-          <p className="orb-muted max-w-sm truncate text-xs">{tab.title || host}</p>
+          <p className="orb-muted max-w-sm truncate text-xs">{title}</p>
           <button type="button" onClick={() => useTabStore.getState().loadTab(tab.id)} className="orb-control mt-1 rounded-md border orb-border px-3 py-1.5 text-xs">Load tab</button>
         </div>
       );

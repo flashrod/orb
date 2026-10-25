@@ -39,6 +39,12 @@ describe('memory guard (idle tab hibernation)', () => {
     expect(shouldHibernate(tab({ id: '1', inCall: true, lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
   });
 
+  it('does not hibernate keepalive sites', () => {
+    expect(shouldHibernate(tab({ id: '1', url: 'https://mail.google.com/mail/u/0/#inbox', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
+    expect(shouldHibernate(tab({ id: '2', url: 'https://www.notion.so/team/page', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
+    expect(shouldHibernate(tab({ id: '3', url: 'https://app.slack.com/client/T1/C2', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
+  });
+
   it('never hibernates the active tab, even when idle', () => {
     expect(shouldHibernate(tab({ id: 'active', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS, 'active')).toBe(false);
   });
@@ -77,6 +83,15 @@ describe('memory guard (idle tab hibernation)', () => {
       tab({ id: 'idle', lastActiveAt: now - 600 * 1000 }),
     ];
     expect(selectTabsToHibernate(tabs, now, MEMORY_GUARD_IDLE_MS, 1, 'active')).toEqual(['idle']);
+  });
+
+  it('keeps keepalive sites even when over the cap', () => {
+    const tabs = [
+      tab({ id: 'notion', url: 'https://www.notion.so/team/page', lastActiveAt: now - 600 * 1000 }),
+      tab({ id: 'gmail', url: 'https://mail.google.com/mail/u/0/#inbox', lastActiveAt: now - 600 * 1000 }),
+      tab({ id: 'idle', url: 'https://example.com', lastActiveAt: now - 600 * 1000 }),
+    ];
+    expect(selectTabsToHibernate(tabs, now, MEMORY_GUARD_IDLE_MS, 1)).toEqual(['idle']);
   });
 
   it('returns nothing when under the cap and nothing is idle', () => {

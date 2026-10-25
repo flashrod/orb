@@ -264,6 +264,7 @@ export class TabManager {
         inCall: false,
         lastActiveAt: tab.lastActiveAt,
         state: 'live' as const,
+        url: tab.url,
       }));
 
     const ids = selectTabsToHibernate(

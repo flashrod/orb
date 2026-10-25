@@ -7,6 +7,7 @@ import TabContextMenu from './TabContextMenu';
 import { chooseSplitPair } from '../lib/splitView';
 import { useSplitViewStore } from '../stores/splitView';
 import { useShellOverlay } from '../stores/shellOverlay';
+import { tidyTitle } from '../../shared/siteBehavior';
 
 const hasMacTrafficLights = /Mac/i.test(navigator.platform || navigator.userAgent);
 
@@ -56,6 +57,7 @@ export default function TabBar({
 
   const renderTab = (tab: Tab) => {
     const hostname = getHostname(tab.url);
+    const title = tidyTitle(tab.url, tab.title) || hostname;
     const isActive = activeTabId === tab.id;
     return <div key={tab.id} draggable onDragStart={(event) => { setDraggingId(tab.id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', tab.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
       event.preventDefault();
@@ -66,11 +68,11 @@ export default function TabBar({
       const sourceIndex = allTabs.findIndex((item) => item.id === id);
       moveTab(id, activeSpaceId, targetIndex - (sourceIndex < targetIndex ? 1 : 0));
     }} onAuxClick={(event) => { if (event.button === 1) closeTab(tab.id); }} onContextMenu={(event) => { event.preventDefault(); setContextTabId(tab.id); setContextPosition({ x: event.clientX, y: event.clientY }); }} className={`group relative flex h-full shrink-0 items-end ${draggingId === tab.id ? 'opacity-40' : ''}`}>
-      <button type="button" role="tab" aria-selected={isActive} aria-label={tab.isPinned ? `Pinned tab: ${tab.title || hostname}` : tab.title || hostname} title={`${tab.title || hostname} · ${hostname}`} onClick={() => setActiveTab(tab.id)} className={`orb-tab relative flex h-[37px] items-center rounded-t-[9px] border border-b-0 text-left transition-colors ${tab.isPinned ? 'w-9 justify-center px-0' : 'min-w-[128px] max-w-[210px] gap-2 px-3 pr-8'} ${isActive ? 'orb-tab-active orb-border' : 'border-transparent'}`}>
+      <button type="button" role="tab" aria-selected={isActive} aria-label={tab.isPinned ? `Pinned tab: ${title}` : title} title={`${title} · ${hostname}`} onClick={() => setActiveTab(tab.id)} className={`orb-tab relative flex h-[37px] items-center rounded-t-[9px] border border-b-0 text-left transition-colors ${tab.isPinned ? 'w-9 justify-center px-0' : 'min-w-[128px] max-w-[210px] gap-2 px-3 pr-8'} ${isActive ? 'orb-tab-active orb-border' : 'border-transparent'}`}>
         {tab.favicon ? <img src={tab.favicon} alt="" className="h-4 w-4 shrink-0 rounded-sm" onError={(event) => (event.currentTarget.style.visibility = 'hidden')} /> : <span className="orb-accent-soft orb-accent flex h-5 w-5 shrink-0 items-center justify-center rounded-md"><Globe aria-hidden="true" className="h-3 w-3" /></span>}
-        {!tab.isPinned && <span className="orb-strong min-w-0 flex-1 truncate text-[12px] font-medium">{tab.title || hostname}</span>}
+        {!tab.isPinned && <span className="orb-strong min-w-0 flex-1 truncate text-[12px] font-medium">{title}</span>}
       </button>
-      <button type="button" aria-label={`Close ${tab.title || hostname}`} onClick={() => closeTab(tab.id)} className={`orb-control absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${tab.isPinned ? 'right-0' : 'right-1'}`}><X className="h-3 w-3" /></button>
+      <button type="button" aria-label={`Close ${title}`} onClick={() => closeTab(tab.id)} className={`orb-control absolute top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100 ${tab.isPinned ? 'right-0' : 'right-1'}`}><X className="h-3 w-3" /></button>
     </div>;
   };
 
