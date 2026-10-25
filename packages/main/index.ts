@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell, type WebContents } from 'electron';
 import path from 'node:path';
 import { registerIpcHandlers } from './ipcHandlers';
+import { registerCertificateErrorHandler } from './certificates';
 import { NativeTabHost, registerNativeTabHandlers } from './nativeTabs';
 import { adBlocker, initAdBlocker } from './adBlocker';
 import { stripTrackingParams } from '../shared/privacy';
@@ -146,6 +147,8 @@ function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input):
 
 app.whenReady().then(async () => {
   if (!singleInstance) return;
+
+  registerCertificateErrorHandler();
 
   // Per-site permission choices, persisted under userData.
   const permissionStore = new PermissionStore();
