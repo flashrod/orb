@@ -1,42 +1,103 @@
-'use client';
-
 import Link from 'next/link';
+import Logo from '@/components/Logo';
+
+const columns = [
+  {
+    title: 'Product',
+    links: [
+      { label: 'Overview', href: '#top' },
+      { label: 'What you get', href: '#product' },
+      { label: 'Privacy', href: '#privacy' },
+      { label: 'FAQ', href: '#faq' },
+    ],
+  },
+  {
+    title: 'Project',
+    links: [
+      { label: 'GitHub', href: 'https://github.com/flashrod/orb' },
+      { label: 'Roadmap', href: 'https://github.com/flashrod/orb/blob/main/ROADMAP.md' },
+      { label: 'Issues', href: 'https://github.com/flashrod/orb/issues' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { label: 'Privacy policy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
+    ],
+  },
+];
 
 export default function Footer() {
   return (
-    <footer className="border-t border-[#CFC7BA] bg-white py-16 px-6">
-      <div className="container-max flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex items-center gap-2">
-          <svg width="20" height="20" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="14" cy="14" r="12" stroke="#0F0F0F" strokeWidth="2" />
-            <path d="M14 8a6 6 0 1 0 0 12a6 6 0 0 0 0-12Z" stroke="#0F0F0F" strokeWidth="2" />
-            <path d="M14 14a2.5 2.5 0 1 0 0 4a2.5 2.5 0 0 0 0-4Z" stroke="#0F0F0F" strokeWidth="1.5" />
-          </svg>
-          <span className="font-serif font-semibold text-[#0F0F0F] text-xs tracking-tight">
-            Orb
-          </span>
-        </div>
-        <div className="flex items-center gap-6 text-[10px] text-[#6E6B65] uppercase tracking-widest">
-          <div className="flex items-center gap-12">
+    <footer className="border-t border-line bg-surface px-6 py-12">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-sm">
             <Link
-              href="https://github.com/flashrod/orb"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#A0522D] transition-colors"
+              href="/"
+              aria-label="Orb home"
+              className="inline-flex items-center gap-2 text-ink transition-colors duration-700 ease-fluid hover:text-accent-strong"
             >
-              GitHub
+              <Logo className="h-6 w-6" />
+              <span className="text-base font-semibold tracking-tight">Orb</span>
             </Link>
+            <p className="mt-3 text-sm text-muted">
+              A calmer, private browser for macOS. Built in the open.
+            </p>
+            <p className="mt-3 text-xs text-muted">Open source under MIT.</p>
           </div>
-          <p className="whitespace-nowrap">
-            Developed by{' '}
+
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+            {columns.map((column) => (
+              <div key={column.title}>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                  {column.title}
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {column.links.map((link) => {
+                    const external = link.href.startsWith('http');
+                    return (
+                      <li key={link.label}>
+                        {external ? (
+                          <a
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-ink transition-colors duration-700 ease-fluid hover:text-accent-strong"
+                          >
+                            {link.label}
+                          </a>
+                        ) : (
+                          <Link
+                            href={link.href}
+                            className="text-sm text-ink transition-colors duration-700 ease-fluid hover:text-accent-strong"
+                          >
+                            {link.label}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-12 flex flex-col gap-3 border-t border-line pt-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Orb. MIT licensed.</p>
+          <p>
+            Made by{' '}
             <a
               href="https://github.com/flashrod"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#A0522D] transition-colors"
+              className="text-ink transition-colors duration-700 ease-fluid hover:text-accent-strong"
             >
               Dylan Mascarenhas
             </a>
+            .
           </p>
         </div>
       </div>

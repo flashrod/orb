@@ -8,42 +8,26 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        orb: {
-          canvas: '#F7F6F3',
-          surface: '#FFFFFF',
-          border: '#EAEAEA',
-          'border-strong': '#D4D4D4',
-          text: '#111111',
-          'text-strong': '#0A0A0A',
-          'text-muted': '#787774',
-          hover: '#F0EFEA',
-          accent: '#A0522D',
-          'accent-soft': '#E9DDD4',
+        canvas: '#F4F1EA',
+        surface: '#FBF9F4',
+        elevated: '#FFFFFF',
+        ink: '#141310',
+        muted: '#6E6960',
+        line: '#DCD6C9',
+        accent: {
+          DEFAULT: '#A0522D',
+          strong: '#8A4526',
+          soft: '#EFE2D7',
         },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Helvetica Neue"', 'sans-serif'],
-        serif: ['"Iowan Old Style"', '"Palatino Linotype"', 'Georgia', 'serif'],
-        mono: ['"SF Mono"', 'Menlo', 'monospace'],
+        sans: ['var(--font-geist-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
-      borderRadius: {
-        none: '0',
-        sm: '4px',
-        DEFAULT: '6px',
-        md: '8px',
-        lg: '10px',
-        xl: '12px',
-      },
-      animation: {
-        reveal: 'reveal 600ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-      },
-      keyframes: {
-        reveal: {
-          '0%': { opacity: '0', transform: 'translateY(12px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
+      transitionTimingFunction: {
+        fluid: 'cubic-bezier(0.32, 0.72, 0, 1)',
       },
     },
   },
   plugins: [],
-}
+};

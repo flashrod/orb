@@ -1,73 +1,249 @@
-'use client';
-
-import { useState } from 'react';
-import Link from 'next/link';
-import Navbar from '@/components/Navbar';
+import Benefits from '@/components/Benefits';
+import BrowserMockup from '@/components/BrowserMockup';
+import Faq from '@/components/Faq';
 import Footer from '@/components/Footer';
+import Navbar from '@/components/Navbar';
+import PrivacySection from '@/components/PrivacySection';
+import ProofSection from '@/components/ProofSection';
+import Reveal from '@/components/Reveal';
+import TaglineReveal from '@/components/TaglineReveal';
+import WaitlistForm from '@/components/WaitlistForm';
+import { faqs, steps } from '@/lib/content';
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map((faq) => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer,
+    },
+  })),
+};
+
+const usualBrowser = [
+  'One tab strip for every part of your life',
+  'Context switching costs a mental reload',
+  'Trackers load first, then get blocked',
+  'Privacy settings live three menus deep',
+];
+
+const orbBrowser = [
+  'A Space for work, reading, and everything else',
+  'Switch context from one command bar',
+  'Requests are blocked before they load',
+  'Every privacy switch sits on one screen',
+];
 
 export default function Page() {
-  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-  const [email, setEmail] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus('sending');
-    try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      setStatus(response.ok ? 'success' : 'error');
-    } catch {
-      setStatus('error');
-    }
-    setTimeout(() => setStatus('idle'), 4000);
-  };
-
   return (
-    <main className="relative">
+    <>
       <Navbar />
-      <section className="section-padding px-6">
-        <div className="container-max text-center">
-          <svg width="64" height="64" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-8">
-            <circle cx="14" cy="14" r="12" stroke="#0F0F0F" strokeWidth="2.5" />
-            <path d="M14 8a6 6 0 1 0 0 12a6 6 0 0 0 0-12Z" stroke="#0F0F0F" strokeWidth="2.5" />
-            <path d="M14 14a2.5 2.5 0 1 0 0 4a2.5 2.5 0 0 0 0-4Z" stroke="#0F0F0F" strokeWidth="1.5" />
-          </svg>
-          <h1 className="text-6xl md:text-8xl font-serif font-bold text-[#0F0F0F] leading-tight mb-6">
-            Orb
-          </h1>
-          <p className="text-lg md:text-xl text-[#2A2A2A] mb-10 max-w-3xl mx-auto leading-relaxed">
-            Orb is a calm browser for focus and privacy — Spaces, Boosts, real ad + tracker blocking.
-            Public beta coming soon for macOS, Windows, and Linux.
-          </p>
-          <form onSubmit={handleSubmit} className="max-w-md mx-auto flex flex-col sm:flex-row gap-4">
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="flex-1 px-6 py-4 rounded-lg border border-[#CFC7BA] bg-white text-[#0F0F0F] placeholder-[#6E6B65] focus:outline-none focus:border-[#A0522D] focus:ring-2 focus:ring-[#A0522D]/20 text-sm"
-            />
-            <button
-              type="submit"
-              disabled={status === 'sending'}
-              className="btn-primary"
+
+      <main id="main-content">
+        <section id="top" aria-labelledby="hero-heading" className="px-6 pb-16 pt-24 md:pb-24">
+          <div className="mx-auto max-w-6xl">
+            <Reveal className="mx-auto max-w-[680px] text-center">
+              <h1
+                id="hero-heading"
+                className="text-4xl font-semibold tracking-tight sm:text-5xl md:text-7xl"
+              >
+                <span className="hero-heading block">Focus without</span>
+                <span className="hero-heading block">the tab sprawl.</span>
+              </h1>
+
+              <p className="mx-auto mt-6 max-w-[680px] text-lg text-muted">
+                Orb is a private browser for macOS that gives every context its own Space. Switch
+                in one keystroke, find anything from the command bar, and block ads and trackers
+                before they load.
+              </p>
+
+              <div className="mx-auto mt-8 max-w-xl text-left">
+                <WaitlistForm />
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-muted">
+                <a
+                  href="https://github.com/flashrod/orb"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors duration-700 ease-fluid hover:text-accent-strong"
+                >
+                  Open source under MIT
+                </a>
+                <span aria-hidden="true">·</span>
+                <span>Local data</span>
+                <span aria-hidden="true">·</span>
+                <span>No account</span>
+              </div>
+            </Reveal>
+
+            <Reveal delay={150} className="mt-12 md:mt-16">
+              <BrowserMockup />
+            </Reveal>
+          </div>
+        </section>
+
+        <section aria-labelledby="tagline" className="px-6 py-16 md:py-24">
+          <div className="mx-auto max-w-6xl">
+            <div className="h-px w-12 bg-line" aria-hidden="true" />
+            <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
+              The point
+            </p>
+            <div className="mt-4">
+              <TaglineReveal />
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="problem-heading" className="px-6 py-16 md:py-24">
+          <div className="mx-auto max-w-6xl">
+            <Reveal className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
+                The tab problem
+              </p>
+              <h2
+                id="problem-heading"
+                className="mt-3 text-3xl font-semibold tracking-tight text-ink md:text-4xl"
+              >
+                Forty seven tabs is not a system.
+              </h2>
+              <p className="mt-4 text-lg text-muted">
+                A single tab strip asks you to hold every context in one place. Work, reading, and
+                the thing you meant to look up later all compete for the same row. Orb gives each
+                context a room of its own, then gets out of the way.
+              </p>
+            </Reveal>
+
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              <Reveal className="h-full">
+                <article className="h-full rounded-2xl border border-line bg-canvas p-6 md:p-8">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+                    The usual browser
+                  </p>
+                  <ul className="mt-6 space-y-3">
+                    {usualBrowser.map((item) => (
+                      <li key={item} className="flex gap-3 text-base text-muted">
+                        <span
+                          className="mt-2 h-2 w-2 shrink-0 rounded-full bg-line"
+                          aria-hidden="true"
+                        />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </Reveal>
+
+              <Reveal delay={100} className="h-full">
+                <article className="h-full rounded-2xl border border-accent/30 bg-surface p-6 md:p-8">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
+                    Orb
+                  </p>
+                  <ul className="mt-6 space-y-3">
+                    {orbBrowser.map((item) => (
+                      <li key={item} className="flex gap-3 text-base text-ink">
+                        <span
+                          className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent"
+                          aria-hidden="true"
+                        />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        <Benefits />
+
+        <section aria-labelledby="how-heading" className="px-6 py-16 md:py-24">
+          <div className="mx-auto max-w-6xl">
+            <Reveal className="max-w-3xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
+                How it works
+              </p>
+              <h2
+                id="how-heading"
+                className="mt-3 text-3xl font-semibold tracking-tight text-ink md:text-4xl"
+              >
+                Three steps, then it disappears.
+              </h2>
+              <p className="mt-4 text-lg text-muted">
+                Orb should take a few minutes to set up and then stop asking for attention.
+              </p>
+            </Reveal>
+
+            <ol className="mt-12 grid gap-4 md:grid-cols-3">
+              {steps.map((step, index) => (
+                <li key={step.title}>
+                  <Reveal delay={index * 50} className="h-full">
+                    <article className="h-full rounded-2xl border border-line bg-surface p-6 md:p-8">
+                      <p className="font-mono text-sm text-accent-strong">
+                        {String(index + 1).padStart(2, '0')}
+                      </p>
+                      <h3 className="mt-6 text-xl font-semibold tracking-tight text-ink">
+                        {step.title}
+                      </h3>
+                      <p className="mt-3 text-base text-muted">{step.body}</p>
+                    </article>
+                  </Reveal>
+                </li>
+              ))}
+            </ol>
+
+            <Reveal delay={150} className="mt-8">
+              <a
+                href="https://github.com/flashrod/orb#getting-started"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-accent-strong underline decoration-line underline-offset-4 transition-colors duration-700 ease-fluid hover:text-ink hover:decoration-accent"
+              >
+                Prefer to build from source? Read the setup guide.
+              </a>
+            </Reveal>
+          </div>
+        </section>
+
+        <PrivacySection />
+        <ProofSection />
+        <Faq />
+
+        <section
+          id="waitlist"
+          aria-labelledby="waitlist-heading"
+          className="px-6 pb-24 pt-16 md:pb-24"
+        >
+          <div className="mx-auto max-w-4xl rounded-3xl border border-line bg-surface p-6 text-center md:p-12">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
+              Public beta
+            </p>
+            <h2
+              id="waitlist-heading"
+              className="mt-3 text-4xl font-semibold tracking-tight text-ink md:text-5xl"
             >
-              {status === 'sending' ? 'Adding…' : 'Join waitlist'}
-            </button>
-          </form>
-          {status === 'success' && (
-            <p className="mt-6 text-sm text-[#2A2A2A]">Thanks—we'll email you when the beta opens.</p>
-          )}
-          {status === 'error' && (
-            <p className="mt-6 text-sm text-[#2A2A2A]">Something went wrong. Try again.</p>
-          )}
-        </div>
-      </section>
+              A quieter browser is one email away.
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted">
+              The macOS beta opens to the waitlist first. Bring your tabs. Leave the noise.
+            </p>
+            <div className="mx-auto mt-8 max-w-xl text-left">
+              <WaitlistForm />
+            </div>
+          </div>
+        </section>
+      </main>
+
       <Footer />
-    </main>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+    </>
   );
 }

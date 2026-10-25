@@ -3,69 +3,101 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 96px;
   }
 
   body {
-    @apply bg-[#F0EEE6] text-[#0F0F0F] antialiased;
-    font-family: var(--font-sans);
-    line-height: 1.55;
+    @apply bg-canvas font-sans text-ink antialiased;
     margin: 0;
-    color: #0F0F0F;
     overflow-x: hidden;
+    text-rendering: optimizeLegibility;
   }
 
-  h1, h2, h3, h4 {
-    font-family: var(--font-serif);
-    letter-spacing: -0.025em;
-    line-height: 1.05;
-    color: #0F0F0F;
+  ::selection {
+    @apply bg-accent text-white;
   }
 
-  h1 {
-    font-size: clamp(3.5rem, 6vw, 6.5rem);
-    font-weight: 700;
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
   }
 
   p {
-    color: #2A2A2A;
+    text-wrap: pretty;
   }
 
-  a {
-    color: inherit;
-    text-decoration: none;
+  :focus-visible {
+    outline: 2px solid #a0522d;
+    outline-offset: 2px;
   }
 
-  button {
-    font-family: inherit;
-  }
-}
-
-@layer components {
-  .btn-primary {
-    @apply bg-[#0F0F0F] text-white px-10 py-5 rounded-lg text-sm font-medium tracking-tight transition-all duration-200;
-    box-shadow: none;
+  summary {
+    list-style: none;
   }
 
-  .btn-primary:hover {
-    @apply bg-[#000000];
+  summary::-webkit-details-marker {
+    display: none;
   }
 
-  .btn-primary:active {
-    transform: scale(0.97);
+  a,
+  button,
+  input,
+  summary {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 @layer components {
-  .section-padding {
-    padding-top: 100px;
-    padding-bottom: 100px;
+  .hero-heading {
+    background-image: linear-gradient(90deg, #0f0f0f 0%, #666666 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  .container-max {
-    max-width: 90rem;
-    margin-left: auto;
-    margin-right: auto;
+  .skip-link {
+    @apply fixed left-6 top-3 z-50 -translate-y-20 rounded-full bg-ink px-3 py-2 text-sm font-semibold text-white transition-transform duration-700 ease-fluid focus:translate-y-0;
+  }
+
+  .legal-copy h2 {
+    @apply mt-12 text-2xl font-semibold tracking-tight text-ink;
+  }
+
+  .legal-copy p {
+    @apply mt-4 text-base text-muted;
+  }
+
+  .legal-copy ul {
+    @apply mt-4 list-disc space-y-2 pl-6 text-base text-muted;
+  }
+
+  .legal-copy a {
+    @apply text-accent-strong underline decoration-line underline-offset-4 transition-colors duration-700 ease-fluid hover:decoration-accent;
+  }
+
+  .faq-item[open] .faq-plus {
+    transform: rotate(45deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
