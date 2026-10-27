@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="840" viewBox="0 0 1320 840">
+  <defs>
+    <radialGradient id="warm" cx="0.5" cy="0.22" r="0.75">
+      <stop offset="0" stop-color="#a0522d" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#a0522d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="corner" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#657a60" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#657a60" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="9" markerHeight="9" orient="auto">
+      <path d="M 1 1 L 11 6 L 1 11" fill="none" stroke="#a0522d" stroke-opacity="0.55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect width="1320" height="840" fill="#ece8e0"/>
+  <rect width="1320" height="840" fill="url(#warm)"/>
+  <circle cx="1180" cy="760" r="420" fill="url(#corner)"/>
+  <rect width="1320" height="840" filter="url(#grain)" opacity="0.035"/>
+
+  <g>
+    <circle cx="606" cy="108" r="21" fill="none" stroke="#a0522d" stroke-width="4"/>
+    <circle cx="606" cy="108" r="11" fill="none" stroke="#a0522d" stroke-opacity="0.7" stroke-width="3"/>
+    <circle cx="606" cy="108" r="3.6" fill="#a0522d"/>
+    <text x="642" y="124" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="42" fill="#292524">Orb</text>
+  </g>
+
+  <text x="660" y="220" text-anchor="middle" font-family="Iowan Old Style, Palatino, Georgia, serif" font-size="54" fill="#292524">A calmer place to browse.</text>
+  <text x="660" y="264" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Helvetica Neue, sans-serif" font-size="14" font-weight="600" letter-spacing="2.6" fill="#8e8980">DRAG ORB INTO APPLICATIONS</text>
+
+  <circle cx="340" cy="500" r="150" fill="#f4f0e8" fill-opacity="0.55" stroke="#c7c1b5" stroke-width="2" stroke-dasharray="4 10"/>
+  <circle cx="980" cy="500" r="150" fill="#f4f0e8" fill-opacity="0.55" stroke="#c7c1b5" stroke-width="2" stroke-dasharray="4 10"/>
+
+  <path d="M 548 500 C 610 470, 700 530, 766 500" fill="none" stroke="#a0522d" stroke-opacity="0.5" stroke-width="3.5" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+  <line x1="470" y1="744" x2="850" y2="744" stroke="#c7c1b5" stroke-opacity="0.7" stroke-width="1.5"/>
+
+  <text x="660" y="784" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Helvetica Neue, sans-serif" font-size="13" letter-spacing="1.4" fill="#8e8980">APPLE SILICON · MACOS 13 OR LATER · NO ACCOUNT NEEDED</text>
+</svg>

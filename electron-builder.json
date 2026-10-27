@@ -13,6 +13,7 @@
       { "target": "dmg", "arch": ["arm64"] },
       { "target": "zip", "arch": ["arm64"] }
     ],
+    "icon": "build/icon.icns",
     "category": "public.app-category.productivity",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
@@ -29,7 +30,17 @@
     }
   },
   "dmg": {
-    "artifactName": "${productName}-${version}-${arch}.${ext}"
+    "icon": "build/icon.icns",
+    "background": "build/dmg-background.png",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "window": {
+      "width": 660,
+      "height": 420
+    },
+    "contents": [
+      { "x": 170, "y": 250, "type": "file", "name": "Orb.app" },
+      { "x": 490, "y": 250, "type": "link", "name": "Applications", "path": "/Applications" }
+    ]
   },
   "win": {
     "target": [
