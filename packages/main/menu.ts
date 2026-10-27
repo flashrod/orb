@@ -77,6 +77,7 @@ export function createMenu(): void {
     {
       label: 'View',
       submenu: [
+        { label: 'Enter Full Screen', accelerator: 'CmdOrCtrl+Shift+F', click: () => dispatch('toggle-fullscreen') },
         { role: 'reload' },
         { role: 'forceReload' },
         { role: 'toggleDevTools' },

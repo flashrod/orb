@@ -125,6 +125,15 @@ function createMainWindow(ctx: SessionContext) {
     mainWindow = null;
   });
 
+  // The shell drops the traffic-light insets while the window is fullscreen;
+  // otherwise macOS leaves a 48px dead strip above the page.
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow?.webContents.send('orb:fullscreen-changed', { fullscreen: true });
+  });
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow?.webContents.send('orb:fullscreen-changed', { fullscreen: false });
+  });
+
   // Native page views live in the same window, above the React shell. The
   // renderer opts in per window; until it does, the webview path is untouched.
   nativeHosts.set(mainWindow, new NativeTabHost(mainWindow, ctx));

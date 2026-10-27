@@ -310,6 +310,14 @@
 .orb-tab { height: 40px; }
 .orb-space-row { min-height: 40px; }
 .orb-vertical-row { min-height: 40px; }
+.orb-rail-scroll { scrollbar-width: none; }
+.orb-rail-scroll::-webkit-scrollbar { width: 0; height: 0; }
+.orb-audio-bars { display: inline-flex; height: 11px; align-items: flex-end; gap: 1.5px; }
+.orb-audio-bars > span { width: 2px; height: 100%; border-radius: 999px; background: var(--orb-accent); transform-origin: bottom; animation: orb-audio-bar 900ms ease-in-out infinite; }
+.orb-audio-bars > span:nth-child(2) { animation-delay: -300ms; }
+.orb-audio-bars > span:nth-child(3) { animation-delay: -600ms; }
+@keyframes orb-audio-bar { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+:root[data-motion='off'] .orb-audio-bars > span { animation: none; transform: scaleY(.7); }
 :root[data-motion='off'] { --orb-motion-duration: 0ms; --orb-motion-entry: 0ms; }
 :root[data-motion='gentle'] { --orb-motion-duration: 150ms; --orb-motion-entry: 280ms; }
 :root[data-motion='lively'] { --orb-motion-duration: 220ms; --orb-motion-entry: 420ms; }

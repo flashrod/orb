@@ -55,6 +55,8 @@ export type OrbEventMap = {
   'orb:tab-focused': { tabId: string };
   /** Progress from find-in-page for a native tab. */
   'orb:find-result': { tabId: string; activeMatchOrdinal: number; matches: number };
+  /** The window entered or left macOS fullscreen. */
+  'orb:fullscreen-changed': { fullscreen: boolean };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -68,6 +70,7 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:tab-snapshot',
   'orb:tab-focused',
   'orb:find-result',
+  'orb:fullscreen-changed',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {

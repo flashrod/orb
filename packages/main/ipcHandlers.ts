@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, session, shell } from 'electron';
+import { ipcMain, dialog, BrowserWindow, screen, session, shell } from 'electron';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { getBoostsDatabase } from './boostsDatabase';
@@ -96,6 +96,38 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('window:minimize-current', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.minimize();
+  });
+
+  ipcMain.handle('window:is-fullscreen', (event) => {
+    return BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false;
+  });
+
+  ipcMain.handle('window:toggle-fullscreen', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return false;
+    // Simple fullscreen only covers the work area (menu bar stays visible).
+    // If a window somehow ended up there, step back to native fullscreen.
+    if (win.isSimpleFullScreen()) {
+      win.setSimpleFullScreen(false);
+      win.setFullScreen(true);
+      return true;
+    }
+    win.setFullScreen(!win.isFullScreen());
+    return win.isFullScreen();
+  });
+
+  ipcMain.handle('window:fullscreen-debug', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return null;
+    const display = screen.getDisplayMatching(win.getBounds());
+    return {
+      full: win.isFullScreen(),
+      simple: win.isSimpleFullScreen(),
+      bounds: win.getBounds(),
+      content: win.getContentBounds(),
+      display: display.bounds,
+      workArea: display.workArea,
+    };
   });
 
   ipcMain.handle('profile:clear-data', async (_event, profileId: string) => {

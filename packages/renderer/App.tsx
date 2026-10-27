@@ -73,7 +73,8 @@ export default function App() {
   const [glanceCandidate, setGlanceCandidate] = useState<{ url: string; tabId: string } | null>(null);
   const [glanceUrl, setGlanceUrl] = useState<string | null>(null);
   const [resizingSplit, setResizingSplit] = useState(false);
-  const [splitPickerOpen, setSplitPickerOpen] = useState(false);
+  const [splitPickerTabId, setSplitPickerTabId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // Tracks which tabs have a WebView mounted. Once mounted, a tab stays mounted
   // even when inactive so switching tabs never reloads the page.
   const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
@@ -696,6 +697,9 @@ export default function App() {
         setCommandBarOpen(false);
         setSettingsOpen(false);
       }
+      else if (action === 'toggle-fullscreen') {
+        void window.orbApi?.toggleFullscreen();
+      }
     };
     window.addEventListener('orb:shortcut', handleShortcut as EventListener);
 
@@ -802,11 +806,25 @@ export default function App() {
     !downloadsOpen &&
     !historyOpen &&
     !glanceUrl &&
-    !splitPickerOpen &&
+    !splitPickerTabId &&
     !pickerBusy &&
     !welcomeOpen &&
     !resizingSplit,
   );
+
+  // Fullscreen removes the macOS traffic lights, so the shell must drop the
+  // 48px titlebar inset instead of leaving a dead strip above the page.
+  useEffect(() => {
+    const api = window.orbApi;
+    if (!api?.on) return;
+    void api.isFullscreen?.().then((value) => setIsFullscreen(Boolean(value)));
+    const subscription = api.on('orb:fullscreen-changed', (payload) => {
+      setIsFullscreen(Boolean((payload as { fullscreen?: boolean } | null)?.fullscreen));
+    });
+    return () => {
+      if (subscription) api.off(subscription);
+    };
+  }, []);
 
   // Entering or leaving compact mode always starts from the collapsed rail.
   useEffect(() => {
@@ -980,7 +998,7 @@ export default function App() {
         {...(welcomeOpen ? { inert: '' } : {})}
         className="relative flex min-w-0 flex-1 overflow-hidden"
       >
-        {showSideTabs ? (
+        {showSideTabs && !isFullscreen ? (
           <VerticalTabPanel
             isOpen
             embedded
@@ -994,10 +1012,12 @@ export default function App() {
             mutedSites={mutedSites}
             onToggleMute={toggleTabMute}
             onToggleSiteMute={toggleSiteMute}
+            fullscreen={isFullscreen}
+            onOpenSplitPicker={setSplitPickerTabId}
           />
         ) : null}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        {showTopTabs ? <TabBar
+        {showTopTabs && !isFullscreen ? <TabBar
           tabs={spaceTabs}
           activeTabId={activeTabId}
           activeSpaceId={activeSpaceId || ''}
@@ -1006,11 +1026,13 @@ export default function App() {
           mutedSites={mutedSites}
           onToggleMute={toggleTabMute}
           onToggleSiteMute={toggleSiteMute}
+          fullscreen={isFullscreen}
+          onOpenSplitPicker={setSplitPickerTabId}
         /> : null}
         {/* Traffic lights sit over the sidebar, so only inset the content
             column when there is no sidebar at all. */}
-        {!showTopTabs && !showSideTabs && hasMacTrafficLights && <div aria-hidden="true" className="h-12 shrink-0" />}
-        {showNavigation && !compactMode && <BrowserToolbar
+        {!showTopTabs && !showSideTabs && hasMacTrafficLights && !isFullscreen && <div aria-hidden="true" className="h-12 shrink-0" />}
+        {showNavigation && !compactMode && !isFullscreen && <BrowserToolbar
           activeTab={activeTab}
           onNavigate={handleNavigate}
           onBack={navigateBack}
@@ -1019,7 +1041,7 @@ export default function App() {
           loadingProgress={activeTabLoading ? 1 : 0}
           onDownloadsToggle={() => setDownloadsOpen((o) => !o)}
           onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); }}
-          trafficLightInset={hasMacTrafficLights && showSideTabs && compactSideTabs}
+          trafficLightInset={hasMacTrafficLights && !isFullscreen}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}
@@ -1027,10 +1049,8 @@ export default function App() {
           splitActive={Boolean(nativeSplitIds)}
           onSwapSplit={swapSplit}
           onCloseSplit={closeSplit}
-          canSplit={spaceTabs.length > 1}
-          onOpenSplit={() => setSplitPickerOpen(true)}
         />}
-        {bookmarksBarVisible && !compactMode && <BookmarksBar onNavigate={handleNavigate} />}
+        {bookmarksBarVisible && !compactMode && !isFullscreen && <BookmarksBar onNavigate={handleNavigate} />}
 
         {!compactMode && (!showTabStrip || !showNavigation) && <div className="pointer-events-none absolute left-2 top-[58px] z-30 flex gap-1">
           {!showTabStrip && <button type="button" onClick={() => setShowTabStrip(true)} aria-label="Show tabs" title="Show tabs" className="orb-elevated orb-control pointer-events-auto flex h-7 w-7 items-center justify-center rounded-md border orb-border shadow-sm"><List className="h-3.5 w-3.5" /></button>}
@@ -1107,17 +1127,20 @@ export default function App() {
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} onOpenHistory={() => { setHistoryOpen(true); setCommandBarOpen(false); }} />}
-        {splitPickerOpen && (
-          <SplitViewPicker
-            tabs={spaceTabs.filter((tab) => tab.id !== activeTabId)}
-            activeTitle={activeTab?.title || activeTab?.url || ''}
-            onPick={(tabId) => {
-              if (activeTabId) openSplit([activeTabId, tabId]);
-              setSplitPickerOpen(false);
-            }}
-            onClose={() => setSplitPickerOpen(false)}
-          />
-        )}
+        {splitPickerTabId && (() => {
+          const anchorTab = spaceTabs.find((tab) => tab.id === splitPickerTabId);
+          return (
+            <SplitViewPicker
+              tabs={spaceTabs.filter((tab) => tab.id !== splitPickerTabId)}
+              activeTitle={anchorTab?.title || anchorTab?.url || ''}
+              onPick={(tabId) => {
+                openSplit([splitPickerTabId, tabId]);
+                setSplitPickerTabId(null);
+              }}
+              onClose={() => setSplitPickerTabId(null)}
+            />
+          );
+        })()}
         {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onPreviewBoost={previewBoost} onReplayOnboarding={replayOnboarding} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
         <PermissionPrompt />

@@ -27,6 +27,8 @@ export default function TabBar({
   mutedSites = [],
   onToggleMute,
   onToggleSiteMute,
+  fullscreen = false,
+  onOpenSplitPicker,
 }: {
   tabs: Tab[];
   activeTabId: string | null;
@@ -36,6 +38,8 @@ export default function TabBar({
   mutedSites?: string[];
   onToggleMute: (tabId: string) => void;
   onToggleSiteMute: (tabId: string) => void;
+  fullscreen?: boolean;
+  onOpenSplitPicker?: (tabId: string) => void;
 }) {
   const { removeTab, addTab, moveTab, updateTab, groups, createGroup, setTabGroup, updateGroup, unloadTab } = useTabStore();
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -163,7 +167,7 @@ export default function TabBar({
   const closeRight = contextTab ? getTabsToClose(displayTabs, contextTab.id, 'right') : [];
   useShellOverlay(Boolean(contextTab && contextPosition));
 
-  return <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights ? 'pl-[112px] pr-3' : 'px-3'}`}>
+  return <div role="tablist" aria-label="Open tabs" className={`orb-tab-strip orb-sidebar flex shrink-0 items-end gap-1 overflow-x-auto border-b orb-border pt-1 scrollbar-hide ${hasMacTrafficLights && !fullscreen ? 'pl-[112px] pr-3' : 'px-3'}`}>
     {partition.pinned.map(renderTab)}
     {scopedGroups.map(({ group, tabs: groupTabs }) => <div key={group.id} role="group" aria-label={`${group.name} tab group`} className="flex shrink-0 items-end gap-1 rounded-t-md px-0.5" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
       const id = event.dataTransfer.getData('text/plain') || draggingId;
@@ -184,6 +188,10 @@ export default function TabBar({
       onNewTab={() => handleNewTab(contextTab.id)}
       onNewGroup={() => setGroupDraftTabId(contextTab.id)}
       onSplitView={() => {
+        if (onOpenSplitPicker) {
+          onOpenSplitPicker(contextTab.id);
+          return;
+        }
         const pair = activeTabId ? chooseSplitPair(activeTabId, contextTab.id, displayTabs.map((item) => item.id)) : null;
         if (pair) useSplitViewStore.getState().open(pair);
       }}

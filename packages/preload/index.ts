@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('orbApi', {
   openExternal: (url: string) => ipcRenderer.invoke('window:open-external', url),
   toggleDevTools: () => ipcRenderer.invoke('window:toggle-devtools'),
   minimizeCurrentWindow: () => ipcRenderer.invoke('window:minimize-current'),
+  isFullscreen: () => ipcRenderer.invoke('window:is-fullscreen') as Promise<boolean>,
+  toggleFullscreen: () => ipcRenderer.invoke('window:toggle-fullscreen') as Promise<boolean>,
+  fullscreenDebug: () => ipcRenderer.invoke('window:fullscreen-debug'),
   focusWindow: (webContentsId: number) => ipcRenderer.invoke('window:focus', webContentsId),
   clearProfileData: (profileId: string) => ipcRenderer.invoke('profile:clear-data', profileId),
 
@@ -156,6 +159,9 @@ declare global {
       openExternal: (url: string) => Promise<void>;
       toggleDevTools: () => Promise<void>;
       minimizeCurrentWindow: () => Promise<void>;
+      isFullscreen: () => Promise<boolean>;
+      toggleFullscreen: () => Promise<boolean>;
+      fullscreenDebug: () => Promise<{ full: boolean; simple: boolean; bounds: { x: number; y: number; width: number; height: number }; content: { x: number; y: number; width: number; height: number }; display: { x: number; y: number; width: number; height: number }; workArea: { x: number; y: number; width: number; height: number } } | null>;
       focusWindow: (webContentsId: number) => Promise<void>;
       clearProfileData: (profileId: string) => Promise<{ cleared: boolean }>;
       saveDialog: (options: any) => Promise<any>;
