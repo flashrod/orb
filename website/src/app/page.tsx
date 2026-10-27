@@ -7,8 +7,13 @@ import PrivacySection from '@/components/PrivacySection';
 import ProofSection from '@/components/ProofSection';
 import Reveal from '@/components/Reveal';
 import TaglineReveal from '@/components/TaglineReveal';
+import LuminousTopography from '@/components/ui/luminous-topography';
 import WaitlistForm from '@/components/WaitlistForm';
 import { faqs, steps } from '@/lib/content';
+import type { CSSProperties } from 'react';
+
+const heroFocus = { x: 0.5, y: 0.42 };
+const heroSafeArea = { x: 0.2, y: 0.06, w: 0.6, h: 0.52 };
 
 const faqJsonLd = {
   '@context': 'https://schema.org',
@@ -43,8 +48,35 @@ export default function Page() {
       <Navbar />
 
       <main id="main-content">
-        <section id="top" aria-labelledby="hero-heading" className="px-6 pb-16 pt-24 md:pb-24">
-          <div className="mx-auto max-w-6xl">
+        <section
+          id="top"
+          aria-labelledby="hero-heading"
+          className="relative isolate overflow-hidden px-6 pb-16 pt-24 md:pb-24"
+        >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              maskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, transparent 94%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 55%, transparent 94%)',
+            }}
+          >
+            <LuminousTopography
+              className="h-full w-full"
+              accent="#A0522D"
+              density={8}
+              depth={2}
+              drift={0.5}
+              intensity={0.8}
+              focalPoint={heroFocus}
+              safeArea={heroSafeArea}
+              lineWidth={1.2}
+              seed={7}
+              style={{ "--motiq-fg": "#141310" } as CSSProperties}
+            />
+          </div>
+
+          <div className="relative z-10 mx-auto max-w-6xl">
             <Reveal className="mx-auto max-w-[680px] text-center">
               <h1
                 id="hero-heading"
