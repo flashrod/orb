@@ -51,7 +51,7 @@ export default function Page() {
         <section
           id="top"
           aria-labelledby="hero-heading"
-          className="relative isolate overflow-hidden px-6 pb-16 pt-24 md:pb-24"
+          className="min-h-[calc(100vh_12rem)] flex items-center px-6 pb-16 pt-24 md:pb-24"
         >
           <div
             aria-hidden="true"
@@ -76,7 +76,7 @@ export default function Page() {
             />
           </div>
 
-          <div className="relative z-10 mx-auto max-w-6xl">
+          <div className="relative z-10 flex flex-col items-center min-w-0 max-w-6xl">
             <Reveal className="mx-auto max-w-[680px] text-center">
               <h1
                 id="hero-heading"
@@ -86,17 +86,17 @@ export default function Page() {
                 <span className="hero-heading block">the tab sprawl.</span>
               </h1>
 
-              <p className="mx-auto mt-6 max-w-[680px] text-lg text-muted">
+              <p className="mx-auto max-w-[680px] text-lg text-muted">
                 Orb is a private browser for macOS that gives every context its own Space. Switch
                 in one keystroke, find anything from the command bar, and block ads and trackers
                 before they load.
               </p>
 
-              <div className="mx-auto mt-8 max-w-xl text-left">
+              <div className="mx-auto max-w-xl text-left">
                 <WaitlistForm />
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-muted">
+              <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted">
                 <a
                   href="https://github.com/flashrod/orb"
                   target="_blank"
