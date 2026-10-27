@@ -1,4 +1,15 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webFrame } from 'electron';
+import { YOUTUBE_AD_SCRIPT, YOUTUBE_HOST_PATTERN } from '../shared/youtubeAds';
+
+// YouTube ships ads inside the player response. Extensions cannot prune it
+// here, so do it in the page's main world before YouTube's scripts run.
+if (YOUTUBE_HOST_PATTERN.test(location.hostname)) {
+  try {
+    void webFrame.executeJavaScript(YOUTUBE_AD_SCRIPT);
+  } catch {
+    // Ad blocking must never stop a page from loading.
+  }
+}
 
 // A deliberately narrow bridge for website content. Do not expose the main
 // renderer's orbApi here: pages may only suggest an HTTP(S) link to Glance.
