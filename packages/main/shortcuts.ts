@@ -1,3 +1,4 @@
+import { COMMANDS, matchBinding } from '../shared/commands';
 import type { OrbShortcutAction } from '../shared/events';
 
 export interface ShortcutInput {
@@ -6,23 +7,40 @@ export interface ShortcutInput {
   meta?: boolean;
   control?: boolean;
   shift?: boolean;
+  alt?: boolean;
   isAutoRepeat?: boolean;
 }
 
-/** Maps a key event to the shell action it should trigger, if any. */
+function toMatchInput(input: ShortcutInput) {
+  return {
+    key: input.key.toLowerCase(),
+    ctrl: !!input.control,
+    alt: !!input.alt,
+    shift: !!input.shift,
+    meta: !!input.meta,
+  };
+}
+
+/** Maps a key event to the shell action it should trigger, if any.
+ *
+ * The mapping is driven by the shared command registry so the menu, the
+ * forwarder and the renderer all agree on what each key combination does.
+ *
+ * On macOS, `Mod` maps to the Meta (Cmd) modifier. For backward
+ * compatibility with the previous behavior where `meta || control` both
+ * counted as the command modifier, we also try with ctrl/meta swapped when
+ * the first match attempt fails.
+ */
 export function shortcutForInput(input: ShortcutInput): OrbShortcutAction | null {
   if (input.type !== 'keyDown' || input.isAutoRepeat) return null;
 
-  const key = input.key.toLowerCase();
-  const command = input.meta || input.control;
+  const platform = (process.platform as 'darwin' | 'win32' | 'linux') ?? 'darwin';
 
-  if (command && input.shift && key === 't') return 'new-space';
-  if (command && input.shift && key === 'm') return 'toggle-compact';
-  if (command && !input.shift && key === 't') return 'new-tab';
-  if (command && !input.shift && key === 'k') return 'command-bar';
-  if (command && !input.shift && key === 'l') return 'focus-address';
-  if (command && !input.shift && key === 'f') return 'find';
-  if (command && !input.shift && key === 'p') return 'print';
-  if (!command && !input.shift && key === 'escape') return 'close-overlays';
-  return null;
+  const result = matchBinding(toMatchInput(input), platform, COMMANDS, {});
+  if (result) return result as OrbShortcutAction;
+
+  // Fallback: swap ctrl and meta so that, e.g., Ctrl+L on macOS still
+  // matches the Mod+L binding (old behavior treated meta||control as one).
+  const swapped = { ...input, control: input.meta, meta: input.control };
+  return matchBinding(toMatchInput(swapped), platform, COMMANDS, {}) as OrbShortcutAction | null;
 }

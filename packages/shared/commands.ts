@@ -1,0 +1,641 @@
+/**
+ * Single source of truth for Orb's keyboard commands.
+ *
+ * Every command is declared here once. The menu (main/menu.ts), the key-event
+ * forwarder (main/shortcuts.ts), the renderer (App.tsx) and the command bar
+ * all read from this registry. Keymap overrides live in the preferences store
+ * and are merged on top of these defaults.
+ *
+ * This module deliberately imports nothing from Electron or the DOM so it can
+ * be unit-tested in any environment.
+ */
+
+export type CommandCategory =
+  | 'Tabs'
+  | 'Navigation'
+  | 'Spaces'
+  | 'View'
+  | 'Split and Glance'
+  | 'Tools'
+  | 'Privacy'
+  | 'App';
+
+export interface Command {
+  /** Stable identifier, e.g. 'tab.new'. Changing this breaks stored overrides. */
+  id: string;
+  /** Human-readable name shown in settings and tooltips. */
+  title: string;
+  category: CommandCategory;
+  /** Default bindings, e.g. ['Mod+T']. Empty means unbound by default. */
+  defaultBindings: string[];
+  /** Where the command can run. */
+  scope: 'shell' | 'page' | 'both';
+  /** Optional parameters for parameterized commands (future phases). */
+  params?: Record<string, 'string' | 'number'>;
+}
+
+export type Platform = 'darwin' | 'win32' | 'linux';
+
+/**
+ * A parsed keyboard binding. Modifiers are always stored in the order
+ * ctrl, alt, shift, mod regardless of how they were written.
+ */
+interface ParsedBinding {
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  mod: boolean;
+  key: string; // lowercase letter/digit or special key name
+}
+
+const MODIFIER_NAMES = new Set(['ctrl', 'alt', 'shift', 'mod']);
+
+/**
+ * Parse a binding string like 'Mod+Shift+T' or 'Ctrl+Alt+KeyT'.
+ * Returns null for malformed bindings.
+ */
+export function parseBinding(binding: string): ParsedBinding | null {
+  const parts = binding.split('+').map((p) => p.trim().toLowerCase());
+  if (parts.length === 0) return null;
+
+  let ctrl = false;
+  let alt = false;
+  let shift = false;
+  let mod = false;
+  let key = '';
+
+  for (const part of parts) {
+    if (part === 'ctrl') ctrl = true;
+    else if (part === 'alt') alt = true;
+    else if (part === 'shift') shift = true;
+    else if (part === 'mod') mod = true;
+    else if (part === '') continue;
+    else if (key === '') key = part;
+    else return null; // more than one non-modifier part
+  }
+
+  if (!key) return null;
+  return { ctrl, alt, shift, mod, key };
+}
+
+/**
+ * Normalize a parsed binding against the platform: 'Mod' maps to the Meta
+ * (Cmd) modifier on macOS and to Control elsewhere.
+ */
+export function normalizeBinding(
+  parsed: ParsedBinding,
+  platform: Platform,
+): { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean; key: string } {
+  const useMeta = platform === 'darwin';
+  return {
+    ctrl: useMeta ? parsed.ctrl : parsed.ctrl || parsed.mod,
+    alt: parsed.alt,
+    shift: parsed.shift,
+    meta: useMeta ? parsed.mod : false,
+    key: parsed.key,
+  };
+}
+
+/**
+ * Match a key event against a single normalized binding.
+ * Ignores key repeats (handled by caller) and modifier-only presses (no key).
+ */
+function matchesBinding(
+  input: { key: string; ctrl: boolean; alt: boolean; shift: boolean; meta: boolean },
+  binding: { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean; key: string },
+): boolean {
+  if (input.key.toLowerCase() !== binding.key.toLowerCase()) return false;
+  return (
+    input.ctrl === binding.ctrl &&
+    input.alt === binding.alt &&
+    input.shift === binding.shift &&
+    input.meta === binding.meta
+  );
+}
+
+/**
+ * Find the command id that matches a key event, given the effective keymap.
+ *
+ * @param input - Normalized key event (key already lowercased by caller).
+ * @param platform - 'darwin' | 'win32' | 'linux'.
+ * @param commands - The command registry.
+ * @param overrides - Stored keymap overrides: commandId → bindings or null (unbound).
+ * @returns The matching command id, or null.
+ */
+export function matchBinding(
+  input: { key: string; ctrl: boolean; alt: boolean; shift: boolean; meta: boolean },
+  platform: Platform,
+  commands: readonly Command[],
+  overrides: Record<string, string[] | null | undefined>,
+): string | null {
+  // Modifier-only presses never match (no key to compare).
+  if (!input.key) return null;
+
+  for (const command of commands) {
+    const stored = overrides[command.id];
+    // null = explicitly unbound, undefined = not overridden → use defaults.
+    const bindings = stored === undefined ? command.defaultBindings : stored;
+    if (!bindings || bindings.length === 0) continue;
+
+    for (const raw of bindings) {
+      const parsed = parseBinding(raw);
+      if (!parsed) continue;
+      const normalized = normalizeBinding(parsed, platform);
+      if (matchesBinding(input, normalized)) return command.id;
+    }
+  }
+  return null;
+}
+
+/** ------------------------------------------------------------------ */
+/** Command registry                                                   */
+/** ------------------------------------------------------------------ */
+
+/** Every command Orb knows about. IDs are permanent — stored keymap
+ *  overrides are keyed by them. Existing action names from
+ *  OrbShortcutAction are preserved so the menu/renderer keep working. */
+export const COMMANDS: readonly Command[] = [
+  // Tabs
+  {
+    id: 'new-tab',
+    title: 'New Tab',
+    category: 'Tabs',
+    defaultBindings: ['Mod+T'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.close',
+    title: 'Close Tab',
+    category: 'Tabs',
+    defaultBindings: ['Mod+W'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.reopen-closed',
+    title: 'Reopen Closed Tab',
+    category: 'Tabs',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'tab.next',
+    title: 'Next Tab',
+    category: 'Tabs',
+    defaultBindings: ['Ctrl+Tab'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.previous',
+    title: 'Previous Tab',
+    category: 'Tabs',
+    defaultBindings: ['Ctrl+Shift+Tab'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-1',
+    title: 'Go to Tab 1',
+    category: 'Tabs',
+    defaultBindings: ['Mod+1'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-2',
+    title: 'Go to Tab 2',
+    category: 'Tabs',
+    defaultBindings: ['Mod+2'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-3',
+    title: 'Go to Tab 3',
+    category: 'Tabs',
+    defaultBindings: ['Mod+3'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-4',
+    title: 'Go to Tab 4',
+    category: 'Tabs',
+    defaultBindings: ['Mod+4'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-5',
+    title: 'Go to Tab 5',
+    category: 'Tabs',
+    defaultBindings: ['Mod+5'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-6',
+    title: 'Go to Tab 6',
+    category: 'Tabs',
+    defaultBindings: ['Mod+6'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-7',
+    title: 'Go to Tab 7',
+    category: 'Tabs',
+    defaultBindings: ['Mod+7'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-8',
+    title: 'Go to Tab 8',
+    category: 'Tabs',
+    defaultBindings: ['Mod+8'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.go-to-last',
+    title: 'Go to Last Tab',
+    category: 'Tabs',
+    defaultBindings: ['Mod+9'],
+    scope: 'both',
+  },
+  {
+    id: 'tab.pin',
+    title: 'Pin Tab',
+    category: 'Tabs',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'tab.mute',
+    title: 'Mute Tab',
+    category: 'Tabs',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'tab.duplicate',
+    title: 'Duplicate Tab',
+    category: 'Tabs',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'tab.hibernate',
+    title: 'Hibernate This Tab',
+    category: 'Tabs',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'tab.hibernate-others',
+    title: 'Hibernate Other Tabs',
+    category: 'Tabs',
+    defaultBindings: [],
+    scope: 'both',
+  },
+
+  // Spaces
+  {
+    id: 'new-space',
+    title: 'New Space',
+    category: 'Spaces',
+    defaultBindings: ['Mod+Shift+T'],
+    scope: 'shell',
+  },
+  {
+    id: 'space.switch-1',
+    title: 'Switch to Space 1',
+    category: 'Spaces',
+    defaultBindings: ['Ctrl+1'],
+    scope: 'shell',
+  },
+  {
+    id: 'space.switch-2',
+    title: 'Switch to Space 2',
+    category: 'Spaces',
+    defaultBindings: ['Ctrl+2'],
+    scope: 'shell',
+  },
+  {
+    id: 'space.switch-3',
+    title: 'Switch to Space 3',
+    category: 'Spaces',
+    defaultBindings: ['Ctrl+3'],
+    scope: 'shell',
+  },
+  {
+    id: 'space.switch-4',
+    title: 'Switch to Space 4',
+    category: 'Spaces',
+    defaultBindings: ['Ctrl+4'],
+    scope: 'shell',
+  },
+  {
+    id: 'space.switch-5',
+    title: 'Switch to Space 5',
+    category: 'Spaces',
+    defaultBindings: ['Ctrl+5'],
+    scope: 'shell',
+  },
+  {
+    id: 'space.next',
+    title: 'Next Space',
+    category: 'Spaces',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'space.previous',
+    title: 'Previous Space',
+    category: 'Spaces',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'space.switch-profile',
+    title: 'Switch Profile',
+    category: 'Spaces',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+
+  // Navigation
+  {
+    id: 'nav.back',
+    title: 'Back',
+    category: 'Navigation',
+    defaultBindings: ['Mod['],
+    scope: 'both',
+  },
+  {
+    id: 'nav.forward',
+    title: 'Forward',
+    category: 'Navigation',
+    defaultBindings: ['Mod]'],
+    scope: 'both',
+  },
+  {
+    id: 'nav.reload',
+    title: 'Reload',
+    category: 'Navigation',
+    defaultBindings: ['Mod+R'],
+    scope: 'both',
+  },
+  {
+    id: 'nav.hard-reload',
+    title: 'Hard Reload',
+    category: 'Navigation',
+    defaultBindings: ['Mod+Shift+R'],
+    scope: 'both',
+  },
+  {
+    id: 'focus-address',
+    title: 'Focus Address Bar',
+    category: 'Navigation',
+    defaultBindings: ['Mod+L'],
+    scope: 'shell',
+  },
+  {
+    id: 'command-bar',
+    title: 'Open Command Bar',
+    category: 'Navigation',
+    defaultBindings: ['Mod+K'],
+    scope: 'shell',
+  },
+  {
+    id: 'find',
+    title: 'Find',
+    category: 'Navigation',
+    defaultBindings: ['Mod+F'],
+    scope: 'both',
+  },
+
+  // View
+  {
+    id: 'view.zoom-in',
+    title: 'Zoom In',
+    category: 'View',
+    defaultBindings: ['Mod+='],
+    scope: 'both',
+  },
+  {
+    id: 'view.zoom-out',
+    title: 'Zoom Out',
+    category: 'View',
+    defaultBindings: ['Mod+-'],
+    scope: 'both',
+  },
+  {
+    id: 'view.zoom-reset',
+    title: 'Reset Zoom',
+    category: 'View',
+    defaultBindings: ['Mod+0'],
+    scope: 'both',
+  },
+  {
+    id: 'toggle-compact',
+    title: 'Toggle Compact',
+    category: 'View',
+    defaultBindings: ['Mod+Shift+M'],
+    scope: 'shell',
+  },
+  {
+    id: 'view.toggle-sidebar',
+    title: 'Toggle Sidebar',
+    category: 'View',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'toggle-fullscreen',
+    title: 'Toggle Fullscreen',
+    category: 'View',
+    defaultBindings: ['Mod+Shift+F'],
+    scope: 'shell',
+  },
+
+  // Split and Glance
+  {
+    id: 'split.open',
+    title: 'Open Split View',
+    category: 'Split and Glance',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'split.swap',
+    title: 'Swap Panes',
+    category: 'Split and Glance',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'split.close',
+    title: 'Close Split View',
+    category: 'Split and Glance',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'glance.open-link',
+    title: 'Open Link in Glance',
+    category: 'Split and Glance',
+    defaultBindings: [],
+    scope: 'both',
+  },
+
+  // Tools
+  {
+    id: 'settings',
+    title: 'Settings',
+    category: 'Tools',
+    defaultBindings: ['Mod+,'],
+    scope: 'shell',
+  },
+  {
+    id: 'print',
+    title: 'Print',
+    category: 'Tools',
+    defaultBindings: ['Mod+P'],
+    scope: 'both',
+  },
+  {
+    id: 'save-pdf',
+    title: 'Save Page as PDF',
+    category: 'Tools',
+    defaultBindings: ['Mod+Shift+S'],
+    scope: 'both',
+  },
+  {
+    id: 'tools.devtools',
+    title: 'Developer Tools',
+    category: 'Tools',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'tools.element-picker',
+    title: 'Element Picker',
+    category: 'Tools',
+    defaultBindings: [],
+    scope: 'page',
+  },
+  {
+    id: 'tools.copy-url',
+    title: 'Copy URL',
+    category: 'Tools',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'tools.downloads',
+    title: 'Open Downloads',
+    category: 'Tools',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'history',
+    title: 'History',
+    category: 'Tools',
+    defaultBindings: ['Mod+Y'],
+    scope: 'shell',
+  },
+
+  // Privacy
+  {
+    id: 'privacy.toggle-blocker',
+    title: 'Toggle Blocker for This Site',
+    category: 'Privacy',
+    defaultBindings: [],
+    scope: 'page',
+  },
+  {
+    id: 'privacy.toggle-https-only',
+    title: 'Toggle HTTPS-only for This Site',
+    category: 'Privacy',
+    defaultBindings: [],
+    scope: 'page',
+  },
+
+  // App
+  {
+    id: 'show-welcome',
+    title: 'Welcome to Orb',
+    category: 'App',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'default-browser',
+    title: 'Set Orb as Default Browser',
+    category: 'App',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+  {
+    id: 'close-overlays',
+    title: 'Close Overlays',
+    category: 'App',
+    defaultBindings: ['Escape'],
+    scope: 'shell',
+  },
+  {
+    id: 'toggle-pip',
+    title: 'Picture in Picture',
+    category: 'App',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'media-play-pause',
+    title: 'Play/Pause Media',
+    category: 'App',
+    defaultBindings: [],
+    scope: 'both',
+  },
+  {
+    id: 'app.toggle-devtools',
+    title: 'Toggle DevTools',
+    category: 'App',
+    defaultBindings: [],
+    scope: 'shell',
+  },
+];
+
+/** Lookup a command by id. */
+export function findCommand(id: string): Command | undefined {
+  return COMMANDS.find((c) => c.id === id);
+}
+
+/** All commands grouped by category. */
+export function commandsByCategory(): Record<CommandCategory, Command[]> {
+  const result: Record<CommandCategory, Command[]> = {
+    Tabs: [],
+    Navigation: [],
+    Spaces: [],
+    View: [],
+    'Split and Glance': [],
+    Tools: [],
+    Privacy: [],
+    App: [],
+  };
+  for (const command of COMMANDS) {
+    (result[command.category] ??= []).push(command);
+  }
+  return result;
+}
+
+/**
+ * Convert a registry binding string to an Electron accelerator string.
+ * 'Mod' becomes 'CmdOrCtrl'. Other parts pass through unchanged.
+ */
+export function bindingToAccelerator(binding: string): string {
+  return binding.replace(/\bmod\b/gi, 'CmdOrCtrl');
+}
+
+/**
+ * Get the Electron accelerator for a command's first default binding,
+ * or null if the command has no default binding.
+ */
+export function getCommandAccelerator(commandId: string): string | null {
+  const command = findCommand(commandId);
+  if (!command || command.defaultBindings.length === 0) return null;
+  return bindingToAccelerator(command.defaultBindings[0]);
+}

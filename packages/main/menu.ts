@@ -1,4 +1,5 @@
 import { BrowserWindow, Menu, shell } from 'electron';
+import { getCommandAccelerator } from '../shared/commands';
 
 /**
  * Menu items cannot call into React directly, so they dispatch the same
@@ -17,6 +18,12 @@ function openWebsite(): void {
   void shell.openExternal(WEBSITE_URL);
 }
 
+/** Accelerator for a command, read from the shared registry. */
+function acceleratorFor(commandId: string): string | undefined {
+  const accel = getCommandAccelerator(commandId);
+  return accel ?? undefined;
+}
+
 export function createMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
@@ -24,9 +31,22 @@ export function createMenu(): void {
       submenu: [
         { role: 'about' },
         { type: 'separator' },
-        { label: 'Welcome to Orb', click: () => dispatch('show-welcome') },
-        { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => dispatch('settings') },
-        { label: 'Set Orb as Default Browser…', click: () => dispatch('default-browser') },
+        {
+          label: 'Welcome to Orb',
+          accelerator: acceleratorFor('show-welcome'),
+          registerAccelerator: false,
+          click: () => dispatch('show-welcome'),
+        },
+        {
+          label: 'Settings…',
+          accelerator: acceleratorFor('settings'),
+          registerAccelerator: false,
+          click: () => dispatch('settings'),
+        },
+        {
+          label: 'Set Orb as Default Browser…',
+          click: () => dispatch('default-browser'),
+        },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -42,17 +62,29 @@ export function createMenu(): void {
       submenu: [
         {
           label: 'New Tab',
-          accelerator: 'CmdOrCtrl+T',
+          accelerator: acceleratorFor('new-tab'),
+          registerAccelerator: false,
           click: () => dispatch('new-tab'),
         },
         {
           label: 'New Space',
-          accelerator: 'CmdOrCtrl+Shift+T',
+          accelerator: acceleratorFor('new-space'),
+          registerAccelerator: false,
           click: () => dispatch('new-space'),
         },
         { type: 'separator' },
-        { label: 'Print…', accelerator: 'CmdOrCtrl+P', click: () => dispatch('print') },
-        { label: 'Save Page as PDF…', accelerator: 'CmdOrCtrl+Shift+S', click: () => dispatch('save-pdf') },
+        {
+          label: 'Print…',
+          accelerator: acceleratorFor('print'),
+          registerAccelerator: false,
+          click: () => dispatch('print'),
+        },
+        {
+          label: 'Save Page as PDF…',
+          accelerator: acceleratorFor('save-pdf'),
+          registerAccelerator: false,
+          click: () => dispatch('save-pdf'),
+        },
         { type: 'separator' },
         { role: 'close' },
       ],
@@ -68,16 +100,41 @@ export function createMenu(): void {
         { role: 'paste' },
         { role: 'selectAll' },
         { type: 'separator' },
-        { label: 'Open Command Bar…', accelerator: 'CmdOrCtrl+K', click: () => dispatch('command-bar') },
-        { label: 'Focus Address Bar', accelerator: 'CmdOrCtrl+L', click: () => dispatch('focus-address') },
-        { label: 'Find…', accelerator: 'CmdOrCtrl+F', click: () => dispatch('find') },
-        { label: 'History', accelerator: 'CmdOrCtrl+Y', click: () => dispatch('history') },
+        {
+          label: 'Open Command Bar…',
+          accelerator: acceleratorFor('command-bar'),
+          registerAccelerator: false,
+          click: () => dispatch('command-bar'),
+        },
+        {
+          label: 'Focus Address Bar',
+          accelerator: acceleratorFor('focus-address'),
+          registerAccelerator: false,
+          click: () => dispatch('focus-address'),
+        },
+        {
+          label: 'Find…',
+          accelerator: acceleratorFor('find'),
+          registerAccelerator: false,
+          click: () => dispatch('find'),
+        },
+        {
+          label: 'History',
+          accelerator: acceleratorFor('history'),
+          registerAccelerator: false,
+          click: () => dispatch('history'),
+        },
       ],
     },
     {
       label: 'View',
       submenu: [
-        { label: 'Enter Full Screen', accelerator: 'CmdOrCtrl+Shift+F', click: () => dispatch('toggle-fullscreen') },
+        {
+          label: 'Enter Full Screen',
+          accelerator: acceleratorFor('toggle-fullscreen'),
+          registerAccelerator: false,
+          click: () => dispatch('toggle-fullscreen'),
+        },
         { role: 'reload' },
         { role: 'forceReload' },
         { role: 'toggleDevTools' },
@@ -86,8 +143,14 @@ export function createMenu(): void {
         { role: 'zoomOut' },
         { role: 'resetZoom' },
         { type: 'separator' },
-        { label: 'Picture in Picture', click: () => dispatch('toggle-pip') },
-        { label: 'Play/Pause Media', click: () => dispatch('media-play-pause') },
+        {
+          label: 'Picture in Picture',
+          click: () => dispatch('toggle-pip'),
+        },
+        {
+          label: 'Play/Pause Media',
+          click: () => dispatch('media-play-pause'),
+        },
       ],
     },
     {
