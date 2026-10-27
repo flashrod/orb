@@ -15,7 +15,7 @@ export interface Space {
 interface SpaceStore {
   spaces: Space[];
   activeSpaceId: string | null;
-  addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt' | 'profileId'> & { profileId?: string }) => void;
+  addSpace: (space: Omit<Space, 'id' | 'createdAt' | 'updatedAt' | 'profileId'> & { profileId?: string }) => string;
   removeSpace: (id: string) => void;
   setActiveSpace: (id: string | null) => void;
   updateSpace: (id: string, partial: Partial<Space>) => void;
@@ -39,6 +39,7 @@ export const useSpaceStore = create<SpaceStore>()(
           ],
           activeSpaceId: id,
         }));
+        return id;
       },
       removeSpace: (id: string) =>
         set((state) => ({

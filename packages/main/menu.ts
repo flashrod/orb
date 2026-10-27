@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu } from 'electron';
+import { BrowserWindow, Menu, shell } from 'electron';
 
 /**
  * Menu items cannot call into React directly, so they dispatch the same
@@ -10,6 +10,13 @@ function dispatch(action: string): void {
   win.webContents.send('orb:shortcut', action);
 }
 
+/** Public site / waitlist URL. Confirm the deployed Vercel domain before shipping. */
+const WEBSITE_URL = 'https://browserorb.vercel.app';
+
+function openWebsite(): void {
+  void shell.openExternal(WEBSITE_URL);
+}
+
 export function createMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
@@ -17,6 +24,7 @@ export function createMenu(): void {
       submenu: [
         { role: 'about' },
         { type: 'separator' },
+        { label: 'Welcome to Orb', click: () => dispatch('show-welcome') },
         { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: () => dispatch('settings') },
         { label: 'Set Orb as Default Browser…', click: () => dispatch('default-browser') },
         { type: 'separator' },
@@ -93,6 +101,10 @@ export function createMenu(): void {
             const { shell } = await import('electron');
             await shell.openExternal('https://github.com/flashrod/orb');
           },
+        },
+        {
+          label: 'Website & waitlist',
+          click: openWebsite,
         },
       ],
     },

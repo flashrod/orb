@@ -17,6 +17,9 @@
     --orb-hover: #e7e3da;
     --orb-accent: #a0522d;
     --orb-accent-soft: #e9ddd4;
+    /* Foreground for accent-filled surfaces. Night accents are light, so the
+       text has to flip to ink instead of staying white. */
+    --orb-on-accent: #ffffff;
     --orb-control-height: 38px;
     --orb-row-height: 42px;
     --orb-space: 9px;
@@ -51,6 +54,7 @@
     --orb-hover: #403e37;
     --orb-accent: #d09a78;
     --orb-accent-soft: #4d3b31;
+    --orb-on-accent: #241d18;
   }
 
   :root[data-accent='moss'] { --orb-accent: #657a60; --orb-accent-soft: #dce6d8; }
@@ -116,7 +120,7 @@
 .orb-strong { color: var(--orb-text-strong); }
 .orb-muted { color: var(--orb-text-muted); }
 .orb-accent { color: var(--orb-accent); }
-.orb-accent-bg { background: var(--orb-accent); }
+.orb-accent-bg { background: var(--orb-accent); color: var(--orb-on-accent); }
 .orb-accent-soft { background: var(--orb-accent-soft); }
 .orb-control { color: var(--orb-text-muted); transition: background-color 140ms ease, color 140ms ease, transform 140ms ease; }
 .orb-control:hover { background: var(--orb-hover); color: var(--orb-text-strong); }
@@ -131,6 +135,175 @@
 .orb-tab:hover { background: var(--orb-hover); color: var(--orb-text-strong); }
 .orb-shadow { box-shadow: 0 1px 2px rgb(41 37 36 / 3%); }
 .orb-serif { font-family: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif; }
+.orb-onboarding-wash {
+  background:
+    radial-gradient(900px 620px at 76% 14%, color-mix(in srgb, var(--orb-accent) 11%, transparent), transparent 68%),
+    radial-gradient(760px 540px at 4% 96%, color-mix(in srgb, var(--orb-accent) 7%, transparent), transparent 62%),
+    var(--orb-canvas);
+}
+.orb-onboarding-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  opacity: .035;
+}
+.orb-onboarding-halo {
+  background: radial-gradient(circle, color-mix(in srgb, var(--orb-accent) 13%, transparent), transparent 68%);
+}
+/* ---- Motion system -------------------------------------------------------
+   Two easing curves only: a confident decelerate for entrances and a softer
+   one for ambient drift. Everything below is transform/opacity except two
+   bounded effects (a clip wipe on headings, a short blur on the art panel). */
+:root {
+  --orb-ease-out: cubic-bezier(.16, 1, .3, 1);
+  --orb-ease-soft: cubic-bezier(.25, 1, .5, 1);
+}
+
+.orb-orbit-slow { animation: orb-orbit 88s linear infinite; }
+.orb-orbit-reverse { animation: orb-orbit 56s linear infinite reverse; }
+.orb-pulse { animation: orb-pulse 5.5s ease-in-out infinite; transform-origin: 160px 160px; }
+@keyframes orb-orbit { to { transform: rotate(360deg); } }
+@keyframes orb-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.18); opacity: .82; } }
+
+/* The orb breathes on its own, and leans a few pixels toward the cursor. The
+   tilt lives on the wrapper so it never fights the float animation. */
+.orb-tilt {
+  transform: translate3d(var(--orb-tilt-x, 0px), var(--orb-tilt-y, 0px), 0);
+  transition: transform 600ms var(--orb-ease-soft);
+  will-change: transform;
+}
+.orb-float { animation: orb-float 9s var(--orb-ease-soft) infinite alternate; }
+@keyframes orb-float {
+  from { transform: translate3d(0, -5px, 0); }
+  to { transform: translate3d(0, 7px, 0); }
+}
+
+/* Ambient colour, drifting behind the orb like light through paper. */
+.orb-aurora { position: absolute; inset: -16%; pointer-events: none; }
+.orb-aurora > span { position: absolute; border-radius: 50%; will-change: transform; }
+.orb-aurora-a {
+  inset: 2% 16% 24% 2%;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--orb-accent) 22%, transparent), transparent 66%);
+  animation: orb-aurora-a 26s var(--orb-ease-soft) infinite alternate;
+}
+.orb-aurora-b {
+  inset: 20% 2% 2% 24%;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--orb-accent) 13%, transparent), transparent 64%);
+  animation: orb-aurora-b 34s var(--orb-ease-soft) infinite alternate;
+}
+@keyframes orb-aurora-a {
+  from { transform: translate3d(-4%, 2%, 0) scale(.94); }
+  to { transform: translate3d(6%, -5%, 0) scale(1.08); }
+}
+@keyframes orb-aurora-b {
+  from { transform: translate3d(5%, -3%, 0) scale(1.02); }
+  to { transform: translate3d(-6%, 6%, 0) scale(.92); }
+}
+
+/* Two rings leave the core and dissolve, staggered so the orb always has one
+   in flight. Long and slow: it should read as breathing, not as a loading dot. */
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--orb-accent) 42%, transparent);
+  opacity: 0;
+  animation: orb-ring 8s var(--orb-ease-out) infinite;
+}
+.orb-ring:nth-of-type(2) { animation-delay: 4s; }@keyframes orb-ring {
+  0% { transform: scale(.6); opacity: 0; }
+  14% { opacity: .55; }
+  100% { transform: scale(1.22); opacity: 0; }
+}
+
+/* Step transitions: the copy slides, the art panel slides further and pulls
+   focus. Exit is faster than entry, as it should be. */
+.orb-onboard-copy { animation: orb-onboard-copy-forward 460ms var(--orb-ease-out) both; }
+.orb-onboard-panel { animation: orb-onboard-panel-forward 720ms var(--orb-ease-out) 30ms both; }
+.orb-onboard-back.orb-onboard-copy { animation-name: orb-onboard-copy-back; }
+.orb-onboard-panel-back { animation-name: orb-onboard-panel-back; }
+@keyframes orb-onboard-copy-forward { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes orb-onboard-copy-back { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes orb-onboard-panel-forward {
+  from { opacity: 0; transform: translateX(30px) scale(.982); filter: blur(8px); }
+  to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+}
+@keyframes orb-onboard-panel-back {
+  from { opacity: 0; transform: translateX(-30px) scale(.982); filter: blur(8px); }
+  to { opacity: 1; transform: translateX(0) scale(1); filter: blur(0); }
+}
+
+/* Within a step, elements arrive in reading order. Small things move a little,
+   the headline gets a clip wipe, the body and controls follow it in. */
+.orb-enter {
+  animation: orb-enter 620ms var(--orb-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 40ms);
+}
+.orb-enter-title {
+  animation: orb-enter-title 760ms var(--orb-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 40ms);
+}
+@keyframes orb-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes orb-enter-title {
+  from { opacity: 0; transform: translateY(16px); clip-path: inset(0 0 88% 0); }
+  to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); }
+}
+
+/* Sibling lists (purpose cards, themes, ready panels) rise in sequence. A list
+   can delay its own start with --orb-stagger-base so it follows the copy. */
+.orb-stagger { --orb-stagger-base: 0ms; }
+.orb-stagger > * { animation: orb-rise 560ms var(--orb-ease-out) both; }
+.orb-stagger > *:nth-child(1) { animation-delay: calc(var(--orb-stagger-base) + 60ms); }
+.orb-stagger > *:nth-child(2) { animation-delay: calc(var(--orb-stagger-base) + 115ms); }
+.orb-stagger > *:nth-child(3) { animation-delay: calc(var(--orb-stagger-base) + 170ms); }
+.orb-stagger > *:nth-child(4) { animation-delay: calc(var(--orb-stagger-base) + 225ms); }
+.orb-stagger > *:nth-child(5) { animation-delay: calc(var(--orb-stagger-base) + 280ms); }
+@keyframes orb-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Selection feedback: a check lands in 240ms, never a bounce. */
+.orb-pop-in { animation: orb-pop-in 240ms var(--orb-ease-out) both; }
+@keyframes orb-pop-in {
+  from { opacity: 0; transform: scale(.55); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Text that swaps in place (step label) fades rather than cutting. */
+.orb-fade { animation: orb-fade 260ms var(--orb-ease-out) both; }
+@keyframes orb-fade { from { opacity: 0; } to { opacity: 1; } }
+
+:root[data-motion='off'] .orb-orbit-slow,
+:root[data-motion='off'] .orb-orbit-reverse,
+:root[data-motion='off'] .orb-pulse,
+:root[data-motion='off'] .orb-float,
+:root[data-motion='off'] .orb-aurora > span,
+:root[data-motion='off'] .orb-ring,
+:root[data-motion='off'] .orb-onboard-copy,
+:root[data-motion='off'] .orb-onboard-panel,
+:root[data-motion='off'] .orb-enter,
+:root[data-motion='off'] .orb-enter-title,
+:root[data-motion='off'] .orb-pop-in,
+:root[data-motion='off'] .orb-fade,
+:root[data-motion='off'] .orb-stagger > * { animation: none; }
+
+/* The OS setting wins over the app setting. Content is always visible without
+   animation: every keyframe above only enhances an already-laid-out element. */
+@media (prefers-reduced-motion: reduce) {
+  .orb-orbit-slow,
+  .orb-orbit-reverse,
+  .orb-pulse,
+  .orb-float,
+  .orb-aurora > span,
+  .orb-ring,
+  .orb-onboard-copy,
+  .orb-onboard-panel,
+  .orb-enter,
+  .orb-enter-title,
+  .orb-pop-in,
+  .orb-fade,
+  .orb-stagger > * { animation: none !important; }
+  .orb-tilt { transform: none !important; transition: none !important; }
+}
 .orb-key { border: 1px solid var(--orb-border); border-radius: 4px; background: var(--orb-surface); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; padding: 2px 5px; }
 .orb-address { height: 44px; }
 .orb-tab-strip { height: 48px; }

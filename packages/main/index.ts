@@ -13,6 +13,7 @@ import { DownloadStore } from './downloads';
 import { HistoryStore, fileHistoryStorage } from './historyStore';
 import { findOpenUrl } from './cli';
 import { shortcutForInput } from './shortcuts';
+import { decideWindowIntent } from './popupPolicy';
 import {
   broadcast,
   isOrbPartition,
@@ -25,7 +26,9 @@ import {
 app.setAppUserModelId('org.orb.browser');
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_DEV === 'true';
-const NATIVE_TABS = process.env.ORB_NATIVE_TABS === '1';
+// Native tabs are the default engine. Set ORB_NATIVE_TABS=0 to fall back to the
+// legacy <webview> path while it is still being removed.
+const NATIVE_TABS = process.env.ORB_NATIVE_TABS !== '0';
 const PRELOAD_DIR = path.join(__dirname, 'preload');
 const DEFAULT_PARTITION = 'persist:orb';
 
@@ -130,6 +133,74 @@ function createMainWindow(ctx: SessionContext) {
 }
 
 /**
+ * OAuth and passkey flows call `window.open(url, name, 'width=…,height=…')` and
+ * then rely on `window.opener` plus the opener's cookies to finish. Turning
+ * those into tabs breaks the handshake, so sized popups get a real window.
+ * Ordinary `target="_blank"` links carry no size features and still become tabs.
+ */
+function decideWindowOpen(
+  contents: WebContents,
+  details: Electron.HandlerDetails,
+): Electron.WindowOpenHandlerResponse {
+  const intent = decideWindowIntent({
+    url: details.url,
+    features: details.features,
+    isWebUrl: isWebUrl(details.url),
+    fromShell: !BrowserWindow.fromWebContents(contents) || contents === mainWindow?.webContents,
+  });
+
+  if (intent === 'popup') {
+    const opener = BrowserWindow.fromWebContents(contents);
+    return {
+      action: 'allow',
+      overrideBrowserWindowOptions: {
+        ...(opener ? { parent: opener } : {}),
+        width: 520,
+        height: 700,
+        minWidth: 380,
+        minHeight: 460,
+        autoHideMenuBar: true,
+        fullscreenable: false,
+        titleBarStyle: 'default',
+        // No webPreferences override: the child inherits the opener's session,
+        // sandbox and context isolation, which keeps the login cookie in the
+        // same jar as the tab that opened it.
+      },
+    };
+  }
+
+  if (intent === 'tab' && isWebUrl(details.url)) {
+    broadcast('orb:popup-requested', { url: stripTrackingParams(details.url) });
+  }
+  return { action: 'deny' };
+}
+
+/**
+ * Enables the macOS platform authenticator so passkey sign-in can use the system
+ * sheet (iCloud Keychain, 1Password, Bitwarden).
+ *
+ * This is opt-in because the entitlement chain is heavy: Apple requires the
+ * Associated Domains entitlement, a real signing identity and an embedded
+ * provisioning profile. An ad-hoc build cannot satisfy that, and switching the
+ * authenticator on there turns every passkey request into a bare
+ * `NotAllowedError` instead of letting Chromium fall back to a phone or a
+ * security key. Signed builds set ORB_WEBAUTHN_PLATFORM_PASSKEYS=1; Touch ID
+ * additionally needs ORB_WEBAUTHN_KEYCHAIN_GROUP.
+ */
+function configurePasskeys(): void {
+  if (process.env.ORB_WEBAUTHN_PLATFORM_PASSKEYS !== '1') return;
+  const keychainAccessGroup = process.env.ORB_WEBAUTHN_KEYCHAIN_GROUP;
+  try {
+    app.configureWebAuthn({
+      ...(keychainAccessGroup ? { touchID: { keychainAccessGroup } } : {}),
+      platformPasskeys: true,
+    });
+  } catch (error) {
+    console.warn('[webauthn] Platform passkeys unavailable:', error instanceof Error ? error.message : error);
+  }
+}
+
+/**
  * Accelerators do not fire while a guest page holds focus, so shortcuts pressed
  * inside a page are forwarded to the shell window instead. WebContentsView
  * reports type 'window', so compare identity with the shell rather than type.
@@ -147,6 +218,7 @@ function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input):
 }
 
 app.whenReady().then(async () => {
+  configurePasskeys();
   if (!singleInstance) return;
 
   registerCertificateErrorHandler();
@@ -242,12 +314,12 @@ app.whenReady().then(async () => {
 
   // Single registration point for every webContents in the app.
   app.on('web-contents-created', (_event, contents) => {
-    // Never let a page (or the shell) open a native window. http(s) targets are
-    // handed to the renderer, which opens them as tabs.
-    contents.setWindowOpenHandler((details) => {
-      if (isWebUrl(details.url)) broadcast('orb:popup-requested', { url: stripTrackingParams(details.url) });
-      return { action: 'deny' };
-    });
+    // OAuth and passkey flows call `window.open(url, name, 'width=…,height=…')`
+    // and then rely on `window.opener` plus the opener's cookies to finish.
+    // Turning those into tabs breaks the handshake. Sized popups therefore get a
+    // real window; ordinary target="_blank" links have no size features and are
+    // still handed to the renderer as tabs.
+    contents.setWindowOpenHandler((details) => decideWindowOpen(contents, details));
 
     // Pages should not be able to hand tracking identifiers to the next hop.
     // The shell has its own navigation guard, so leave window contents alone.
@@ -291,10 +363,7 @@ app.whenReady().then(async () => {
     });
 
     contents.on('did-attach-webview', (_attachEvent, guest) => {
-      guest.setWindowOpenHandler((details) => {
-        if (isWebUrl(details.url)) broadcast('orb:popup-requested', { url: stripTrackingParams(details.url) });
-        return { action: 'deny' };
-      });
+      guest.setWindowOpenHandler((details) => decideWindowOpen(guest, details));
       adBlocker.applyWebRtcPolicy(guest);
     });
   });

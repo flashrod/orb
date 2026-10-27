@@ -18,6 +18,9 @@ export function migrateAppearanceSettings(persistedState: unknown, version: numb
     ...(version < 4 ? { showStartPage: true } : {}),
     ...(version < 5 ? { showTabStrip: true, showNavigation: true, compactMode: false } : {}),
     ...(version < 6 ? { sideTabWidth: 240 } : {}),
+    // People already using Orb should not be dropped into a first-run tour
+    // after an update. Fresh installs get the default (false) instead.
+    ...(version < 7 ? { onboardingComplete: true } : {}),
   };
 }
 
@@ -36,6 +39,7 @@ interface AppearanceStore {
   showNavigation: boolean;
   compactMode: boolean;
   compactSideTabs: boolean;
+  onboardingComplete: boolean;
   motion: MotionPreference;
   customColors: Partial<Record<PaletteToken, string>>;
   setTheme: (theme: AppearanceTheme) => void;
@@ -51,6 +55,8 @@ interface AppearanceStore {
   setShowNavigation: (enabled: boolean) => void;
   setCompactMode: (enabled: boolean) => void;
   setCompactSideTabs: (enabled: boolean) => void;
+  completeOnboarding: () => void;
+  replayOnboarding: () => void;
   setMotion: (motion: MotionPreference) => void;
   setCustomColor: (token: PaletteToken, color: string) => void;
   resetCustomColors: () => void;
@@ -72,6 +78,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       showNavigation: true,
       compactMode: false,
       compactSideTabs: false,
+      onboardingComplete: false,
       motion: 'gentle',
       customColors: {},
       setTheme: (theme) => set({ theme }),
@@ -87,6 +94,8 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setShowNavigation: (showNavigation) => set({ showNavigation }),
       setCompactMode: (compactMode) => set({ compactMode }),
       setCompactSideTabs: (compactSideTabs) => set({ compactSideTabs }),
+      completeOnboarding: () => set({ onboardingComplete: true }),
+      replayOnboarding: () => set({ onboardingComplete: false }),
       setMotion: (motion) => set({ motion }),
       setCustomColor: (token, color) => set((state) => {
         const customColors = { ...state.customColors };
@@ -98,7 +107,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
-      version: 6,
+      version: 7,
       migrate: migrateAppearanceSettings,
       storage: createJSONStorage(() => localStorage),
     }

@@ -1,9 +1,10 @@
 import { app, session, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import { FilterRequestContext, FilterRuleIndex, isThirdPartyRequest, NetworkFilterRule, parseFilterLine } from './filterRules';
+import { FilterRequestContext, FilterRuleIndex, cookieContext, NetworkFilterRule, parseFilterLine } from './filterRules';
 
-// Filter list sources (from Arc's manifest.json reverse engineering)
+// Filter list sources. The subscription set was chosen by studying Arc's
+// manifest.json; the lists themselves are public and the parser is Orb's own.
 type FilterListType = 'generic' | 'privacy' | 'cookies';
 interface FilterListSource { id: string; name: string; type: FilterListType; url: string; enabled: boolean; custom?: boolean }
 interface FilterListStatus extends FilterListSource { lastUpdated: number | null; ruleCount: number; error: string | null }
@@ -425,6 +426,21 @@ const initializedSessions = new WeakSet<Electron.Session>();
 const activeWebContents = new Set<Electron.WebContents>();
 let filterListsLoading: Promise<void> | null = null;
 
+/** `frame.top.url`, guarded because a frame can be gone by the time we ask. */
+function topLevelUrlOf(frame: Electron.WebFrameMain | null | undefined): string | undefined {
+  try {
+    const url = frame?.top?.url;
+    return url && /^https?:/.test(url) ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Opaque origins arrive as the string "null". */
+function usableOrigin(origin: string | null | undefined): string | undefined {
+  return origin && origin !== 'null' ? origin : undefined;
+}
+
 export function initAdBlocker(ses: Electron.Session): void {
   adBlocker.loadPreferences();
   if (initializedSessions.has(ses)) return;
@@ -469,9 +485,14 @@ export function initAdBlocker(ses: Electron.Session): void {
     },
     (details, callback) => {
       const headers = { ...(details.requestHeaders || {}) };
-      const requestDetails = details as Electron.OnBeforeSendHeadersListenerDetails & { initiator?: string };
-      const initiator = requestDetails.initiator || details.referrer || undefined;
-      if (adBlocker.thirdPartyCookieBlockingEnabled && isThirdPartyRequest(details.url, initiator) && !adBlocker.isRequestAllowlisted(details.url, initiator)) {
+      const context = cookieContext({
+        url: details.url,
+        resourceType: details.resourceType,
+        topLevelUrl: topLevelUrlOf(details.frame),
+        initiatorOrigin: usableOrigin(details.initiatorOrigin),
+        referrer: details.referrer,
+      });
+      if (adBlocker.thirdPartyCookieBlockingEnabled && context.thirdParty && !adBlocker.isRequestAllowlisted(details.url, context.initiator)) {
         for (const key of Object.keys(headers)) if (key.toLowerCase() === 'cookie') delete headers[key];
       }
 
@@ -492,9 +513,14 @@ export function initAdBlocker(ses: Electron.Session): void {
   );
 
   ses.webRequest.onHeadersReceived({ urls: ['<all_urls>'] }, (details, callback) => {
-    const requestDetails = details as Electron.OnHeadersReceivedListenerDetails & { initiator?: string };
-    const initiator = requestDetails.initiator || details.referrer || undefined;
-    if (!adBlocker.thirdPartyCookieBlockingEnabled || !isThirdPartyRequest(details.url, initiator) || adBlocker.isRequestAllowlisted(details.url, initiator)) {
+    const context = cookieContext({
+      url: details.url,
+      resourceType: details.resourceType,
+      topLevelUrl: topLevelUrlOf(details.frame),
+      initiatorOrigin: usableOrigin(details.initiatorOrigin),
+      referrer: details.referrer,
+    });
+    if (!adBlocker.thirdPartyCookieBlockingEnabled || !context.thirdParty || adBlocker.isRequestAllowlisted(details.url, context.initiator)) {
       callback({ responseHeaders: details.responseHeaders });
       return;
     }

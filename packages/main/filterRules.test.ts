@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FilterRuleIndex, matchesFilterRule, parseFilterLine, type NetworkFilterRule } from './filterRules';
+import { FilterRuleIndex, cookieContext, matchesFilterRule, parseFilterLine, type NetworkFilterRule } from './filterRules';
 
 function rule(line: string): NetworkFilterRule {
   const parsed = parseFilterLine(line);
@@ -98,5 +98,48 @@ describe('FilterRuleIndex', () => {
     const index = new FilterRuleIndex([rule('||ads.example.com^')]);
     expect(index.firstBlockMatch('https://ads.example.com/a.js', request)?.source).toBe('||ads.example.com^');
     expect(index.firstBlockMatch('https://other.test/a.js', request)).toBeUndefined();
+  });
+});
+
+describe('cookieContext', () => {
+  it('never treats a top-level document as third-party', () => {
+    // Following a link, or coming back from an OAuth redirect, must keep the
+    // cookies the destination already owns.
+    expect(cookieContext({
+      url: 'https://news.example.com/story',
+      resourceType: 'mainFrame',
+      initiatorOrigin: 'https://google.com',
+      referrer: 'https://accounts.google.com/',
+    })).toEqual({ thirdParty: false });
+  });
+
+  it('judges subresources against the site in the address bar', () => {
+    expect(cookieContext({
+      url: 'https://cdn.shop.example/widget.js',
+      resourceType: 'script',
+      topLevelUrl: 'https://shop.example/',
+    }).thirdParty).toBe(false);
+  });
+
+  it('blocks cookies for a genuinely embedded third-party frame', () => {
+    const context = cookieContext({
+      url: 'https://tracker.example/pixel',
+      resourceType: 'image',
+      topLevelUrl: 'https://shop.example/',
+    });
+    expect(context.thirdParty).toBe(true);
+    expect(context.initiator).toBe('https://shop.example/');
+  });
+
+  it('falls back to the initiator when the top frame is unavailable', () => {
+    expect(cookieContext({
+      url: 'https://ads.example/a.js',
+      resourceType: 'script',
+      initiatorOrigin: 'https://shop.example',
+    }).thirdParty).toBe(true);
+  });
+
+  it('allows requests with no site context at all', () => {
+    expect(cookieContext({ url: 'https://example.com/a.js', resourceType: 'script' }).thirdParty).toBe(false);
   });
 });

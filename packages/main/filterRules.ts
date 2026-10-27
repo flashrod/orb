@@ -17,6 +17,41 @@ export function isThirdPartyRequest(requestUrl: string, initiatorUrl?: string): 
   } catch { return false; }
 }
 
+export interface CookieContextInput {
+  url: string;
+  resourceType: string;
+  /** Site in the address bar, i.e. `frame.top.url`. */
+  topLevelUrl?: string;
+  /** Origin that issued the request; survives redirects. */
+  initiatorOrigin?: string;
+  referrer?: string;
+}
+
+export interface CookieContext {
+  thirdParty: boolean;
+  initiator?: string;
+}
+
+/**
+ * Decides whether a request may carry cookies.
+ *
+ * Comparing every request against its initiator/referrer gets two things wrong:
+ *
+ * 1. A top-level document is always first-party to itself. Judging it by the
+ *    site that linked to it strips cookies on every cross-site click and on the
+ *    OAuth redirect back to the relying party, so the session that was just
+ *    created never sticks.
+ * 2. Subresources belong to the site in the address bar, not to the frame that
+ *    issued them, otherwise a third-party iframe looks first-party.
+ */
+export function cookieContext(input: CookieContextInput): CookieContext {
+  // Top-level documents own their own cookies, whoever linked to them.
+  if (input.resourceType === 'mainFrame') return { thirdParty: false };
+
+  const initiator = input.topLevelUrl || input.initiatorOrigin || input.referrer || undefined;
+  return { thirdParty: isThirdPartyRequest(input.url, initiator), initiator };
+}
+
 export interface NetworkFilterRule {
   action: 'block' | 'allow';
   source: string;

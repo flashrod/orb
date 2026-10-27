@@ -5,6 +5,7 @@ import { useEssentialsStore } from '../stores/essentials';
 import { resolveAddressOrSearch, resolveWebsiteAddress } from '../lib/navigation';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 import { filterEssentialsForContext } from '../lib/essentials';
+import { personalizedGreeting } from '../../shared/greeting';
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(date);
@@ -32,7 +33,8 @@ export default function StartPage({
   const addSite = useEssentialsStore((state) => state.addSite);
   const removeSite = useEssentialsStore((state) => state.removeSite);
   const date = useMemo(() => formatDate(new Date()), []);
-  const { searchProvider, essentialsScope } = useBrowserPreferencesStore();
+  const { searchProvider, essentialsScope, displayName } = useBrowserPreferencesStore();
+  const greeting = useMemo(() => personalizedGreeting(new Date().getHours(), displayName), [displayName]);
   const sites = filterEssentialsForContext(allSites, essentialsScope, spaceId, profileId);
   const [restorableCount, setRestorableCount] = useState(0);
   const [restoreNotice, setRestoreNotice] = useState('');
@@ -83,7 +85,7 @@ export default function StartPage({
 
         <div className="mt-7 max-w-[640px]">
           <h1 className="orb-serif orb-strong text-[clamp(34px,4vw,48px)] font-medium leading-[1.1] tracking-[-0.035em]">A little room to think.</h1>
-          <p className="orb-muted mt-3 max-w-[48ch] text-[15px] leading-6">Your browser, arranged around what matters in this space.</p>
+          <p className="orb-muted mt-3 max-w-[48ch] text-[15px] leading-6">{greeting}. Your browser, arranged around what matters in this space.</p>
         </div>
 
         {restorableCount > 0 && (

@@ -62,7 +62,7 @@ function SectionHeading({ title, detail }: { title: string; detail: string }) {
   return <div className="mb-4"><h2 className="orb-strong text-sm font-semibold">{title}</h2><p className="orb-muted mt-1 text-xs">{detail}</p></div>;
 }
 
-export default function Settings({ onClose, onNavigate, activeUrl, initialSection = 'appearance', onExportPdf, onPreviewBoost }: { onClose: () => void; onNavigate: (url: string) => void; activeUrl?: string; initialSection?: SettingsSection; onExportPdf?: () => void; onPreviewBoost?: (boost: { domain: string; css: string; js: string }) => void }) {
+export default function Settings({ onClose, onNavigate, activeUrl, initialSection = 'appearance', onExportPdf, onPreviewBoost, onReplayOnboarding }: { onClose: () => void; onNavigate: (url: string) => void; activeUrl?: string; initialSection?: SettingsSection; onExportPdf?: () => void; onPreviewBoost?: (boost: { domain: string; css: string; js: string }) => void; onReplayOnboarding?: () => void }) {
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const { searchProvider, setSearchProvider } = useBrowserPreferencesStore();
   const { order, hidden, move, toggleHidden, reset } = useToolbarStore();
@@ -209,6 +209,13 @@ export default function Settings({ onClose, onNavigate, activeUrl, initialSectio
                     <select aria-label="Default search provider" value={searchProvider} onChange={(event) => setSearchProvider(event.target.value as typeof searchProvider)} className="orb-strong h-9 min-w-40 rounded-md border orb-border bg-[var(--orb-elevated)] px-3 text-xs outline-none focus:border-[var(--orb-accent)]">
                       {SEARCH_PROVIDERS.map((provider) => <option key={provider.id} value={provider.id}>{provider.name}</option>)}
                     </select>
+                  </div>
+                </section>
+
+                <section className="border-t orb-border pt-5">
+                  <div className="orb-elevated flex items-center justify-between gap-4 rounded-md border orb-border px-3 py-2.5">
+                    <span><span className="orb-strong block text-xs font-medium">Welcome tour</span><span className="orb-muted mt-1 block text-[10px]">Revisit the first-run choices for appearance and your first Space.</span></span>
+                    <button type="button" onClick={onReplayOnboarding} disabled={!onReplayOnboarding} className="orb-control shrink-0 rounded-md border orb-border px-3 py-1.5 text-xs disabled:opacity-50">Show tour</button>
                   </div>
                 </section>
               </div>

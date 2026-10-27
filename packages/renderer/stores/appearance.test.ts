@@ -17,4 +17,17 @@ describe('appearance migrations', () => {
       compactMode: false,
     });
   });
+
+  it('does not replay onboarding for people already using Orb', () => {
+    expect(migrateAppearanceSettings({ theme: 'night' }, 6)).toMatchObject({
+      theme: 'night',
+      onboardingComplete: true,
+    });
+  });
+
+  it('keeps a completed tour complete on the current schema', () => {
+    expect(migrateAppearanceSettings({ onboardingComplete: false }, 7)).toMatchObject({
+      onboardingComplete: false,
+    });
+  });
 });

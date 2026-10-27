@@ -34,6 +34,7 @@ export type OrbShortcutAction =
   | 'toggle-compact'
   | 'settings'
   | 'default-browser'
+  | 'show-welcome'
   | 'find'
   | 'print'
   | 'save-pdf'

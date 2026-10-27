@@ -148,6 +148,22 @@ function installDownloadPolicy(ses: Session, ctx: SessionContext): void {
 }
 
 /**
+ * Electron cancels discoverable-credential (passkey) requests with a
+ * `NotAllowedError` when no listener is registered for this event, even when a
+ * single credential matches. Orb has no account picker yet, so it takes the
+ * first account the authenticator offers.
+ *
+ * Platform passkeys (iCloud Keychain, 1Password, Bitwarden) additionally need
+ * `app.configureWebAuthn({ platformPasskeys: true })` plus Apple entitlements;
+ * that is wired up in the app entry point.
+ */
+function installWebAuthnPolicy(ses: Session): void {
+  ses.on('select-webauthn-account', (_event, details, callback) => {
+    callback(details.accounts[0]?.credentialId ?? null);
+  });
+}
+
+/**
  * Installs popup, permission and download policy on a session. Safe to call
  * repeatedly; each session is only hardened once.
  */
@@ -157,6 +173,7 @@ export function hardenSession(ses: Session, ctx: SessionContext): void {
 
   installPermissionPolicy(ses, ctx);
   installDownloadPolicy(ses, ctx);
+  installWebAuthnPolicy(ses);
 }
 
 /** Returns the hardened session for an Orb partition. */

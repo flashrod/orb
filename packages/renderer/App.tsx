@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useSpaceStore } from './stores/spaces';
 import { useProfileStore } from './stores/profiles';
+import { useBrowserPreferencesStore } from './stores/preferences';
 import { resolveSpaceProfile } from './lib/profiles';
 import { useTabStore } from './stores/tabs';
 import type { Tab } from './stores/tabs';
@@ -11,6 +12,7 @@ import BrowserToolbar from './components/BrowserToolbar';
 import WebView from './components/WebView';
 import VerticalTabPanel from './components/VerticalTabPanel';
 import Settings from './components/Settings';
+import Onboarding, { type OnboardingChoice } from './components/Onboarding';
 import { useAppearanceStore } from './stores/appearance';
 import StartPage from './components/StartPage';
 import GlanceView from './components/GlanceView';
@@ -56,6 +58,12 @@ const NATIVE_TABS = nativeTabsEnabled();
 export default function App() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // A fresh install opens on the tour. Existing profiles have already
+  // completed it through the store migration; ?welcome=1 is a dev escape hatch.
+  const [welcomeOpen, setWelcomeOpen] = useState(() =>
+    !useAppearanceStore.getState().onboardingComplete ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('welcome')),
+  );
   const [settingsSection, setSettingsSection] = useState<'appearance' | 'browser' | 'privacy' | 'boosts' | 'toolbar' | 'profiles'>('appearance');
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerNotice, setPickerNotice] = useState('');
@@ -176,8 +184,41 @@ export default function App() {
     }
   }, []);
 
-  const previewBoost = useCallback(async (boost: { domain: string; css: string; js: string }) => {
-    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
+  const finishOnboarding = useCallback((choice: OnboardingChoice) => {
+    useBrowserPreferencesStore.getState().setDisplayName(choice.displayName);
+
+    const spaceStore = useSpaceStore.getState();
+    const current = spaceStore.spaces.find((space) => space.id === spaceStore.activeSpaceId) ?? spaceStore.spaces[0];
+    const [firstSpace, ...rest] = choice.spaces.length > 0
+      ? choice.spaces
+      : [{ name: 'Personal', color: '#a0522d' }];
+
+    let firstId = current?.id;
+    if (current) {
+      spaceStore.updateSpace(current.id, { name: firstSpace.name, color: firstSpace.color });
+    } else {
+      firstId = spaceStore.addSpace({ name: firstSpace.name, icon: 'globe', color: firstSpace.color, tabIds: [] });
+    }
+    for (const space of rest) {
+      spaceStore.addSpace({ name: space.name, icon: 'globe', color: space.color, tabIds: [] });
+    }
+    if (firstId) spaceStore.setActiveSpace(firstId);
+
+    useAppearanceStore.getState().completeOnboarding();
+    setWelcomeOpen(false);
+  }, []);
+
+  const skipOnboarding = useCallback(() => {
+    useAppearanceStore.getState().completeOnboarding();
+    setWelcomeOpen(false);
+  }, []);
+
+  const replayOnboarding = useCallback(() => {
+    useAppearanceStore.getState().replayOnboarding();
+    setWelcomeOpen(true);
+  }, []);
+
+  const previewBoost = useCallback(async (boost: { domain: string; css: string; js: string }) => {    const { tabs: allTabs, activeTabId: currentTabId } = useTabStore.getState();
     const current = allTabs.find((tab) => tab.id === currentTabId);
     if (!current || current.url === 'about:blank') {
       setPickerNotice('Open a website before previewing a Boost.');
@@ -453,6 +494,7 @@ export default function App() {
 
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (welcomeOpen) return;
       if ((e.metaKey || e.ctrlKey) && e.key === 't') {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('orb:new-tab'));
@@ -554,6 +596,7 @@ export default function App() {
     }).catch(() => undefined);
 
     const handleShortcut = (e: Event) => {
+      if (welcomeOpen) return;
       const customEvent = e as CustomEvent<string>;
       const action = customEvent.detail;
       if (action === 'new-tab') handleNewTab();
@@ -577,6 +620,9 @@ export default function App() {
       else if (action === 'default-browser') {
         setSettingsSection('browser');
         setSettingsOpen(true);
+      }
+      else if (action === 'show-welcome') {
+        replayOnboarding();
       }
       else if (action === 'close-overlays') {
         setCommandBarOpen(false);
@@ -614,7 +660,7 @@ export default function App() {
       window.removeEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
       window.removeEventListener('orb:shortcut', handleShortcut as EventListener);
     };
-  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind, exportActivePdf, togglePictureInPicture, toggleMediaPlayback]);
+  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind, exportActivePdf, togglePictureInPicture, toggleMediaPlayback, replayOnboarding, welcomeOpen]);
 
   // Forward main-process push events (popups, permissions, downloads, menu
   // shortcuts) into the DOM events the shell already listens for.
@@ -635,6 +681,8 @@ export default function App() {
           isPinned: tab.isPinned,
           isAudible: Boolean(webviewRefs.current[tab.id]?.isAudible?.()),
           inCall: false,
+          hasUnsavedInput: false,
+          hasNotificationPermission: false,
           lastActiveAt: tabLastActiveAtRef.current[tab.id] ?? now,
           state: 'live',
           url: tab.url,
@@ -646,6 +694,7 @@ export default function App() {
         MEMORY_GUARD_IDLE_MS,
         MEMORY_GUARD_MAX_LIVE_TABS,
         currentTabId,
+        { neverHibernate: useBrowserPreferencesStore.getState().neverHibernate },
       );
       if (toHibernate.length === 0) return;
 
@@ -680,6 +729,7 @@ export default function App() {
     !downloadsOpen &&
     !glanceUrl &&
     !pickerBusy &&
+    !welcomeOpen &&
     !resizingSplit,
   );
 
@@ -842,8 +892,13 @@ export default function App() {
 
   return (
     <div className="orb-frame flex h-screen w-screen overflow-hidden">
+      {welcomeOpen && <Onboarding onFinish={finishOnboarding} onSkip={skipOnboarding} macTrafficLights={hasMacTrafficLights} />}
       {/* Main content area */}
-      <main className="relative flex min-w-0 flex-1 overflow-hidden">
+      <main
+        aria-hidden={welcomeOpen || undefined}
+        {...(welcomeOpen ? { inert: '' } : {})}
+        className="relative flex min-w-0 flex-1 overflow-hidden"
+      >
         {showSideTabs ? (
           <VerticalTabPanel
             isOpen
@@ -962,7 +1017,7 @@ export default function App() {
 
         {/* Command Bar Overlay */}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} />}
-        {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onPreviewBoost={previewBoost} onClose={() => setSettingsOpen(false)} />}
+        {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onPreviewBoost={previewBoost} onReplayOnboarding={replayOnboarding} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
         <PermissionPrompt />
         {downloadsOpen && (
