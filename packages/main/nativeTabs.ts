@@ -6,7 +6,7 @@ import { profilePartition } from '../shared/profiles';
 import { bestBoostForDomain } from '../shared/boosts';
 import { getBoostsDatabase } from './boostsDatabase';
 import { clampBounds, type TabOpenInput, type TabStateSnapshot, type ViewBounds } from '../shared/tabModel';
-import { initAdBlocker } from './adBlocker';
+import { adBlocker, initAdBlocker } from './adBlocker';
 import { PrewarmPool } from './prewarmPool';
 import { buildPageContextMenu } from './pageContextMenu';
 import { stripTrackingParams } from '../shared/privacy';
@@ -429,6 +429,8 @@ export class NativeTabHost {
     });
     contents.on('dom-ready', () => {
       void this.applyBoost(tabId, contents);
+      const host = hostFromUrl(contents.getURL());
+      if (host) void this.applyCss(tabId, adBlocker.getCosmeticCss(host));
     });
     contents.on('page-title-updated', (_event, title) => emit({ type: 'page-title-updated', title }));
     contents.on('page-favicon-updated', (_event, favicons) => {

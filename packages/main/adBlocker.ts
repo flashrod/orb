@@ -2,6 +2,7 @@ import { app, session, dialog } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { FilterRequestContext, FilterRuleIndex, cookieContext, NetworkFilterRule, parseFilterLine } from './filterRules';
+import { cosmeticCssForHost } from './cosmeticCss';
 
 // Filter list sources. These are the public lists most blockers subscribe to;
 // the parser below is Orb's own.
@@ -48,8 +49,32 @@ interface CosmeticFilterRule {
   isRegexSelect: boolean; // ##+ vs ##
 }
 
+// Rules that ship with Orb rather than coming from a list. The player-response
+// pruning lives in shared/youtubeAds.ts; these cover the requests and the
+// leftover furniture that lists do not always reach.
+const BUILTIN_FILTERS = [
+  '||youtube.com/api/stats/ads',
+  '||youtube.com/api/stats/atr',
+  '||youtube.com/pagead/',
+  '||youtube.com/ptracking',
+];
+
+const BUILTIN_COSMETIC: Array<{ domain: string; selector: string }> = [
+  { domain: 'youtube.com', selector: '#masthead-ad' },
+  { domain: 'youtube.com', selector: '.ytp-ad-overlay-container' },
+  { domain: 'youtube.com', selector: '.ytp-ad-progress-list' },
+  { domain: 'youtube.com', selector: 'ytd-display-ad-renderer' },
+  { domain: 'youtube.com', selector: 'ytd-promoted-sparkles-web-renderer' },
+  { domain: 'youtube.com', selector: 'ytd-promoted-video-renderer' },
+  { domain: 'youtube.com', selector: 'ytd-ad-slot-renderer' },
+  { domain: 'youtube.com', selector: 'ytd-in-feed-ad-layout-renderer' },
+  { domain: 'youtube.com', selector: 'ytd-banner-promo-renderer' },
+];
+
 export class AdBlocker {
-  private networkRules: NetworkFilterRule[] = [];
+  private networkRules: NetworkFilterRule[] = BUILTIN_FILTERS
+    .map((line) => parseFilterLine(line))
+    .filter((rule): rule is NetworkFilterRule => Boolean(rule));
   private trackerRules: NetworkFilterRule[] = [];
   private networkIndex = new FilterRuleIndex([]);
   private trackerIndex = new FilterRuleIndex([]);
@@ -154,6 +179,12 @@ export class AdBlocker {
         console.error(`[AdBlocker] Failed to load ${source.url}:`, err);
       }
     }
+
+    for (const line of BUILTIN_FILTERS) {
+      const rule = parseFilterLine(line);
+      if (rule) networkRules.push(rule);
+    }
+    for (const rule of BUILTIN_COSMETIC) cosmeticRules.push({ ...rule, isRegexSelect: false });
 
     this.networkRules = networkRules;
     this.trackerRules = trackerRules;
@@ -378,6 +409,15 @@ export class AdBlocker {
 
   getTrackerRuleCount(): number {
     return this.trackerRules.length;
+  }
+
+  /**
+   * CSS for the element-hiding rules that apply to this host. Lists carry
+   * thousands of `##` rules; only the matching ones are worth sending.
+   */
+  getCosmeticCss(host: string): string {
+    if (!this.cosmeticFilteringEnabled) return '';
+    return cosmeticCssForHost(this.cosmeticRules, host);
   }
 
   getCosmeticRuleCount(): number {
