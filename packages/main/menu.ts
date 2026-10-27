@@ -71,6 +71,7 @@ export function createMenu(): void {
         { label: 'Open Command Bar…', accelerator: 'CmdOrCtrl+K', click: () => dispatch('command-bar') },
         { label: 'Focus Address Bar', accelerator: 'CmdOrCtrl+L', click: () => dispatch('focus-address') },
         { label: 'Find…', accelerator: 'CmdOrCtrl+F', click: () => dispatch('find') },
+        { label: 'History', accelerator: 'CmdOrCtrl+Y', click: () => dispatch('history') },
       ],
     },
     {

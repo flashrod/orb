@@ -185,6 +185,33 @@ export class HistoryStore {
     await this.save();
   }
 
+  /** Forget a whole site, e.g. "remove everything from this host". */
+  async removeHost(host: string): Promise<number> {
+    const target = host.trim().toLowerCase();
+    let removed = 0;
+    for (const [url, entry] of this.entries) {
+      if (entry.host.toLowerCase() === target) {
+        this.entries.delete(url);
+        removed += 1;
+      }
+    }
+    if (removed > 0) await this.save();
+    return removed;
+  }
+
+  /** Delete visits inside an inclusive time range ("clear today", "last hour"). */
+  async clearRange(from: number, to: number): Promise<number> {
+    let removed = 0;
+    for (const [url, entry] of this.entries) {
+      if (entry.visitedAt >= from && entry.visitedAt <= to) {
+        this.entries.delete(url);
+        removed += 1;
+      }
+    }
+    if (removed > 0) await this.save();
+    return removed;
+  }
+
   async clear(): Promise<void> {
     this.entries.clear();
     await this.save();

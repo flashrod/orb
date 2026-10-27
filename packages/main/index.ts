@@ -271,6 +271,14 @@ app.whenReady().then(async () => {
     if (typeof url === 'string') await historyStore.remove(url);
     return { ok: true };
   });
+  ipcMain.handle('history:remove-host', async (_, host: unknown) => {
+    if (typeof host !== 'string') return { ok: false, removed: 0 };
+    return { ok: true, removed: await historyStore.removeHost(host) };
+  });
+  ipcMain.handle('history:clear-range', async (_, from: unknown, to: unknown) => {
+    if (typeof from !== 'number' || typeof to !== 'number') return { ok: false, removed: 0 };
+    return { ok: true, removed: await historyStore.clearRange(from, to) };
+  });
   ipcMain.handle('history:clear', async () => {
     await historyStore.clear();
     return { ok: true };

@@ -191,4 +191,28 @@ describe('HistoryStore', () => {
     }
     expect(store.query('').map((entry) => entry.host)).toEqual(['site4.test', 'site3.test', 'site2.test']);
   });
+
+  it('removes every page for one host and leaves other hosts alone', async () => {
+    const { store, advance } = setup();
+    await store.record('https://example.com/a', 'A');
+    await store.record('https://example.com/b', 'B');
+    advance(10);
+    await store.record('https://other.test/', 'Other');
+
+    expect(await store.removeHost('example.com')).toBe(2);
+    expect(store.query('').map((entry) => entry.host)).toEqual(['other.test']);
+    expect(await store.removeHost('missing.test')).toBe(0);
+  });
+
+  it('clears a time range without touching older visits', async () => {
+    const { store, advance } = setup();
+    await store.record('https://old.test/', 'Old');
+    advance(1_000);
+    await store.record('https://today.test/a', 'Today A');
+    await store.record('https://today.test/b', 'Today B');
+    advance(1_000);
+
+    expect(await store.clearRange(1_500, 2_500)).toBe(2);
+    expect(store.query('').map((entry) => entry.host)).toEqual(['old.test']);
+  });
 });
