@@ -169,6 +169,20 @@ describe('HistoryStore', () => {
     expect(top.find((entry) => entry.host === 'example.com')?.url).toBe('https://example.com/b');
   });
 
+  it('lists recent sites newest first, one per host', async () => {
+    const { store, advance } = setup();
+    await store.record('https://a.test/one', 'A one');
+    advance(10);
+    await store.record('https://b.test/', 'B');
+    advance(10);
+    await store.record('https://a.test/two', 'A two');
+
+    expect(store.recentSites(5).map((entry) => entry.url)).toEqual([
+      'https://a.test/two',
+      'https://b.test/',
+    ]);
+  });
+
   it('drops the oldest entries beyond the cap', async () => {
     const { store, advance } = setup(3);
     for (let index = 0; index < 5; index += 1) {

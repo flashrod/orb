@@ -97,6 +97,7 @@ contextBridge.exposeInMainWorld('orbApi', {
   // History
   queryHistory: (text: string, limit?: number) => ipcRenderer.invoke('history:query', text, limit ?? 20),
   topSites: (limit?: number) => ipcRenderer.invoke('history:top', limit ?? 8),
+  recentSites: (limit?: number) => ipcRenderer.invoke('history:recent', limit ?? 6),
   removeHistory: (url: string) => ipcRenderer.invoke('history:remove', url),
   clearHistory: () => ipcRenderer.invoke('history:clear'),
 
@@ -190,6 +191,7 @@ declare global {
       // History
       queryHistory: (text: string, limit?: number) => Promise<Array<{ url: string; title: string; host: string; visitedAt: number; visitCount: number }>>;
       topSites: (limit?: number) => Promise<Array<{ url: string; title: string; host: string; visitedAt: number; visitCount: number }>>;
+      recentSites: (limit?: number) => Promise<Array<{ url: string; title: string; host: string; visitedAt: number; visitCount: number }>>;
       removeHistory: (url: string) => Promise<{ ok: boolean }>;
       clearHistory: () => Promise<{ ok: boolean }>;
       // Downloads

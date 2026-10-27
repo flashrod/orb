@@ -166,6 +166,20 @@ export class HistoryStore {
       .map((entry) => ({ ...entry }));
   }
 
+  /** Most recently opened pages, one per host, newest first. */
+  recentSites(limit = 6): HistoryEntry[] {
+    const seen = new Set<string>();
+    return [...this.entries.values()]
+      .sort((a, b) => b.visitedAt - a.visitedAt)
+      .filter((entry) => {
+        if (seen.has(entry.host)) return false;
+        seen.add(entry.host);
+        return true;
+      })
+      .slice(0, Math.max(0, limit))
+      .map((entry) => ({ ...entry }));
+  }
+
   async remove(url: string): Promise<void> {
     this.entries.delete(url);
     await this.save();
