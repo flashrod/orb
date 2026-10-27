@@ -679,6 +679,87 @@ export default function App() {
     window.addEventListener('orb:new-space', handleNewSpace);
     window.addEventListener('orb:popup-requested', handlePopupRequestedEvent);
 
+    // --- Tab navigation shortcut handlers ---
+
+    const spaceTabsFor = useCallback((spaceId: string) => {
+      return useTabStore.getState().tabs
+        .filter((tab) => tab.spaceId === spaceId)
+        .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    }, []);
+
+    const handleCloseActiveTab = useCallback(() => {
+      const state = useTabStore.getState();
+      const id = state.activeTabId;
+      if (!id) return;
+      state.removeTab(id);
+    }, []);
+
+    const handleActivateTabByOffset = useCallback((offset: number) => {
+      const state = useTabStore.getState();
+      const currentId = state.activeTabId;
+      if (!currentId) return;
+      const current = state.tabs.find((tab) => tab.id === currentId);
+      if (!current) return;
+      const siblings = spaceTabsFor(current.spaceId);
+      const index = siblings.findIndex((tab) => tab.id === currentId);
+      if (index < 0) return;
+      const nextIndex = (index + offset + siblings.length) % siblings.length;
+      useTabStore.getState().setActiveTab(siblings[nextIndex].id);
+    }, [spaceTabsFor]);
+
+    const handleGoToTabIndex = useCallback((zeroBasedIndex: number) => {
+      const state = useTabStore.getState();
+      const currentId = state.activeTabId;
+      if (!currentId) return;
+      const current = state.tabs.find((tab) => tab.id === currentId);
+      if (!current) return;
+      const siblings = spaceTabsFor(current.spaceId);
+      if (zeroBasedIndex < 0 || zeroBasedIndex >= siblings.length) return;
+      useTabStore.getState().setActiveTab(siblings[zeroBasedIndex].id);
+    }, [spaceTabsFor]);
+
+    const handleTogglePinActiveTab = useCallback(() => {
+      const state = useTabStore.getState();
+      const id = state.activeTabId;
+      if (!id) return;
+      const tab = state.tabs.find((t) => t.id === id);
+      if (!tab) return;
+      state.updateTab(id, { isPinned: !tab.isPinned });
+    }, []);
+
+    const handleToggleMuteActiveTab = useCallback(() => {
+      const state = useTabStore.getState();
+      const id = state.activeTabId;
+      if (!id) return;
+      const tab = state.tabs.find((t) => t.id === id);
+      if (!tab) return;
+      toggleTabMute(id);
+    }, [toggleTabMute]);
+
+    const handleDuplicateActiveTab = useCallback(() => {
+      const state = useTabStore.getState();
+      const tab = state.tabs.find((t) => t.id === state.activeTabId);
+      if (!tab || tab.url === 'about:blank') return;
+      const spaceId = tab.spaceId;
+      state.addTab({ spaceId, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: false, isActive: true });
+    }, []);
+
+    const handleHibernateActiveTab = useCallback(() => {
+      const id = useTabStore.getState().activeTabId;
+      if (!id) return;
+      void window.orbApi?.tabs.hibernate(id);
+    }, []);
+
+    const handleHibernateOtherTabs = useCallback(() => {
+      const state = useTabStore.getState();
+      const id = state.activeTabId;
+      if (!id) return;
+      for (const tab of state.tabs) {
+        if (tab.id === id) continue;
+        void window.orbApi?.tabs.hibernate(tab.id);
+      }
+    }, []);
+
     // A link that launched the app arrives once the shell is listening.
     void window.orbApi?.takeLaunchUrl?.().then((url) => {
       if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
@@ -720,6 +801,63 @@ export default function App() {
       }
       else if (action === 'toggle-fullscreen') {
         void window.orbApi?.toggleFullscreen();
+      }
+      else if (action === 'tab.close') {
+        handleCloseActiveTab();
+      }
+      else if (action === 'tab.next') {
+        handleActivateTabByOffset(1);
+      }
+      else if (action === 'tab.previous') {
+        handleActivateTabByOffset(-1);
+      }
+      else if (action === 'tab.go-to-1') {
+        handleGoToTabIndex(0);
+      }
+      else if (action === 'tab.go-to-2') {
+        handleGoToTabIndex(1);
+      }
+      else if (action === 'tab.go-to-3') {
+        handleGoToTabIndex(2);
+      }
+      else if (action === 'tab.go-to-4') {
+        handleGoToTabIndex(3);
+      }
+      else if (action === 'tab.go-to-5') {
+        handleGoToTabIndex(4);
+      }
+      else if (action === 'tab.go-to-6') {
+        handleGoToTabIndex(5);
+      }
+      else if (action === 'tab.go-to-7') {
+        handleGoToTabIndex(6);
+      }
+      else if (action === 'tab.go-to-8') {
+        handleGoToTabIndex(7);
+      }
+      else if (action === 'tab.go-to-last') {
+        const state = useTabStore.getState();
+        const currentId = state.activeTabId;
+        if (!currentId) return;
+        const current = state.tabs.find((tab) => tab.id === currentId);
+        if (!current) return;
+        const siblings = spaceTabsFor(current.spaceId);
+        if (siblings.length > 0) useTabStore.getState().setActiveTab(siblings[siblings.length - 1].id);
+      }
+      else if (action === 'tab.pin') {
+        handleTogglePinActiveTab();
+      }
+      else if (action === 'tab.mute') {
+        handleToggleMuteActiveTab();
+      }
+      else if (action === 'tab.duplicate') {
+        handleDuplicateActiveTab();
+      }
+      else if (action === 'tab.hibernate') {
+        handleHibernateActiveTab();
+      }
+      else if (action === 'tab.hibernate-others') {
+        handleHibernateOtherTabs();
       }
     };
     window.addEventListener('orb:shortcut', handleShortcut as EventListener);
