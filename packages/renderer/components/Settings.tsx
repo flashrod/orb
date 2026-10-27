@@ -227,7 +227,7 @@ export default function Settings({ onClose, onNavigate, activeUrl, initialSectio
 
             {section === 'performance' && <PerformanceSettings />}
 
-            {section === 'history' && <HistorySettings />}
+            {section === 'history' && <HistorySettings onOpenGoogleActivity={() => { onNavigate('https://myactivity.google.com/'); onClose(); }} />}
 
             {section === 'boosts' && <div className="mx-auto max-w-[720px]"><BoostsEditor onPreview={onPreviewBoost} /></div>}
 

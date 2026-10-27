@@ -18,7 +18,7 @@ function formatVisited(visitedAt: number): string {
     : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: date.getFullYear() === new Date(now).getFullYear() ? undefined : 'numeric' });
 }
 
-export default function HistorySettings() {
+export default function HistorySettings({ onOpenGoogleActivity }: { onOpenGoogleActivity?: () => void }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
@@ -117,6 +117,17 @@ export default function HistorySettings() {
           <Trash className="h-3.5 w-3.5" />Clear history
         </button>
       </div>}
+    </div>
+
+    <div className="orb-elevated flex flex-wrap items-center gap-2 rounded-lg border orb-border px-3 py-2">
+      <p className="orb-muted min-w-0 flex-1 text-[11px] leading-5">
+        Orb can only delete the history stored on this Mac. Google keeps account activity on its own servers.
+      </p>
+      {onOpenGoogleActivity && (
+        <button type="button" onClick={onOpenGoogleActivity} className="orb-control shrink-0 rounded-md border orb-border px-2.5 py-1 text-[11px]">
+          Open Google My Activity ↗
+        </button>
+      )}
     </div>
 
     <div className="relative">

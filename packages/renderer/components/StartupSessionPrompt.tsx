@@ -4,15 +4,25 @@ import { ClockCounterClockwise } from '@phosphor-icons/react';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 import { countRestorableTabs, restoreLastSession } from '../lib/restoreSession';
 import { useTabStore } from '../stores/tabs';
+import { useSpaceStore } from '../stores/spaces';
 import { useSplitViewStore } from '../stores/splitView';
 
 const ASKED_KEY = 'orb-startup-asked';
 
-/** Closes every tab and lets the app open a single blank one. */
+/** Closes every tab and leaves one blank tab so the window is never empty. */
 function startFresh(): void {
   const tabState = useTabStore.getState();
   useSplitViewStore.getState().close();
   for (const tab of [...tabState.tabs]) tabState.removeTab(tab.id);
+
+  const spaceState = useSpaceStore.getState();
+  let spaceId = spaceState.activeSpaceId || spaceState.spaces[0]?.id;
+  if (!spaceId) {
+    spaceState.addSpace({ name: 'Personal', icon: 'globe', color: '#a0522d', tabIds: [] });
+    spaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
+  }
+  if (!spaceId) return;
+  useTabStore.getState().addTab({ spaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
 }
 
 /**

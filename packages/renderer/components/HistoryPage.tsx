@@ -39,9 +39,11 @@ function timeLabel(visitedAt: number): string {
  */
 export default function HistoryPage({
   onNavigate,
+  onOpenNewTab,
   onClose,
 }: {
   onNavigate: (url: string) => void;
+  onOpenNewTab?: (url: string) => void;
   onClose: () => void;
 }) {
   const [entries, setEntries] = useState<HistoryPageEntry[]>([]);
@@ -231,8 +233,18 @@ export default function HistoryPage({
         </div>
       </div>
 
-      <footer className="orb-sidebar flex shrink-0 items-center justify-between gap-3 border-t orb-border px-4 py-2 text-[10px] sm:px-6">
-        <p role="status" className="orb-muted min-w-0 flex-1 truncate">{notice || 'History stays on this Mac. Nothing is synced.'}</p>
+      <footer className="orb-sidebar flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t orb-border px-4 py-2 text-[10px] sm:px-6">
+        <p role="status" className="orb-muted min-w-0 flex-1 truncate">{notice || 'History stays on this Mac. Google account activity lives on Google servers.'}</p>
+        {onOpenNewTab && (
+          <button
+            type="button"
+            title="Google keeps its own activity history. Open My Activity to delete it there too."
+            onClick={() => { onOpenNewTab('https://myactivity.google.com/'); onClose(); }}
+            className="orb-control shrink-0 rounded px-1.5 py-0.5 text-[10px]"
+          >
+            Clear Google activity ↗
+          </button>
+        )}
         <span className="orb-muted shrink-0"><kbd className="orb-key orb-strong">⌘Y</kbd> to close</span>
       </footer>
     </div>

@@ -523,8 +523,17 @@ export default function App() {
       if (!targetSpaceId) return;
       useTabStore.getState().addTab({ spaceId: targetSpaceId, url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
     };
+    // A fresh session can legitimately have no tabs at mount; never leave a
+    // blank window waiting for a focus event that already happened.
+    restoreTabIfNeeded();
     window.addEventListener('focus', restoreTabIfNeeded);
     return () => window.removeEventListener('focus', restoreTabIfNeeded);
+  }, []);
+
+  const openInNewTab = useCallback((url: string) => {
+    const spaceId = useSpaceStore.getState().activeSpaceId || useSpaceStore.getState().spaces[0]?.id;
+    if (!spaceId) return;
+    useTabStore.getState().addTab({ spaceId, url, title: '', favicon: '', isPinned: false, isActive: true });
   }, []);
 
   const handleNavigate = useCallback((url: string) => {
@@ -1052,7 +1061,7 @@ export default function App() {
 
         {/* Web Content */}
         <div ref={pageAreaRef} data-orb-page-area className="orb-frame relative flex-1 overflow-hidden">
-          {historyOpen && <HistoryPage onNavigate={handleNavigate} onClose={() => setHistoryOpen(false)} />}
+          {historyOpen && <HistoryPage onNavigate={handleNavigate} onOpenNewTab={openInNewTab} onClose={() => setHistoryOpen(false)} />}
           {NATIVE_TABS && activeSnapshot && (!nativePageVisible || activeTabLoading) ? (
             <img src={activeSnapshot} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
           ) : null}
