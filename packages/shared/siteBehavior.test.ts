@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isMutedSite,
   isNeverHibernate,
   normalizeNeverHibernateEntry,
   pipPolicyFor,
@@ -128,5 +129,19 @@ describe('per-site behavior: tidy titles', () => {
 
   it('normalizes whitespace', () => {
     expect(tidyTitle('https://example.com', '  Hello   world  ')).toBe('Hello world');
+  });
+});
+
+describe('per-site behavior: muted sites', () => {
+  it('matches a bare domain and its subdomains', () => {
+    const list = ['youtube.com'];
+    expect(isMutedSite('https://www.youtube.com/watch?v=1', list)).toBe(true);
+    expect(isMutedSite('https://music.youtube.com/', list)).toBe(true);
+    expect(isMutedSite('https://notyoutube.com/', list)).toBe(false);
+  });
+
+  it('ignores an empty list and non-web URLs', () => {
+    expect(isMutedSite('https://example.com', [])).toBe(false);
+    expect(isMutedSite('about:blank', ['example.com'])).toBe(false);
   });
 });

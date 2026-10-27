@@ -143,6 +143,8 @@ export function useNativeTabBridge({
         }
         if (remote.title && remote.title !== current.title) patch.title = remote.title;
         if (remote.favicon && remote.favicon !== current.favicon) patch.favicon = remote.favicon;
+        if (remote.isAudible !== current.isAudible) patch.isAudible = remote.isAudible;
+        if (remote.isMuted !== current.isMuted) patch.isMuted = remote.isMuted;
         if (Object.keys(patch).length > 0) store.updateTab(remote.id, patch);
       }
     });

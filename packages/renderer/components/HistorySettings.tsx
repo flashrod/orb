@@ -73,15 +73,50 @@ export default function HistorySettings() {
     }
   };
 
+  const clearToday = async () => {
+    setBusy(true);
+    setNotice('');
+    try {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const result = await window.orbApi.clearHistoryRange(start.getTime(), Date.now());
+      await refresh();
+      setNotice(`Cleared ${result.removed} ${result.removed === 1 ? 'visit' : 'visits'} from today.`);
+    } catch {
+      setError('Could not clear today.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const forgetSite = async (host: string) => {
+    setBusy(true);
+    setNotice('');
+    try {
+      const result = await window.orbApi.removeHistoryHost(host);
+      await refresh();
+      setNotice(`Removed ${result.removed} ${result.removed === 1 ? 'visit' : 'visits'} from ${host}.`);
+    } catch {
+      setError('Could not remove that site.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return <div className="mx-auto max-w-[720px] space-y-5">
     <div className="flex items-start justify-between gap-4">
       <div>
         <h2 className="orb-strong text-sm font-semibold">History</h2>
-        <p className="orb-muted mt-1 text-xs">Visits are stored locally. Repeated visits update one row instead of adding duplicates.</p>
+        <p className="orb-muted mt-1 text-xs">Visits are stored locally. Repeated visits update one row instead of adding duplicates. Press <kbd className="orb-key orb-strong">⌘Y</kbd> anywhere to open full history.</p>
       </div>
-      {entries.length > 0 && <button type="button" disabled={busy} onClick={() => void clear()} className="orb-control flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs disabled:opacity-50">
-        <Trash className="h-3.5 w-3.5" />Clear history
-      </button>}
+      {entries.length > 0 && <div className="flex shrink-0 items-center gap-2">
+        <button type="button" disabled={busy} onClick={() => void clearToday()} className="orb-control flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs disabled:opacity-50">
+          Clear today
+        </button>
+        <button type="button" disabled={busy} onClick={() => void clear()} className="orb-control flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs disabled:opacity-50">
+          <Trash className="h-3.5 w-3.5" />Clear history
+        </button>
+      </div>}
     </div>
 
     <div className="relative">
@@ -109,6 +144,16 @@ export default function HistorySettings() {
             {entry.host} · {formatVisited(entry.visitedAt)}{entry.visitCount > 1 ? ` · ${entry.visitCount} visits` : ''}
           </p>
         </div>
+        <button
+          type="button"
+          aria-label={`Forget all visits to ${entry.host}`}
+          title={`Forget everything from ${entry.host}`}
+          disabled={busy}
+          onClick={() => void forgetSite(entry.host)}
+          className="orb-control shrink-0 rounded px-2 py-1 text-[10px] disabled:opacity-40"
+        >
+          Forget site
+        </button>
         <button
           type="button"
           aria-label={`Remove visit to ${entry.host}`}

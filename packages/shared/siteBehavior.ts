@@ -117,6 +117,18 @@ export function isNeverHibernate(url: string, list: readonly string[]): boolean 
   });
 }
 
+/** True when the tab's site is on the user's muted list. */
+export function isMutedSite(url: string, list: readonly string[]): boolean {
+  if (list.length === 0) return false;
+  const parsed = parseWebUrl(url);
+  if (!parsed) return false;
+  const host = canonicalHost(parsed.hostname);
+  return list.some((entry) => {
+    const domain = normalizeNeverHibernateEntry(entry);
+    return domain !== null && hostIs(host, domain);
+  });
+}
+
 // --------------------------------------------------- picture-in-picture policy
 
 /** Returns the PiP behavior Orb should apply on a site. */

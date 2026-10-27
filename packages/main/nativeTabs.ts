@@ -133,6 +133,11 @@ export class NativeTabHost {
     this.manager.setTabBounds(id, bounds);
   }
 
+  /** Mutes or unmutes one tab; the renderer owns site-wide mute memory. */
+  setMuted(id: string, muted: boolean): void {
+    this.manager.setMuted(id, muted);
+  }
+
   async setPageVisible(visible: boolean): Promise<void> {
     this.desiredPageVisible = visible;
     if (visible) {
@@ -510,6 +515,7 @@ export class NativeTabHost {
       reload: () => contents.reload(),
       goBack: () => contents.navigationHistory.goBack(),
       goForward: () => contents.navigationHistory.goForward(),
+      setAudioMuted: (muted) => contents.setAudioMuted(muted),
       destroy: () => {
         this.views.delete(tabId);
         this.insertedCssKeys.delete(tabId);
@@ -657,6 +663,7 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
     host.setBounds(requireBounds(bounds), requireSecondaryBounds(secondary));
   });
   on('tabs:set-tab-bounds', (host, id, bounds) => host.setTabBounds(requireString(id, 'tab id'), requireBounds(bounds)));
+  on('tabs:set-muted', (host, id, muted) => host.setMuted(requireString(id, 'tab id'), muted === true));
   on('tabs:set-page-visible', (host, visible) => host.setPageVisible(visible === true));
   on('tabs:hibernate', (host, id) => host.hibernate(requireString(id, 'tab id')));
   on('tabs:wake', (host, id) => host.wake(requireString(id, 'tab id')));

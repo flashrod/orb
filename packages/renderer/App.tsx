@@ -13,6 +13,8 @@ import WebView from './components/WebView';
 import VerticalTabPanel from './components/VerticalTabPanel';
 import Settings from './components/Settings';
 import Onboarding, { type OnboardingChoice } from './components/Onboarding';
+import StartupSessionPrompt from './components/StartupSessionPrompt';
+import SplitViewPicker from './components/SplitViewPicker';
 import { useAppearanceStore } from './stores/appearance';
 import StartPage from './components/StartPage';
 import GlanceView from './components/GlanceView';
@@ -20,12 +22,13 @@ import { useBoostStore } from './stores/boosts';
 import BookmarksBar from './components/BookmarksBar';
 import PermissionPrompt from './components/PermissionPrompt';
 import DownloadsPanel from './components/DownloadsPanel';
+import HistoryPage from './components/HistoryPage';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
 import { bindMainEvents } from './lib/mainEvents';
 import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
 import { captureSession, SESSION_SNAPSHOT_KEY } from './lib/sessionSnapshot';
 import { stripTrackingParams } from '../shared/privacy';
-import { tidyTitle } from '../shared/siteBehavior';
+import { isMutedSite, tidyTitle } from '../shared/siteBehavior';
 import { pdfFilename } from '../shared/pdf';
 import { canUsePictureInPicture } from '../shared/media';
 import { boostMatchesDomain } from '../shared/boosts';
@@ -70,6 +73,7 @@ export default function App() {
   const [glanceCandidate, setGlanceCandidate] = useState<{ url: string; tabId: string } | null>(null);
   const [glanceUrl, setGlanceUrl] = useState<string | null>(null);
   const [resizingSplit, setResizingSplit] = useState(false);
+  const [splitPickerOpen, setSplitPickerOpen] = useState(false);
   // Tracks which tabs have a WebView mounted. Once mounted, a tab stays mounted
   // even when inactive so switching tabs never reloads the page.
   const [mountedTabIds, setMountedTabIds] = useState<Set<string>>(new Set());
@@ -85,6 +89,7 @@ export default function App() {
   const [findResult, setFindResult] = useState<{ active: number; matches: number } | null>(null);
   // Downloads panel state
   const [downloadsOpen, setDownloadsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [currentDownloadPath, setCurrentDownloadPath] = useState('');
   // Memory guard: last activity per tab, kept in a ref so the guard timer reads
@@ -102,9 +107,13 @@ export default function App() {
   const setSplitRatio = useSplitViewStore((state) => state.setRatio);
   const closeSplit = useSplitViewStore((state) => state.close);
   const swapSplit = useSplitViewStore((state) => state.swap);
+  const openSplit = useSplitViewStore((state) => state.open);
+  const mutedSites = useBrowserPreferencesStore((state) => state.mutedSites);
   const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, customColors, setTabLayout, setCompactMode, setShowTabStrip, setShowNavigation, setCompactSideTabs } = useAppearanceStore();
 
   const webviewRefs = useRef<Record<string, any>>({});
+  // Tabs whose site-wide mute has already been pushed to the native view.
+  const appliedMuteRef = useRef<Map<string, string>>(new Map());
   const splitAreaRef = useRef<HTMLDivElement | null>(null);
   const pageAreaRef = useRef<HTMLDivElement | null>(null);
   const getActiveWebView = useCallback(() => {
@@ -318,6 +327,50 @@ export default function App() {
     getActiveWebView()?.navigateReload();
   }, [getActiveWebView]);
 
+  const toggleTabMute = useCallback((tabId: string) => {
+    const tab = useTabStore.getState().tabs.find((item) => item.id === tabId);
+    if (!tab) return;
+    const next = !tab.isMuted;
+    useTabStore.getState().updateTab(tabId, { isMuted: next });
+    void window.orbApi?.tabs.setMuted(tabId, next);
+  }, []);
+
+  const toggleSiteMute = useCallback((tabId: string) => {
+    const state = useTabStore.getState();
+    const tab = state.tabs.find((item) => item.id === tabId);
+    if (!tab || !tab.url || tab.url === 'about:blank') return;
+    let host = '';
+    try {
+      host = new URL(tab.url).hostname;
+    } catch {
+      return;
+    }
+    const preferences = useBrowserPreferencesStore.getState();
+    const muted = isMutedSite(tab.url, preferences.mutedSites);
+    if (muted) preferences.unmuteSite(host);
+    else preferences.muteSite(host);
+
+    for (const item of state.tabs) {
+      if (!isMutedSite(item.url, [host])) continue;
+      if (muted) appliedMuteRef.current.delete(item.id);
+      else appliedMuteRef.current.set(item.id, item.url);
+      void window.orbApi?.tabs.setMuted(item.id, !muted);
+    }
+  }, []);
+
+  // Site mutes follow the tab as it navigates; a manual tab mute is untouched.
+  useEffect(() => {
+    if (!NATIVE_TABS) return;
+    const api = window.orbApi?.tabs;
+    if (!api || mutedSites.length === 0) return;
+    for (const tab of tabs) {
+      if (!tab.url || tab.url === 'about:blank' || !isMutedSite(tab.url, mutedSites)) continue;
+      if (appliedMuteRef.current.get(tab.id) === tab.url) continue;
+      appliedMuteRef.current.set(tab.id, tab.url);
+      void api.setMuted(tab.id, true);
+    }
+  }, [tabs, mutedSites]);
+
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = theme;
@@ -475,6 +528,7 @@ export default function App() {
   }, []);
 
   const handleNavigate = useCallback((url: string) => {
+    setHistoryOpen(false);
     url = stripTrackingParams(url);
     let targetTabId = useTabStore.getState().activeTabId;
     if (!targetTabId) {
@@ -525,6 +579,10 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         printActive();
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        setHistoryOpen((open) => !open);
       }
       if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split') {
         e.preventDefault();
@@ -603,6 +661,7 @@ export default function App() {
       else if (action === 'new-space') handleNewSpace();
       else if (action === 'command-bar') setCommandBarOpen(true);
       else if (action === 'find') openFind();
+      else if (action === 'history') setHistoryOpen((open) => !open);
       else if (action === 'print') printActive();
       else if (action === 'save-pdf') void exportActivePdf();
       else if (action === 'toggle-pip') void togglePictureInPicture();
@@ -720,14 +779,21 @@ export default function App() {
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
   const activeProfile = resolveSpaceProfile(activeSpace?.profileId, profiles);
   const overlayActive = useAnyShellOverlay();
+  // In split view one pane can be a start page while the other holds a real
+  // page; the native view must still be shown for its half.
+  const splitHasLivePage = Boolean(splitTabIds?.some((id) => {
+    const tab = tabs.find((item) => item.id === id);
+    return Boolean(tab && tab.url !== 'about:blank');
+  }));
   const nativePageVisible = Boolean(
-    activeTab &&
-    activeTab.url !== 'about:blank' &&
+    ((activeTab && activeTab.url !== 'about:blank') || splitHasLivePage) &&
     !overlayActive &&
     !commandBarOpen &&
     !settingsOpen &&
     !downloadsOpen &&
+    !historyOpen &&
     !glanceUrl &&
+    !splitPickerOpen &&
     !pickerBusy &&
     !welcomeOpen &&
     !resizingSplit,
@@ -737,6 +803,11 @@ export default function App() {
   useEffect(() => {
     setRailPeek(false);
   }, [compactSideTabs]);
+
+  // Switching tabs leaves the history page; it belongs to the shell, not a tab.
+  useEffect(() => {
+    setHistoryOpen(false);
+  }, [activeTabId]);
 
   const nativeSplitIds: [string, string] | null = (() => {
     if (!splitTabIds || splitTabIds[0] === splitTabIds[1]) return null;
@@ -893,6 +964,7 @@ export default function App() {
   return (
     <div className="orb-frame flex h-screen w-screen overflow-hidden">
       {welcomeOpen && <Onboarding onFinish={finishOnboarding} onSkip={skipOnboarding} macTrafficLights={hasMacTrafficLights} />}
+      <StartupSessionPrompt enabled={!welcomeOpen} />
       {/* Main content area */}
       <main
         aria-hidden={welcomeOpen || undefined}
@@ -910,6 +982,9 @@ export default function App() {
             onCollapse={() => { setCompactSideTabs(true); setRailPeek(false); }}
             onReload={navigateReload}
             spaceId={activeSpaceId || ''}
+            mutedSites={mutedSites}
+            onToggleMute={toggleTabMute}
+            onToggleSiteMute={toggleSiteMute}
           />
         ) : null}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -919,6 +994,9 @@ export default function App() {
           activeSpaceId={activeSpaceId || ''}
           setActiveTab={setActiveTab}
           onReload={navigateReload}
+          mutedSites={mutedSites}
+          onToggleMute={toggleTabMute}
+          onToggleSiteMute={toggleSiteMute}
         /> : null}
         {/* Traffic lights sit over the sidebar, so only inset the content
             column when there is no sidebar at all. */}
@@ -940,6 +1018,8 @@ export default function App() {
           splitActive={Boolean(nativeSplitIds)}
           onSwapSplit={swapSplit}
           onCloseSplit={closeSplit}
+          canSplit={spaceTabs.length > 1}
+          onOpenSplit={() => setSplitPickerOpen(true)}
         />}
         {bookmarksBarVisible && !compactMode && <BookmarksBar onNavigate={handleNavigate} />}
 
@@ -972,6 +1052,7 @@ export default function App() {
 
         {/* Web Content */}
         <div ref={pageAreaRef} data-orb-page-area className="orb-frame relative flex-1 overflow-hidden">
+          {historyOpen && <HistoryPage onNavigate={handleNavigate} onClose={() => setHistoryOpen(false)} />}
           {NATIVE_TABS && activeSnapshot && (!nativePageVisible || activeTabLoading) ? (
             <img src={activeSnapshot} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover object-top" />
           ) : null}
@@ -1016,7 +1097,18 @@ export default function App() {
         </div>
 
         {/* Command Bar Overlay */}
-        {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} />}
+        {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} onOpenHistory={() => { setHistoryOpen(true); setCommandBarOpen(false); }} />}
+        {splitPickerOpen && (
+          <SplitViewPicker
+            tabs={spaceTabs.filter((tab) => tab.id !== activeTabId)}
+            activeTitle={activeTab?.title || activeTab?.url || ''}
+            onPick={(tabId) => {
+              if (activeTabId) openSplit([activeTabId, tabId]);
+              setSplitPickerOpen(false);
+            }}
+            onClose={() => setSplitPickerOpen(false)}
+          />
+        )}
         {settingsOpen && <Settings initialSection={settingsSection} activeUrl={activeTab?.url} onNavigate={handleNavigate} onExportPdf={() => void exportActivePdf()} onPreviewBoost={previewBoost} onReplayOnboarding={replayOnboarding} onClose={() => setSettingsOpen(false)} />}
         {pickerNotice && <div role="status" aria-live="polite" className="orb-elevated orb-shadow absolute bottom-5 left-1/2 z-40 max-w-[min(520px,90vw)] -translate-x-1/2 rounded-lg border orb-border px-4 py-3 text-xs orb-strong">{pickerNotice}</div>}
         <PermissionPrompt />

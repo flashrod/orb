@@ -36,9 +36,11 @@ function getIcon(name: string, className?: string) {
 export default function CommandBar({
   onClose,
   onOpenSettings,
+  onOpenHistory,
 }: {
   onClose: () => void;
   onOpenSettings: () => void;
+  onOpenHistory: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CommandResult[]>([]);
@@ -125,6 +127,17 @@ export default function CommandBar({
         },
       })));
 
+    if (lower.startsWith('hist')) {
+      results.push({
+        id: 'cmd-history',
+        type: 'command',
+        title: 'Open history',
+        subtitle: 'Search and manage visits (⌘Y)',
+        icon: getIcon('history', 'w-4 h-4'),
+        action: onOpenHistory,
+      });
+    }
+
     if (lower.startsWith('clear hist')) {
       results.push({
         id: 'cmd-clear-history',
@@ -195,6 +208,14 @@ export default function CommandBar({
             void window.orbApi?.toggleDevTools();
             onClose();
           },
+        },
+        {
+          id: 'cmd-history',
+          type: 'command',
+          title: 'History',
+          subtitle: 'Search and manage visits (⌘Y)',
+          icon: getIcon('history', 'w-4 h-4'),
+          action: onOpenHistory,
         },
         {
           id: 'cmd-settings',

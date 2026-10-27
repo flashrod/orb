@@ -9,6 +9,9 @@ export interface Tab {
   title: string;
   favicon: string;
   isPinned: boolean;
+  /** Live audio state from the native view, mirrored for the tab strip. */
+  isAudible?: boolean;
+  isMuted?: boolean;
   groupId?: string | null;
   /** Unloaded tabs keep their identity and URL but have no live renderer. */
   isUnloaded?: boolean;

@@ -11,6 +11,7 @@ class FakeView implements TabView {
   reloadCount = 0;
   backCount = 0;
   forwardCount = 0;
+  muted = false;
 
   constructor(bounds: ViewBounds) {
     this.bounds = bounds;
@@ -36,6 +37,9 @@ class FakeView implements TabView {
   }
   goForward(): void {
     this.forwardCount += 1;
+  }
+  setAudioMuted(muted: boolean): void {
+    this.muted = muted;
   }
   destroy(): void {
     this.destroyed = true;
@@ -198,6 +202,19 @@ describe('TabManager', () => {
     expect(updated?.title).toBe('Example');
     expect(updated?.favicon).toBe('https://example.com/f.ico');
     expect(updated?.isAudible).toBe(true);
+  });
+
+  it('mutes a tab and carries the state into a recreated view', () => {
+    const { manager, views } = setup();
+    const tab = openTab(manager, 'https://a.com');
+
+    manager.setMuted(tab.id, true);
+    expect(manager.get(tab.id)?.isMuted).toBe(true);
+    expect(views[0].muted).toBe(true);
+
+    manager.hibernate(tab.id);
+    manager.wake(tab.id);
+    expect(views[1].muted).toBe(true);
   });
 
   it('hibernates by destroying the view and wakes by recreating it', () => {

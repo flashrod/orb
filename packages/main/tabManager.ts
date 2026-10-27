@@ -26,6 +26,7 @@ export interface TabView {
   reload(): void;
   goBack(): void;
   goForward(): void;
+  setAudioMuted(muted: boolean): void;
   destroy(): void;
 }
 
@@ -103,6 +104,7 @@ export class TabManager {
       canGoBack: false,
       canGoForward: false,
       isAudible: false,
+      isMuted: false,
       inCall: false,
       hasUnsavedInput: false,
       hasNotificationPermission: false,
@@ -195,6 +197,15 @@ export class TabManager {
     const clamped = clampBounds(bounds);
     this.boundsByTab.set(id, clamped);
     this.views.get(id)?.setBounds(clamped);
+  }
+
+  /** Mutes or unmutes one tab's audio. */
+  setMuted(id: string, muted: boolean): void {
+    const tab = this.tabs.get(id);
+    if (!tab || tab.isMuted === muted) return;
+    tab.isMuted = muted;
+    this.views.get(id)?.setAudioMuted(muted);
+    this.markDirty();
   }
 
   /** Drops a split-pane override so the tab follows the page bounds again. */
@@ -353,6 +364,7 @@ export class TabManager {
     const view = this.deps.createView(tab, this.boundsByTab.get(tab.id) ?? this.bounds);
     this.views.set(tab.id, view);
     view.loadURL(tab.url);
+    view.setAudioMuted(tab.isMuted);
     view.setVisible(this.activeTabId === tab.id);
     return view;
   }

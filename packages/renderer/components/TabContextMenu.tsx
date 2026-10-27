@@ -9,10 +9,14 @@ export interface TabContextMenuProps {
   canUnload: boolean;
   canSplit: boolean;
   canCloseToRight: boolean;
+  isMuted?: boolean;
+  isSiteMuted?: boolean;
   onNewTab: () => void;
   onNewGroup: () => void;
   onSplitView: () => void;
   onTogglePinned: () => void;
+  onToggleMute?: () => void;
+  onToggleSiteMute?: () => void;
   onUnload: () => void;
   onCloseTab: () => void;
   onCloseToRight: () => void;
@@ -60,6 +64,8 @@ export default function TabContextMenu(props: TabContextMenuProps) {
     {action('New tab to the right', props.onNewTab)}
     {action('Add to new tab group', props.onNewGroup)}
     {action('Open in split view', props.onSplitView, !props.canSplit)}
+    {props.onToggleMute && action(props.isMuted ? 'Unmute tab' : 'Mute tab', props.onToggleMute)}
+    {props.onToggleSiteMute && action(props.isSiteMuted ? 'Unmute site' : 'Mute site', props.onToggleSiteMute)}
     <div className="my-1 border-t orb-border" />
     {action(props.isPinned ? 'Unpin tab' : 'Pin tab', props.onTogglePinned)}
     {action('Unload tab', props.onUnload, !props.canUnload)}

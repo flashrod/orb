@@ -99,6 +99,8 @@ contextBridge.exposeInMainWorld('orbApi', {
   topSites: (limit?: number) => ipcRenderer.invoke('history:top', limit ?? 8),
   recentSites: (limit?: number) => ipcRenderer.invoke('history:recent', limit ?? 6),
   removeHistory: (url: string) => ipcRenderer.invoke('history:remove', url),
+  removeHistoryHost: (host: string) => ipcRenderer.invoke('history:remove-host', host),
+  clearHistoryRange: (from: number, to: number) => ipcRenderer.invoke('history:clear-range', from, to),
   clearHistory: () => ipcRenderer.invoke('history:clear'),
 
   // Downloads
@@ -121,6 +123,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     reorder: (ids: string[]) => ipcRenderer.invoke('tabs:reorder', ids) as Promise<TabStateSnapshot | null>,
     setBounds: (bounds: ViewBounds, secondary?: { id: string; bounds: ViewBounds } | null) => ipcRenderer.invoke('tabs:set-bounds', bounds, secondary ?? null) as Promise<void>,
     setTabBounds: (id: string, bounds: ViewBounds) => ipcRenderer.invoke('tabs:set-tab-bounds', id, bounds) as Promise<void>,
+    setMuted: (id: string, muted: boolean) => ipcRenderer.invoke('tabs:set-muted', id, muted) as Promise<void>,
     setPageVisible: (visible: boolean) => ipcRenderer.invoke('tabs:set-page-visible', visible) as Promise<void>,
     hibernate: (id: string) => ipcRenderer.invoke('tabs:hibernate', id) as Promise<void>,
     wake: (id: string) => ipcRenderer.invoke('tabs:wake', id) as Promise<void>,
@@ -193,6 +196,8 @@ declare global {
       topSites: (limit?: number) => Promise<Array<{ url: string; title: string; host: string; visitedAt: number; visitCount: number }>>;
       recentSites: (limit?: number) => Promise<Array<{ url: string; title: string; host: string; visitedAt: number; visitCount: number }>>;
       removeHistory: (url: string) => Promise<{ ok: boolean }>;
+      removeHistoryHost: (host: string) => Promise<{ ok: boolean; removed: number }>;
+      clearHistoryRange: (from: number, to: number) => Promise<{ ok: boolean; removed: number }>;
       clearHistory: () => Promise<{ ok: boolean }>;
       // Downloads
       getDownloads: () => Promise<Array<{ id: string; url: string; filePath: string | null; totalBytes: number; receivedBytes: number; state: string; startedAt: number; completedAt: number | null }>>;
@@ -212,6 +217,7 @@ declare global {
         reorder: (ids: string[]) => Promise<TabStateSnapshot | null>;
         setBounds: (bounds: ViewBounds, secondary?: { id: string; bounds: ViewBounds } | null) => Promise<void>;
         setTabBounds: (id: string, bounds: ViewBounds) => Promise<void>;
+        setMuted: (id: string, muted: boolean) => Promise<void>;
         setPageVisible: (visible: boolean) => Promise<void>;
         hibernate: (id: string) => Promise<void>;
         wake: (id: string) => Promise<void>;

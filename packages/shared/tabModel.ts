@@ -24,6 +24,8 @@ export interface TabRecord {
   canGoBack: boolean;
   canGoForward: boolean;
   isAudible: boolean;
+  /** The user muted this tab, either directly or through its site. */
+  isMuted: boolean;
   /** The tab is in an active call or meeting. */
   inCall: boolean;
   /** A form field holds typed input that a reload would discard. */

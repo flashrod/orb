@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, Globe, WarningCircle } from '@phosphor-icons/react';
 import { defaultBrowserHelp } from '../../shared/defaultBrowser';
+import { useBrowserPreferencesStore, type StartupBehavior } from '../stores/preferences';
+import Toggle from './ui/Toggle';
 
 type DefaultBrowserStatus = { isDefault: boolean; platform: string };
+
+const startupOptions: { id: StartupBehavior; label: string; detail: string }[] = [
+  { id: 'ask', label: 'Ask me', detail: 'Choose each time Orb opens' },
+  { id: 'restore', label: 'Reopen tabs', detail: 'Bring back your last session' },
+  { id: 'fresh', label: 'Start fresh', detail: 'Open a new tab instead' },
+];
 
 export default function BrowserSettings({ onExportPdf }: { onExportPdf?: () => void }) {
   const [status, setStatus] = useState<DefaultBrowserStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const { startupBehavior, setStartupBehavior, showRecentSites, setShowRecentSites } = useBrowserPreferencesStore();
 
   const refresh = async () => {
     try {
@@ -84,6 +93,41 @@ export default function BrowserSettings({ onExportPdf }: { onExportPdf?: () => v
 
           {notice && <p role="status" className="orb-muted mt-3 text-[11px]">{notice}</p>}
           {error && <p role="alert" className="mt-3 flex items-center gap-1.5 text-[11px] text-red-700"><WarningCircle aria-hidden="true" className="h-3.5 w-3.5" />{error}</p>}
+        </div>
+      </section>
+
+      <section className="border-t orb-border pt-6">
+        <div className="mb-3">
+          <h2 className="orb-strong text-sm font-semibold">Startup</h2>
+          <p className="orb-muted mt-1 text-xs">Decide what happens to the tabs from your last session.</p>
+        </div>
+
+        <div className="orb-elevated rounded-lg border orb-border p-3">
+          <div className="grid gap-1.5 sm:grid-cols-3">
+            {startupOptions.map((option) => {
+              const active = startupBehavior === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setStartupBehavior(option.id)}
+                  className={`rounded-md border px-3 py-2 text-left transition-colors ${active ? 'border-[var(--orb-accent)] bg-[var(--orb-accent-soft)]' : 'orb-border hover:border-[var(--orb-border-strong)]'}`}
+                >
+                  <span className="orb-strong block text-xs font-medium">{option.label}</span>
+                  <span className="orb-muted mt-0.5 block text-[10px] leading-4">{option.detail}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-4 border-t orb-border pt-3">
+            <div>
+              <p className="orb-strong text-xs font-medium">Show recent sites on the start page</p>
+              <p className="orb-muted mt-1 text-[10px]">A short list of where you left off.</p>
+            </div>
+            <Toggle checked={showRecentSites} onChange={() => setShowRecentSites(!showRecentSites)} label="Show recent sites on the start page" />
+          </div>
         </div>
       </section>
 
