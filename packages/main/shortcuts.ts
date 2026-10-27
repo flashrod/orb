@@ -39,6 +39,21 @@ export function bindingSafeInTextField(binding: string): boolean {
   return /^f([1-9]|1[0-2])$/.test(key);
 }
 
+/** Module-level overrides synced from the renderer preferences store.
+ *  The main process keeps its own copy so key events inside web pages
+ *  (forwarded via before-input-event) can be matched without a round trip. */
+export let keymapOverrides: Record<string, string[] | null | undefined> = {};
+
+/** Replace the entire override map (used on initial sync). */
+export function setKeymapOverrides(overrides: Record<string, string[] | null | undefined>): void {
+  keymapOverrides = { ...overrides };
+}
+
+/** Override a single command's bindings (null = unbind). */
+export function setKeymapOverride(commandId: string, bindings: string[] | null): void {
+  keymapOverrides = { ...keymapOverrides, [commandId]: bindings };
+}
+
 /** Maps a key event to the shell action it should trigger, if any.
  *
  * The mapping is driven by the shared command registry so the menu, the
@@ -56,7 +71,7 @@ export function bindingSafeInTextField(binding: string): boolean {
  */
 export function shortcutForInput(
   input: ShortcutInput,
-  overrides: Record<string, string[] | null | undefined> = {},
+  overrides: Record<string, string[] | null | undefined> = keymapOverrides,
   inTextField = false,
 ): OrbShortcutAction | null {
   if (input.type !== 'keyDown' || input.isAutoRepeat || input.isComposing) return null;

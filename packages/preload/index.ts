@@ -147,6 +147,13 @@ contextBridge.exposeInMainWorld('orbApi', {
     getSnapshot: (id: string) => ipcRenderer.invoke('tabs:get-snapshot', id) as Promise<string | null>,
     debugState: () => ipcRenderer.invoke('tabs:debug-state') as Promise<unknown>,
   },
+  keymap: {
+    getOverrides: () => ipcRenderer.invoke('keymap:get-overrides'),
+    setOverride: (commandId: string, bindings: string[] | null) =>
+      ipcRenderer.invoke('keymap:set-override', commandId, bindings),
+    setOverrides: (overrides: Record<string, string[] | null>) =>
+      ipcRenderer.invoke('keymap:set-overrides', overrides),
+  },
 });
 
 declare global {
@@ -243,6 +250,13 @@ declare global {
         snapshot: () => Promise<TabStateSnapshot>;
         getSnapshot: (id: string) => Promise<string | null>;
         debugState: () => Promise<unknown>;
+      },
+      // Keymap overrides synced to the main process so key events inside web
+      // pages can be matched without a round trip.
+      keymap: {
+        getOverrides: () => Promise<Record<string, string[] | null>>;
+        setOverride: (commandId: string, bindings: string[] | null) => Promise<void>;
+        setOverrides: (overrides: Record<string, string[] | null>) => Promise<void>;
       };
       // Main -> renderer events (allowlisted channels only)
       on: (channel: string, listener: (payload: unknown) => void) => number;

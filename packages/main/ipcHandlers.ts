@@ -4,6 +4,7 @@ import { adBlocker } from './adBlocker';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
+import { setKeymapOverride, setKeymapOverrides, keymapOverrides } from './shortcuts';
 import { profilePartition } from '../shared/profiles';
 import { getDefaultBrowserStatus, openDefaultBrowserSettings, requestDefaultBrowser } from './defaultBrowser';
 import { savePdfBuffer } from './pdf';
@@ -275,5 +276,17 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('extensions:remove', async (_, id: string) => {
     await removeExtension(requireString(id, 'extension id', 256));
     return { removed: true };
+  });
+
+  // Keymap overrides synced from the renderer preferences store.
+  ipcMain.handle('keymap:get-overrides', () => keymapOverrides);
+  ipcMain.handle('keymap:set-override', (_, commandId: string, bindings: string[] | null) => {
+    if (typeof commandId !== 'string') throw new Error('Invalid command id.');
+    setKeymapOverride(commandId, bindings);
+    return { ok: true };
+  });
+  ipcMain.handle('keymap:set-overrides', (_, overrides: Record<string, string[] | null>) => {
+    setKeymapOverrides(overrides);
+    return { ok: true };
   });
 }
