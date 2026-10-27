@@ -559,6 +559,27 @@ export default function App() {
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       if (welcomeOpen) return;
+
+      // Text-field guard: never steal typing from a focused input/textarea/
+      // contenteditable unless the shortcut uses a command modifier
+      // (Cmd/Ctrl/Alt), or is Escape or a function key.
+      const active = document.activeElement;
+      const isTextField =
+        active &&
+        (active.tagName === 'INPUT' ||
+          active.tagName === 'TEXTAREA' ||
+          (active as HTMLElement).isContentEditable);
+      if (
+        isTextField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        e.key !== 'Escape' &&
+        !/^F([1-9]|1[0-2])$/i.test(e.key)
+      ) {
+        return;
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key === 't') {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent('orb:new-tab'));
