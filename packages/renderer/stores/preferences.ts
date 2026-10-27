@@ -18,6 +18,8 @@ interface BrowserPreferencesStore {
   showRecentSites: boolean;
   /** What to do with the previous session when the app opens. */
   startupBehavior: StartupBehavior;
+  /** Per-command keyboard shortcut overrides. commandId → bindings or null (unbound). Missing = default. */
+  keymapOverrides: Record<string, string[] | null>;
   setSearchProvider: (provider: SearchProvider) => void;
   setEssentialsScope: (scope: EssentialsScope) => void;
   setDisplayName: (name: string) => void;
@@ -27,6 +29,10 @@ interface BrowserPreferencesStore {
   unmuteSite: (host: string) => void;
   setShowRecentSites: (show: boolean) => void;
   setStartupBehavior: (behavior: StartupBehavior) => void;
+  /** Override the bindings for a command. Pass null to unbind. */
+  setKeymapOverride: (commandId: string, bindings: string[] | null) => void;
+  /** Reset every override to defaults. */
+  resetKeymap: () => void;
 }
 
 export type StartupBehavior = 'ask' | 'restore' | 'fresh';
@@ -41,11 +47,17 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
   mutedSites: [],
   showRecentSites: true,
   startupBehavior: 'ask',
+  keymapOverrides: {},
   setSearchProvider: (searchProvider) => set({ searchProvider }),
   setEssentialsScope: (essentialsScope) => set({ essentialsScope }),
   setDisplayName: (displayName) => set({ displayName: normalizeDisplayName(displayName) }),
   setShowRecentSites: (showRecentSites) => set({ showRecentSites }),
   setStartupBehavior: (startupBehavior) => set({ startupBehavior }),
+  setKeymapOverride: (commandId, bindings) =>
+    set((state) => ({
+      keymapOverrides: { ...state.keymapOverrides, [commandId]: bindings },
+    })),
+  resetKeymap: () => set({ keymapOverrides: {} }),
   addNeverHibernate: (entry) => {
     const domain = normalizeNeverHibernateEntry(entry);
     if (!domain) return null;
@@ -72,7 +84,7 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
   },
 }), {
   name: 'orb-preferences',
-  version: 6,
+  version: 7,
   storage: createJSONStorage(() => localStorage),
   migrate: (state: any) => ({
     searchProvider: ['google', 'duckduckgo', 'bing', 'brave', 'startpage'].includes(state?.searchProvider) ? state.searchProvider : 'google',
@@ -90,5 +102,6 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
         .map((entry: unknown) => (typeof entry === 'string' ? normalizeNeverHibernateEntry(entry) : null))
         .filter((entry: string | null): entry is string => Boolean(entry)))].sort()
       : [],
+    keymapOverrides: {},
   }),
 }));
