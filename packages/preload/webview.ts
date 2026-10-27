@@ -18,3 +18,48 @@ contextBridge.exposeInMainWorld('orbPageApi', {
     }
   },
 });
+
+// Tell the main process when the page holds typed input that a reload would
+// discard. This is one of the signals that protects a tab from hibernation.
+// Only transitions are reported, so typing does not generate IPC traffic.
+const typedFields = new Set<Element>();
+let lastDirty = false;
+
+function fieldHasValue(element: Element): boolean {
+  if (!element.isConnected) return false;
+  const html = element as HTMLElement;
+  if (html.isContentEditable) return Boolean(html.textContent?.trim());
+  const value = (element as HTMLInputElement).value;
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function reportUnsavedInput(): void {
+  let dirty = false;
+  for (const element of typedFields) {
+    if (!element.isConnected) typedFields.delete(element);
+    else if (fieldHasValue(element)) dirty = true;
+  }
+  if (dirty === lastDirty) return;
+  lastDirty = dirty;
+  try {
+    ipcRenderer.send('orb:page-unsaved-input', dirty);
+  } catch {
+    // The window may be closing.
+  }
+}
+
+document.addEventListener('input', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const html = target as HTMLElement;
+  if (html.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+    typedFields.add(target);
+    reportUnsavedInput();
+  }
+}, true);
+document.addEventListener('change', reportUnsavedInput, true);
+document.addEventListener('submit', () => {
+  typedFields.clear();
+  reportUnsavedInput();
+}, true);
+

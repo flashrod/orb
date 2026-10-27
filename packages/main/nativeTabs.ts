@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { BrowserWindow, Menu, WebContentsView, app, clipboard, ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
+import { BrowserWindow, Menu, WebContentsView, app, clipboard, ipcMain, type WebContents } from 'electron';
 import { TabManager, type TabView, type TabViewEvent } from './tabManager';
 import { orbSessionFor, type SessionContext } from './sessions';
 import { profilePartition } from '../shared/profiles';
@@ -9,8 +9,8 @@ import { clampBounds, type TabOpenInput, type TabStateSnapshot, type ViewBounds 
 import { initAdBlocker } from './adBlocker';
 import { PrewarmPool } from './prewarmPool';
 import { buildPageContextMenu } from './pageContextMenu';
-import { selectTabsToHibernate } from '../shared/tabLifecycle';
 import { stripTrackingParams } from '../shared/privacy';
+import { hostFromUrl } from '../shared/sessionPolicy';
 import type { TabMemorySample } from '../shared/memory';
 import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
 import {
@@ -42,6 +42,7 @@ export class NativeTabHost {
   private readonly insertedCssKeys = new Map<string, string[]>();
   private readonly appliedBoosts = new Map<string, string>();
   private readonly prewarm: PrewarmPool<PrewarmedView>;
+  private neverHibernate: string[] = [];
   private split: { id: string; bounds: ViewBounds } | null = null;
   private pageVisible = true;
   private desiredPageVisible = true;
@@ -56,6 +57,7 @@ export class NativeTabHost {
         this.applyVisibility();
         this.pushState(snapshot);
       },
+      neverHibernate: () => this.neverHibernate,
     });
 
     this.prewarm = new PrewarmPool<PrewarmedView>(
@@ -146,6 +148,11 @@ export class NativeTabHost {
     if (this.desiredPageVisible) return;
     this.pageVisible = false;
     this.applyVisibility();
+  }
+
+  /** Replaces the user's never-hibernate list for this window. */
+  setNeverHibernate(domains: readonly string[]): void {
+    this.neverHibernate = domains.map((domain) => domain.trim()).filter(Boolean);
   }
 
   snapshot(): TabStateSnapshot {
@@ -249,24 +256,19 @@ export class NativeTabHost {
     await view.webContents.executeJavaScript(code, true);
   }
 
+  /** Records whether a page holds typed input a reload would discard. */
+  noteUnsavedInput(sender: WebContents, hasUnsavedInput: boolean): void {
+    for (const [tabId, view] of this.views) {
+      if (view.webContents === sender) {
+        this.manager.handleViewEvent(tabId, { type: 'unsaved-input-changed', hasUnsavedInput });
+        return;
+      }
+    }
+  }
+
   /** Hibernates every background tab that is safe to reclaim. */
   hibernateBackground(): string[] {
-    const snapshot = this.manager.snapshot();
-    const ids = selectTabsToHibernate(
-      snapshot.tabs.map((tab) => ({
-        id: tab.id,
-        isPinned: tab.isPinned,
-        isAudible: tab.isAudible,
-        inCall: false,
-        lastActiveAt: tab.lastActiveAt,
-        state: tab.lifecycle === 'hibernated' ? 'hibernated' as const : 'live' as const,
-        url: tab.url,
-      })),
-      Date.now(),
-      0,
-      Number.MAX_SAFE_INTEGER,
-      snapshot.activeTabId,
-    );
+    const ids = this.manager.planMemoryBudget({ idleThresholdMs: 0, maxLiveTabs: Number.MAX_SAFE_INTEGER });
     for (const id of ids) void this.hibernate(id);
     return ids;
   }
@@ -433,7 +435,28 @@ export class NativeTabHost {
       const favicon = Array.isArray(favicons) ? favicons[0] : '';
       if (favicon) emit({ type: 'page-favicon-updated', favicon });
     });
-    contents.on('audio-state-changed', (event) => emit({ type: 'audible-changed', audible: event.audible }));
+    // Behavior-based hibernation protection. A call is inferred from an allowed
+    // microphone plus live audio, which covers every conferencing site without
+    // naming one; notifications follow the permission the user already granted.
+    const refreshProtection = () => {
+      if (contents.isDestroyed()) return;
+      const host = hostFromUrl(contents.getURL());
+      if (!host) return;
+      emit({
+        type: 'notification-permission-changed',
+        granted: this.ctx.permissionStore.get(host, 'notifications') === 'allow',
+      });
+      emit({
+        type: 'call-state-changed',
+        inCall: this.ctx.permissionStore.get(host, 'microphone') === 'allow' && contents.isCurrentlyAudible(),
+      });
+    };
+    contents.on('did-stop-loading', refreshProtection);
+    contents.on('did-navigate-in-page', refreshProtection);
+    contents.on('audio-state-changed', (event) => {
+      emit({ type: 'audible-changed', audible: event.audible });
+      refreshProtection();
+    });
     contents.on('focus', () => {
       if (!this.window.isDestroyed()) this.window.webContents.send('orb:tab-focused', { tabId });
     });
@@ -544,7 +567,7 @@ export class NativeTabHost {
   }
 }
 
-type HostLookup = (event: IpcMainInvokeEvent) => NativeTabHost | undefined;
+type HostLookup = (event: { sender: WebContents }) => NativeTabHost | undefined;
 
 function requireString(value: unknown, label: string): string {
   if (typeof value !== 'string' || value.length === 0 || value.length > 2048) {
@@ -647,6 +670,11 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   });
   on('tabs:memory', (host) => host.memory());
   on('tabs:hibernate-background', (host) => host.hibernateBackground());
+  on('tabs:set-never-hibernate', (host, domains) => {
+    if (!Array.isArray(domains)) return null;
+    host.setNeverHibernate(domains.filter((domain): domain is string => typeof domain === 'string').slice(0, 200));
+    return null;
+  });
   on('tabs:find-in-page', (host, id, text, options) => {
     if (typeof text !== 'string' || text.length === 0 || text.length > 512) return null;
     const opts = options && typeof options === 'object' ? options as Record<string, unknown> : {};
@@ -671,4 +699,9 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:snapshot', (host) => host.snapshot());
   on('tabs:get-snapshot', (host, id) => host.getSnapshot(requireString(id, 'tab id')) ?? null);
   on('tabs:debug-state', (host) => host.debugState());
+
+  // Page content reports dirty form state; there is no invoke response.
+  ipcMain.on('orb:page-unsaved-input', (event, dirty) => {
+    getHost(event)?.noteUnsavedInput(event.sender, dirty === true);
+  });
 }

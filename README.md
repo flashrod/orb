@@ -1,6 +1,6 @@
 # Orb
 
-A calm, private browser for macOS built clean-room from reverse-engineered design patterns, not Arc's code.
+A calm, private browser for macOS. Arc-inspired design, independently implemented.
 
 Orb brings Spaces, Boosts, and a command bar to a privacy-first browser you fully control. Warm monochrome UI, real ad and tracker blocking, and an interface you can restyle completely.
 

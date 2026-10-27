@@ -35,7 +35,10 @@ export type TabViewEvent =
   | { type: 'did-navigate'; url: string; canGoBack: boolean; canGoForward: boolean }
   | { type: 'page-title-updated'; title: string }
   | { type: 'page-favicon-updated'; favicon: string }
-  | { type: 'audible-changed'; audible: boolean };
+  | { type: 'audible-changed'; audible: boolean }
+  | { type: 'call-state-changed'; inCall: boolean }
+  | { type: 'unsaved-input-changed'; hasUnsavedInput: boolean }
+  | { type: 'notification-permission-changed'; granted: boolean };
 
 export interface TabManagerDeps {
   createView(tab: TabRecord, bounds: ViewBounds): TabView;
@@ -45,6 +48,8 @@ export interface TabManagerDeps {
   scheduleFlush?: (flush: () => void) => void;
   idleHibernateMs?: number;
   maxLiveTabs?: number;
+  /** Domains the user has pinned to "never hibernate". */
+  neverHibernate?: () => readonly string[];
 }
 
 /**
@@ -98,6 +103,9 @@ export class TabManager {
       canGoBack: false,
       canGoForward: false,
       isAudible: false,
+      inCall: false,
+      hasUnsavedInput: false,
+      hasNotificationPermission: false,
       lifecycle: 'live',
       lastActiveAt: now,
       createdAt: now,
@@ -224,6 +232,15 @@ export class TabManager {
       case 'audible-changed':
         tab.isAudible = event.audible;
         break;
+      case 'call-state-changed':
+        tab.inCall = event.inCall;
+        break;
+      case 'unsaved-input-changed':
+        tab.hasUnsavedInput = event.hasUnsavedInput;
+        break;
+      case 'notification-permission-changed':
+        tab.hasNotificationPermission = event.granted;
+        break;
     }
     this.markDirty();
   }
@@ -253,7 +270,7 @@ export class TabManager {
    * Returns the tabs the memory budget would reclaim right now, without
    * touching them, so the caller can capture a snapshot first.
    */
-  planMemoryBudget(): string[] {
+  planMemoryBudget(options: { idleThresholdMs?: number; maxLiveTabs?: number } = {}): string[] {
     const now = this.now();
     const candidates = this.list()
       .filter((tab) => tab.lifecycle === 'live')
@@ -261,7 +278,9 @@ export class TabManager {
         id: tab.id,
         isPinned: tab.isPinned,
         isAudible: tab.isAudible,
-        inCall: false,
+        inCall: tab.inCall,
+        hasUnsavedInput: tab.hasUnsavedInput,
+        hasNotificationPermission: tab.hasNotificationPermission,
         lastActiveAt: tab.lastActiveAt,
         state: 'live' as const,
         url: tab.url,
@@ -270,9 +289,10 @@ export class TabManager {
     const ids = selectTabsToHibernate(
       candidates,
       now,
-      this.idleHibernateMs,
-      this.maxLiveTabs,
+      options.idleThresholdMs ?? this.idleHibernateMs,
+      options.maxLiveTabs ?? this.maxLiveTabs,
       this.activeTabId,
+      { neverHibernate: this.deps.neverHibernate?.() ?? [] },
     );
     return ids;
   }

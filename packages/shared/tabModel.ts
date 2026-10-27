@@ -24,6 +24,12 @@ export interface TabRecord {
   canGoBack: boolean;
   canGoForward: boolean;
   isAudible: boolean;
+  /** The tab is in an active call or meeting. */
+  inCall: boolean;
+  /** A form field holds typed input that a reload would discard. */
+  hasUnsavedInput: boolean;
+  /** The site has been granted notification permission. */
+  hasNotificationPermission: boolean;
   lifecycle: TabLifecycle;
   lastActiveAt: number;
   createdAt: number;

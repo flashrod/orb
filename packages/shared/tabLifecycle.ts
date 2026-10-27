@@ -1,20 +1,34 @@
 /**
  * Tab hibernation policy, shared by the renderer's webview path and the
  * main-process TabManager. Pure functions only.
+ *
+ * Protection is behavior-based, not site-based: a tab survives only while it is
+ * doing something a reload would interrupt (playing audio, in a call, holding
+ * typed input, showing notifications) or because the user asked for it.
  */
 
-import { isKeepalive, isSuspensionExempt } from './siteBehavior';
+import { isNeverHibernate } from './siteBehavior';
 
 export type TabState = 'live' | 'throttled' | 'hibernated';
+
 export interface MemoryGuardTab {
   id: string;
   isPinned: boolean;
   isAudible: boolean;
+  /** The tab is in an active call or meeting. */
   inCall: boolean;
+  /** A form field holds typed input that a reload would discard. */
+  hasUnsavedInput: boolean;
+  /** The site has been granted notification permission. */
+  hasNotificationPermission: boolean;
   lastActiveAt: number;
   state: TabState;
-  /** Current URL, used to keep communication and editor tabs alive. */
   url?: string;
+}
+
+export interface HibernationOptions {
+  /** Domains the user has pinned to "never hibernate". */
+  neverHibernate?: readonly string[];
 }
 
 /** Background tabs idle for this long are hibernated. */
@@ -25,25 +39,27 @@ export const MEMORY_GUARD_MAX_LIVE_TABS = 20;
 
 /**
  * A tab may only be hibernated when it is live, unprotected and idle.
- * Protected: pinned, audible, in a call, a keepalive site, or currently
- * focused by the user.
+ * Protected: pinned, audible, in a call, holding typed input, notifications
+ * granted, on the user's never-hibernate list, or currently focused.
  */
 export function shouldHibernate(
   tab: MemoryGuardTab,
   now: number,
   idleThresholdMs: number,
   activeTabId?: string | null,
+  options: HibernationOptions = {},
 ): boolean {
   if (tab.state !== 'live') return false;
-  if (isProtectedTab(tab)) return false;
+  if (isProtectedTab(tab, options)) return false;
   if (activeTabId && tab.id === activeTabId) return false;
   return now - tab.lastActiveAt > idleThresholdMs;
 }
 
-function isProtectedTab(tab: MemoryGuardTab): boolean {
+function isProtectedTab(tab: MemoryGuardTab, options: HibernationOptions): boolean {
   if (tab.isPinned || tab.isAudible || tab.inCall) return true;
+  if (tab.hasUnsavedInput || tab.hasNotificationPermission) return true;
   if (!tab.url) return false;
-  return isKeepalive(tab.url) || isSuspensionExempt(tab.url);
+  return isNeverHibernate(tab.url, options.neverHibernate ?? []);
 }
 
 /**
@@ -59,12 +75,13 @@ export function selectTabsToHibernate(
   idleThresholdMs: number,
   maxLiveTabs: number,
   activeTabId?: string | null,
+  options: HibernationOptions = {},
 ): string[] {
   const liveTabs = tabs.filter((tab) => tab.state === 'live');
   const selected = new Set<string>();
 
   for (const tab of liveTabs) {
-    if (shouldHibernate(tab, now, idleThresholdMs, activeTabId)) selected.add(tab.id);
+    if (shouldHibernate(tab, now, idleThresholdMs, activeTabId, options)) selected.add(tab.id);
   }
 
   const remainingLive = liveTabs.filter((tab) => !selected.has(tab.id)).length;
@@ -74,7 +91,7 @@ export function selectTabsToHibernate(
     for (const tab of oldestFirst) {
       if (live <= maxLiveTabs) break;
       if (selected.has(tab.id)) continue;
-      if (isProtectedTab(tab)) continue;
+      if (isProtectedTab(tab, options)) continue;
       if (activeTabId && tab.id === activeTabId) continue;
       selected.add(tab.id);
       live -= 1;

@@ -132,6 +132,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     executeBoostJavaScript: (id: string, code: string) => ipcRenderer.invoke('tabs:execute-boost-javascript', id, code) as Promise<void>,
     memory: () => ipcRenderer.invoke('tabs:memory') as Promise<{ id: string; pid: number | null; bytes: number }[]>,
     hibernateBackground: () => ipcRenderer.invoke('tabs:hibernate-background') as Promise<string[]>,
+    setNeverHibernate: (domains: string[]) => ipcRenderer.invoke('tabs:set-never-hibernate', domains) as Promise<void>,
     stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => ipcRenderer.invoke('tabs:stop-find-in-page', id, action ?? 'clearSelection') as Promise<void>,
     applyCss: (id: string, css: string) => ipcRenderer.invoke('tabs:apply-css', id, css) as Promise<void>,
     snapshot: () => ipcRenderer.invoke('tabs:snapshot') as Promise<TabStateSnapshot>,
@@ -220,6 +221,7 @@ declare global {
         executeBoostJavaScript: (id: string, code: string) => Promise<void>;
         memory: () => Promise<{ id: string; pid: number | null; bytes: number }[]>;
         hibernateBackground: () => Promise<string[]>;
+        setNeverHibernate: (domains: string[]) => Promise<void>;
         stopFindInPage: (id: string, action?: 'clearSelection' | 'keepSelection' | 'activateSelection') => Promise<void>;
         applyCss: (id: string, css: string) => Promise<void>;
         snapshot: () => Promise<TabStateSnapshot>;

@@ -1,13 +1,13 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { Tab } from '../stores/tabs';
 import { useTabStore } from '../stores/tabs';
+import { useBrowserPreferencesStore } from '../stores/preferences';
 import type { TabStateSnapshot } from '../../shared/tabModel';
 
 /**
- * The native-view engine is opt-in while it reaches parity with the webview
- * path. Enable it by launching with `ORB_NATIVE_TABS=1` (main appends
- * `?nativeTabs=1` to the renderer URL). Nothing is persisted, so a bad build
- * can never strand a profile in the experimental path.
+ * The native-view engine is the default. Set `ORB_NATIVE_TABS=0` to fall back
+ * to the legacy webview path (main then omits `?nativeTabs=1` from the renderer
+ * URL) while that path is still being removed.
  */
 export function nativeTabsEnabled(): boolean {
   if (typeof window === 'undefined') return false;
@@ -226,4 +226,11 @@ export function useNativeTabBridge({
     }, 60 * 1000);
     return () => window.clearInterval(timer);
   }, [enabled]);
+
+  // Keep the main process's never-hibernate list in step with settings.
+  const neverHibernate = useBrowserPreferencesStore((state) => state.neverHibernate);
+  useEffect(() => {
+    if (!enabled) return;
+    void window.orbApi?.tabs.setNeverHibernate(neverHibernate);
+  }, [enabled, neverHibernate]);
 }

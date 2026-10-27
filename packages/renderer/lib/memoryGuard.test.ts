@@ -12,6 +12,8 @@ function tab(overrides: Partial<MemoryGuardTab> & { id: string }): MemoryGuardTa
     isPinned: false,
     isAudible: false,
     inCall: false,
+    hasUnsavedInput: false,
+    hasNotificationPermission: false,
     lastActiveAt: 0,
     state: 'live',
     ...overrides,
@@ -39,10 +41,22 @@ describe('memory guard (idle tab hibernation)', () => {
     expect(shouldHibernate(tab({ id: '1', inCall: true, lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
   });
 
-  it('does not hibernate keepalive sites', () => {
-    expect(shouldHibernate(tab({ id: '1', url: 'https://mail.google.com/mail/u/0/#inbox', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
-    expect(shouldHibernate(tab({ id: '2', url: 'https://www.notion.so/team/page', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
-    expect(shouldHibernate(tab({ id: '3', url: 'https://app.slack.com/client/T1/C2', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
+  it('hibernates a site that used to be on the keepalive list', () => {
+    expect(shouldHibernate(tab({ id: '1', url: 'https://mail.google.com/mail/u/0/#inbox', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(true);
+    expect(shouldHibernate(tab({ id: '2', url: 'https://www.notion.so/team/page', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(true);
+    expect(shouldHibernate(tab({ id: '3', url: 'https://app.slack.com/client/T1/C2', lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(true);
+  });
+
+  it('protects typed input, notifications and the user never-hibernate list', () => {
+    expect(shouldHibernate(tab({ id: '1', hasUnsavedInput: true, lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
+    expect(shouldHibernate(tab({ id: '2', hasNotificationPermission: true, lastActiveAt: tenMinutesAgo }), now, MEMORY_GUARD_IDLE_MS)).toBe(false);
+    expect(shouldHibernate(
+      tab({ id: '3', url: 'https://example.com/', lastActiveAt: tenMinutesAgo }),
+      now,
+      MEMORY_GUARD_IDLE_MS,
+      null,
+      { neverHibernate: ['example.com'] },
+    )).toBe(false);
   });
 
   it('never hibernates the active tab, even when idle', () => {
@@ -85,13 +99,13 @@ describe('memory guard (idle tab hibernation)', () => {
     expect(selectTabsToHibernate(tabs, now, MEMORY_GUARD_IDLE_MS, 1, 'active')).toEqual(['idle']);
   });
 
-  it('keeps keepalive sites even when over the cap', () => {
+  it('reclaims sites that are not on the never-hibernate list', () => {
     const tabs = [
       tab({ id: 'notion', url: 'https://www.notion.so/team/page', lastActiveAt: now - 600 * 1000 }),
       tab({ id: 'gmail', url: 'https://mail.google.com/mail/u/0/#inbox', lastActiveAt: now - 600 * 1000 }),
       tab({ id: 'idle', url: 'https://example.com', lastActiveAt: now - 600 * 1000 }),
     ];
-    expect(selectTabsToHibernate(tabs, now, MEMORY_GUARD_IDLE_MS, 1)).toEqual(['idle']);
+    expect(selectTabsToHibernate(tabs, now, MEMORY_GUARD_IDLE_MS, 1, null, { neverHibernate: ['notion.so'] })).toEqual(['gmail', 'idle']);
   });
 
   it('returns nothing when under the cap and nothing is idle', () => {

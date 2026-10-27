@@ -113,7 +113,7 @@ export const faqs = [
   {
     question: 'How is Orb different from Arc?',
     answer:
-      'Orb takes the useful shape of Arc, with Spaces and a keyboard first command bar, and rebuilds it as a clean room project. Browsing data stays on your machine, there is no cloud account, and the source is public. Orb is not affiliated with Arc or The Browser Company.',
+      'Orb takes the useful shape of Arc, with Spaces and a keyboard first command bar, and builds on it with its own implementation. Browsing data stays on your machine, there is no cloud account, and the source is public. Orb is not affiliated with Arc or The Browser Company.',
   },
   {
     question: 'Does Orb block ads and trackers?',
