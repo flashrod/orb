@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FilterRequestContext, FilterRuleIndex, cookieContext, NetworkFilterRule, parseFilterLine } from './filterRules';
 
-// Filter list sources. The subscription set was chosen by studying Arc's
-// manifest.json; the lists themselves are public and the parser is Orb's own.
+// Filter list sources. These are the public lists most blockers subscribe to;
+// the parser below is Orb's own.
 type FilterListType = 'generic' | 'privacy' | 'cookies';
 interface FilterListSource { id: string; name: string; type: FilterListType; url: string; enabled: boolean; custom?: boolean }
 interface FilterListStatus extends FilterListSource { lastUpdated: number | null; ruleCount: number; error: string | null }
