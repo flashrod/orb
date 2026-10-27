@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   COMMANDS,
   findCommand,
+  effectiveKeymap,
+  findConflicts,
+  isBound,
   matchBinding,
   normalizeBinding,
   parseBinding,
@@ -180,3 +183,66 @@ describe('registry integrity', () => {
     expect(total).toBe(COMMANDS.length);
   });
 });
+
+describe('effectiveKeymap', () => {
+  const overrides: Record<string, string[] | null> = {};
+
+  it('falls back to defaults when no override', () => {
+    const keymap = effectiveKeymap(COMMANDS, {});
+    expect(keymap.get('new-tab')).toEqual(['Mod+T']);
+  });
+
+  it('applies override bindings', () => {
+    const keymap = effectiveKeymap(COMMANDS, { 'new-tab': ['Mod+N'] });
+    expect(keymap.get('new-tab')).toEqual(['Mod+N']);
+    // other commands unchanged
+    expect(keymap.get('command-bar')).toEqual(['Mod+K']);
+  });
+
+  it('null override unbinds a command', () => {
+    const keymap = effectiveKeymap(COMMANDS, { 'new-tab': null });
+    expect(keymap.get('new-tab')).toEqual([]);
+  });
+
+  it('empty array override unbinds a command', () => {
+    const keymap = effectiveKeymap(COMMANDS, { 'new-tab': [] });
+    expect(keymap.get('new-tab')).toEqual([]);
+  });
+});
+
+describe('findConflicts', () => {
+  it('finds no conflicts in defaults', () => {
+    expect(findConflicts(COMMANDS, {})).toEqual([]);
+  });
+
+  it('detects two commands sharing a binding', () => {
+    const conflicts = findConflicts(COMMANDS, {
+      'new-tab': ['Mod+N'],
+      'command-bar': ['Mod+N'],
+    });
+    expect(conflicts.length).toBe(1);
+    expect(conflicts[0].binding).toBe('Mod+N');
+    expect(conflicts[0].commands.sort()).toEqual(['command-bar', 'new-tab'].sort());
+  });
+
+  it('ignores unbound commands', () => {
+    const conflicts = findConflicts(COMMANDS, {
+      'new-tab': null,
+      'command-bar': ['Mod+N'],
+    });
+    expect(conflicts.length).toBe(0);
+  });
+});
+
+describe('isBound', () => {
+  it('reports default-bound commands', () => {
+    expect(isBound('new-tab', {})).toBe(true);
+    expect(isBound('tab.mute', {})).toBe(false);
+  });
+
+  it('reports overridden bindings', () => {
+    expect(isBound('new-tab', { 'new-tab': null })).toBe(false);
+    expect(isBound('tab.mute', { 'tab.mute': ['Mod+M'] })).toBe(true);
+  });
+});
+

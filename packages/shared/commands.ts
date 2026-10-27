@@ -639,3 +639,59 @@ export function getCommandAccelerator(commandId: string): string | null {
   if (!command || command.defaultBindings.length === 0) return null;
   return bindingToAccelerator(command.defaultBindings[0]);
 }
+
+/**
+ * Resolve the effective bindings for every command: defaults merged with
+ * stored overrides. A null override unbinds the command; a missing override
+ * falls back to defaults.
+ */
+export function effectiveKeymap(
+  commands: readonly Command[],
+  overrides: Record<string, string[] | null | undefined>,
+): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const command of commands) {
+    const stored = overrides[command.id];
+    result.set(command.id, stored === undefined ? command.defaultBindings : stored ?? []);
+  }
+  return result;
+}
+
+/**
+ * Find bindings that map to more than one command in the effective keymap.
+ * Returns one entry per conflicting binding with the command ids that share it.
+ */
+export function findConflicts(
+  commands: readonly Command[],
+  overrides: Record<string, string[] | null | undefined>,
+): { binding: string; commands: string[] }[] {
+  const keymap = effectiveKeymap(commands, overrides);
+  const bindingToCommands = new Map<string, string[]>();
+  for (const [commandId, bindings] of keymap) {
+    for (const binding of bindings) {
+      const list = bindingToCommands.get(binding) ?? [];
+      list.push(commandId);
+      bindingToCommands.set(binding, list);
+    }
+  }
+  const conflicts: { binding: string; commands: string[] }[] = [];
+  for (const [binding, commandIds] of bindingToCommands) {
+    if (commandIds.length > 1) conflicts.push({ binding, commands: commandIds });
+  }
+  return conflicts;
+}
+
+/**
+ * Check whether a given command id is bound in the effective keymap.
+ */
+export function isBound(
+  commandId: string,
+  overrides: Record<string, string[] | null | undefined>,
+  commands: readonly Command[] = COMMANDS,
+): boolean {
+  const command = findCommand(commandId);
+  if (!command) return false;
+  const stored = overrides[commandId];
+  const bindings = stored === undefined ? command.defaultBindings : stored ?? [];
+  return bindings.length > 0;
+}
