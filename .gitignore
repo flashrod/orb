@@ -14,3 +14,6 @@ ROADMAP.md
 
 *.tsbuildinfo
 .vercel
+
+# Electron runtime profile, created when the app is launched from the repo
+/Orb/
