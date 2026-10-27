@@ -759,6 +759,23 @@ export default function App() {
   // shortcuts) into the DOM events the shell already listens for.
   useEffect(() => bindMainEvents(window.orbApi, window), []);
 
+  // Sync keymap overrides to the main process so key events inside web pages
+  // are matched against the user's current keymap without a round trip.
+  useEffect(() => {
+    const api = window.orbApi?.keymap;
+    if (!api) return;
+    const store = useBrowserPreferencesStore;
+    let prev = store.getState().keymapOverrides;
+    void api.setOverrides(prev);
+    const sub = store.subscribe((state) => {
+      const next = state.keymapOverrides;
+      if (next === prev) return;
+      prev = next;
+      void api.setOverrides(next);
+    });
+    return () => sub();
+  }, []);
+
   // Memory guard: hibernate idle background tabs and keep the live-tab count
   // inside the budget. Reads stores and refs directly so the timer never needs
   // to be recreated when tab state changes.
