@@ -391,3 +391,26 @@
     @apply text-zinc-600 hover:text-zinc-900 underline underline-offset-2 hover:decoration-zinc-900/30 transition-colors;
   }
 }
+
+/* Start page responds to the pane it lives in, not the window: split view and
+   narrow spaces get the stacked layout instead of a squeezed two-column grid. */
+.orb-start { container-type: inline-size; }
+.orb-start-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+.orb-start-title { font-size: clamp(30px, 6.5cqi, 48px); }
+.orb-start-sites { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+
+@container (min-width: 520px) {
+  .orb-start-sites { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container (min-width: 780px) {
+  .orb-start-sites { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@container (min-width: 880px) {
+  .orb-start-columns { grid-template-columns: minmax(0, 1fr) 320px; gap: 3rem; }
+}
+
+@container (min-width: 1120px) {
+  .orb-start-columns { grid-template-columns: minmax(0, 1fr) 360px; }
+}
