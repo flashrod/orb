@@ -59,7 +59,18 @@ function scoreEntry(entry: HistoryEntry, tokens: string[], query: string): numbe
 
   if (query && host.startsWith(query)) score += 6;
   if (query && title.startsWith(query)) score += 3;
+
+  // A page opened every day should outrank a one-off with the same text match.
+  // Log-scaled so a page visited 200 times is not 200x a page visited once.
+  score += Math.min(6, Math.log2(1 + entry.visitCount) * 1.5);
   return score;
+}
+
+/** How often, damped by how long ago. Used to rank sites with no query text. */
+function frecency(entry: HistoryEntry, now: number): number {
+  const ageHours = Math.max(0, now - entry.visitedAt) / 3_600_000;
+  const recency = 3 / (1 + ageHours / 24);
+  return Math.log2(1 + entry.visitCount) * 2 + recency;
 }
 
 /**
@@ -137,6 +148,22 @@ export class HistoryStore {
       a.entry.url.localeCompare(b.entry.url));
 
     return matches.slice(0, Math.max(0, limit)).map((match) => ({ ...match.entry }));
+  }
+
+  /** The sites someone actually lives in: one page per host, ranked by frecency. */
+  topSites(limit = 8): HistoryEntry[] {
+    const now = this.now();
+    const best = new Map<string, HistoryEntry>();
+
+    for (const entry of this.entries.values()) {
+      const current = best.get(entry.host);
+      if (!current || frecency(entry, now) > frecency(current, now)) best.set(entry.host, entry);
+    }
+
+    return [...best.values()]
+      .sort((a, b) => frecency(b, now) - frecency(a, now) || a.host.localeCompare(b.host))
+      .slice(0, Math.max(0, limit))
+      .map((entry) => ({ ...entry }));
   }
 
   async remove(url: string): Promise<void> {

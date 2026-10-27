@@ -135,6 +135,40 @@ describe('HistoryStore', () => {
     expect(store.query('').map((entry) => entry.host)).toEqual(['ok.test']);
   });
 
+  it('ranks a frequently visited match above a one-off', async () => {
+    const { store, advance } = setup();
+    for (let index = 0; index < 20; index += 1) {
+      await store.record('https://daily.test/docs', 'Docs');
+      advance(10);
+    }
+    await store.record('https://once.test/docs', 'Docs');
+    expect(store.query('docs')[0].host).toBe('daily.test');
+  });
+
+  it('lists top sites by how often they are visited', async () => {
+    const { store, advance } = setup();
+    await store.record('https://rare.test/a', 'Rare');
+    advance(10);
+    for (let index = 0; index < 5; index += 1) {
+      await store.record('https://often.test/a', 'Often');
+      advance(10);
+    }
+    expect(store.topSites(2).map((entry) => entry.host)).toEqual(['often.test', 'rare.test']);
+  });
+
+  it('lists one top site per host, keeping the strongest page', async () => {
+    const { store, advance } = setup();
+    await store.record('https://example.com/a', 'A');
+    advance(10);
+    await store.record('https://example.com/b', 'B');
+    advance(10);
+    await store.record('https://other.test/', 'Other');
+
+    const top = store.topSites(10);
+    expect(top.filter((entry) => entry.host === 'example.com')).toHaveLength(1);
+    expect(top.find((entry) => entry.host === 'example.com')?.url).toBe('https://example.com/b');
+  });
+
   it('drops the oldest entries beyond the cap', async () => {
     const { store, advance } = setup(3);
     for (let index = 0; index < 5; index += 1) {

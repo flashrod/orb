@@ -275,6 +275,8 @@ app.whenReady().then(async () => {
     await historyStore.clear();
     return { ok: true };
   });
+  ipcMain.handle('history:top', (_, limit: unknown) =>
+    historyStore.topSites(typeof limit === 'number' ? limit : 8));
 
   ipcMain.handle('permission:get-all', () => permissionStore.getAll());
   ipcMain.handle('permission:set', async (_, { host, permission, state }: { host: string; permission: string; state: PermissionState }) => {
