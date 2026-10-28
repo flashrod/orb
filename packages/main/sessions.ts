@@ -27,6 +27,7 @@ const DEFAULT_PERMISSION_TIMEOUT_MS = 30_000;
 // Electron returns the same Session instance for a partition, so identity is a
 // safe way to make hardening idempotent across repeated webview attaches.
 const hardenedSessions = new WeakSet<Session>();
+const knownSessions = new Set<Session>();
 
 /** Sends a push event to every live shell window. */
 export function broadcast(channel: string, payload: unknown): void {
@@ -179,6 +180,16 @@ export function hardenSession(ses: Session, ctx: SessionContext): void {
 /** Returns the hardened session for an Orb partition. */
 export function orbSessionFor(partition: string, ctx: SessionContext): Session {
   const ses = session.fromPartition(partition, { cache: true });
+  knownSessions.add(ses);
   hardenSession(ses, ctx);
   return ses;
+}
+
+/**
+ * Every session Orb has created, across the default profile and each Space
+ * profile. "Clear browsing data" needs all of them: a user does not think of
+ * profiles as separate stores.
+ */
+export function orbSessions(): Session[] {
+  return [...knownSessions];
 }

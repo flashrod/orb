@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check, Shield, Trash, WarningCircle } from '@phosphor-icons/react';
 import Toggle from './ui/Toggle';
 import { groupPermissions, permissionLabel, type PermissionEntry } from '../lib/permissionsView';
+import { describePlan } from '../../shared/browsingData';
 
 type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
 type FilterList = { id: string; name: string; url: string; enabled: boolean; custom?: boolean; ruleCount: number; error: string | null; lastUpdated: number | null };
@@ -9,10 +10,20 @@ type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boo
 
 const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: true, httpsExceptions: [], thirdPartyCookieBlockingEnabled: true, webRtcProtectionEnabled: true, fingerprintingProtectionEnabled: true, allowlist: [], blockedRequests: [], filterLists: [] };
 
+const clearOptions = [
+  { id: 'history', label: 'Browsing history', detail: 'Pages you visited and the suggestions built from them.' },
+  { id: 'cache', label: 'Cached files', detail: 'Images and scripts stored to load pages faster.' },
+  { id: 'cookies', label: 'Cookies', detail: 'Signs you out of most sites.' },
+  { id: 'siteData', label: 'Site data', detail: 'Local storage, IndexedDB and service workers.' },
+] as const;
+
 export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
   const [status, setStatus] = useState<Status>(emptyStatus);
   const [domain, setDomain] = useState('');
   const [httpsDomain, setHttpsDomain] = useState('');
+  const [clearSelection, setClearSelection] = useState({ history: true, cache: true, cookies: false, siteData: false });
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [clearNotice, setClearNotice] = useState('');
   const [filterUrl, setFilterUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -102,6 +113,20 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
     finally { setBusy(false); }
   };
 
+  const clearBrowsingData = async () => {
+    setBusy(true); setError(''); setNotice(''); setClearNotice('');
+    try {
+      const result = await window.orbApi.clearBrowsingData(clearSelection);
+      if (!result.ok) throw new Error(result.error || 'Could not clear browsing data.');
+      const scope = result.profiles && result.profiles > 1 ? ` across ${result.profiles} profiles` : '';
+      setClearNotice(`Cleared ${describePlan(result.labels)}${scope}.`);
+      setConfirmingClear(false);
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not clear browsing data.');
+    } finally { setBusy(false); }
+  };
+
   const rows = [
     { label: 'Block ads and page trackers', description: `${status.ruleCount.toLocaleString()} advertising rules loaded`, checked: status.enabled, toggle: () => update(() => window.orbApi.toggleAdBlocker(!status.enabled)) },
     { label: 'Block known trackers and cookie scripts', description: `${status.trackerRuleCount.toLocaleString()} privacy rules loaded`, checked: status.trackerBlockingEnabled, toggle: () => update(() => window.orbApi.toggleTrackerBlocking(!status.trackerBlockingEnabled)) },
@@ -163,6 +188,39 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
       {activeDomain && <button type="button" disabled={busy || status.allowlist.some((item) => item === activeDomain || activeDomain.endsWith(`.${item}`))} onClick={() => void saveDomain(activeDomain)} className="orb-control mt-3 rounded-md border orb-border px-3 py-2 text-xs disabled:opacity-50">{status.allowlist.some((item) => item === activeDomain || activeDomain.endsWith(`.${item}`)) ? `Shield exception active for ${activeDomain}` : `Allow this site · ${activeDomain}`}</button>}
       <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void saveDomain(domain); }}><input value={domain} onChange={(event) => setDomain(event.target.value)} aria-label="Site to allow" placeholder="example.com" className="orb-strong orb-placeholder h-9 min-w-0 flex-1 rounded-md border orb-border bg-transparent px-3 text-xs outline-none focus:border-[var(--orb-accent)]" /><button type="submit" disabled={busy || !domain.trim()} className="orb-accent-bg rounded-md px-3 text-xs text-white disabled:opacity-50">Add exception</button></form>
       {status.allowlist.length > 0 && <div className="mt-3 space-y-1">{status.allowlist.map((item) => <div key={item} className="orb-elevated flex items-center gap-3 rounded-md border orb-border px-3 py-2"><span className="orb-strong min-w-0 flex-1 truncate text-xs">{item}</span><Check className="orb-accent h-3.5 w-3.5" /><button type="button" aria-label={`Remove exception for ${item}`} onClick={() => void update(() => window.orbApi.removeAdBlockerAllowlist(item))} className="orb-control rounded px-2 py-1 text-[10px]">Remove</button></div>)}</div>}
+    </section>
+    <section className="border-t orb-border pt-5">
+      <h3 className="orb-strong text-xs font-semibold">Clear browsing data</h3>
+      <p className="orb-muted mt-1 text-[11px]">Remove data from Orb only. Other browsers are not touched.</p>
+      <div className="mt-3 space-y-1.5">{clearOptions.map((option) => (
+        <label key={option.id} className="orb-elevated flex cursor-pointer items-start gap-3 rounded-md border orb-border px-3 py-2">
+          <input
+            type="checkbox"
+            aria-label={option.label}
+            checked={clearSelection[option.id]}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setClearSelection((current) => ({ ...current, [option.id]: checked }));
+              setConfirmingClear(false);
+            }}
+            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--orb-accent)]"
+          />
+          <span className="min-w-0"><span className="orb-strong block text-[11px]">{option.label}</span><span className="orb-muted mt-0.5 block text-[10px]">{option.detail}</span></span>
+        </label>
+      ))}</div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => { if (confirmingClear) void clearBrowsingData(); else setConfirmingClear(true); }}
+          className={`rounded-md px-3 py-2 text-xs disabled:opacity-50 ${confirmingClear ? 'bg-red-700 text-white' : 'orb-control border orb-border'}`}
+        >
+          {confirmingClear ? 'Confirm clear' : 'Clear selected data'}
+        </button>
+        {confirmingClear && <button type="button" onClick={() => setConfirmingClear(false)} className="orb-control rounded-md border orb-border px-3 py-2 text-xs">Cancel</button>}
+        <span className="orb-muted text-[10px]">{confirmingClear ? 'This cannot be undone. Open tabs keep their current content.' : 'Choose what to remove, then confirm.'}</span>
+      </div>
+      {clearNotice && <p role="status" className="orb-accent-soft orb-strong mt-3 rounded-md px-3 py-2 text-xs">{clearNotice}</p>}
     </section>
     <section className="border-t orb-border pt-5">
       <div className="flex items-start justify-between gap-4"><div><h3 className="orb-strong text-xs font-semibold">Filter lists</h3><p className="orb-muted mt-1 text-[11px]">Choose which HTTPS lists are active. Refresh fetches the latest rules.</p></div><button type="button" disabled={busy} onClick={() => void update(() => window.orbApi.refreshFilterLists())} className="orb-control rounded-md border orb-border px-2.5 py-1.5 text-[10px]">Refresh lists</button></div>

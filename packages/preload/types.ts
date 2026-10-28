@@ -14,6 +14,8 @@ export interface ExposedApi {
   openDialog: (options: any) => Promise<any>;
   savePdf: (data: Uint8Array, suggestedName: string) => Promise<{ saved: boolean; path?: string; error?: string }>;
   getAppVersion: () => Promise<string>;
+  getBuildInfo: () => Promise<{ version: string; electron: string; chromium: string; node: string; platform: string; arch: string }>;
+  clearBrowsingData: (request: { history?: boolean; cache?: boolean; cookies?: boolean; siteData?: boolean }) => Promise<{ ok: boolean; labels: string[]; profiles?: number; error?: string }>;
   takeLaunchUrl?: () => Promise<string | null>;
   getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;
   setDefaultBrowser: () => Promise<{ isDefault: boolean; platform: string }>;
@@ -70,6 +72,8 @@ export const exposedApi: ExposedApi = {
   openDialog: async () => Promise.resolve({}),
   savePdf: async () => ({ saved: false }),
   getAppVersion: async () => '0.1.0',
+  getBuildInfo: async () => ({ version: '0.1.0', electron: '', chromium: '', node: '', platform: 'darwin', arch: 'arm64' }),
+  clearBrowsingData: async () => ({ ok: true, labels: [] }),
   getDefaultBrowserStatus: async () => ({ isDefault: false, platform: 'darwin' }),
   setDefaultBrowser: async () => ({ isDefault: false, platform: 'darwin' }),
   openDefaultBrowserSettings: async () => ({ opened: false }),

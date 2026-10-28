@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, screen, session, shell } from 'electron';
+import { ipcMain, dialog, BrowserWindow, screen, session, shell, app } from 'electron';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { normalizeExceptionDomain } from './httpsOnly';
@@ -74,10 +74,18 @@ export function registerIpcHandlers(): void {
     return dialog.showOpenDialog(requireDialogOptions(options) as Electron.OpenDialogOptions);
   });
 
-  // Get app version
-  ipcMain.handle('app:get-version', () => {
-    return process.env.npm_package_version || '0.1.0';
-  });
+  // Get app version. In a packaged build npm_package_version is absent, so read
+  // the version electron-builder wrote into the app bundle.
+  ipcMain.handle('app:get-version', () => app.getVersion());
+
+  ipcMain.handle('app:get-build-info', () => ({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    node: process.versions.node,
+    platform: process.platform,
+    arch: process.arch,
+  }));
 
   ipcMain.handle('app:default-browser-status', () => getDefaultBrowserStatus());
   ipcMain.handle('app:set-default-browser', () => requestDefaultBrowser());

@@ -19,9 +19,11 @@ import {
   isOrbPartition,
   isWebUrl,
   orbSessionFor,
+  orbSessions,
   type PendingPermission,
   type SessionContext,
 } from './sessions';
+import { planClearBrowsingData, planIsEmpty } from '../shared/browsingData';
 
 app.setAppUserModelId('org.orb.browser');
 
@@ -306,6 +308,34 @@ app.whenReady().then(async () => {
   ipcMain.handle('history:clear', async () => {
     await historyStore.clear();
     return { ok: true };
+  });
+
+  // Clear browsing data across the default profile and every Space profile.
+  // Sessions are tracked at creation, so profiles the user has not visited yet
+  // are not silently skipped.
+  ipcMain.handle('app:clear-browsing-data', async (_, request: unknown) => {
+    const plan = planClearBrowsingData(request);
+    if (planIsEmpty(plan)) return { ok: false, error: 'Choose at least one kind of data to clear.', labels: [] };
+
+    if (plan.history) await historyStore.clear();
+
+    const sessions = orbSessions();
+    const failures: string[] = [];
+    for (const ses of sessions) {
+      try {
+        if (plan.cache) await ses.clearCache();
+        if (plan.storages.length > 0) await ses.clearStorageData({ storages: plan.storages });
+      } catch (error) {
+        failures.push(error instanceof Error ? error.message : 'unknown error');
+      }
+    }
+
+    return {
+      ok: failures.length === 0,
+      labels: plan.labels,
+      profiles: sessions.length,
+      error: failures.length > 0 ? failures[0] : undefined,
+    };
   });
   ipcMain.handle('history:top', (_, limit: unknown) =>
     historyStore.topSites(typeof limit === 'number' ? limit : 8));

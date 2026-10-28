@@ -52,6 +52,8 @@ contextBridge.exposeInMainWorld('orbApi', {
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  getBuildInfo: () => ipcRenderer.invoke('app:get-build-info'),
+  clearBrowsingData: (request: unknown) => ipcRenderer.invoke('app:clear-browsing-data', request),
   takeLaunchUrl: () => ipcRenderer.invoke('app:take-launch-url') as Promise<string | null>,
   getDefaultBrowserStatus: () => ipcRenderer.invoke('app:default-browser-status'),
   setDefaultBrowser: () => ipcRenderer.invoke('app:set-default-browser'),
@@ -188,6 +190,8 @@ declare global {
       openDialog: (options: any) => Promise<any>;
       savePdf: (data: Uint8Array, suggestedName: string) => Promise<{ saved: boolean; path?: string; error?: string }>;
       getAppVersion: () => Promise<string>;
+      getBuildInfo: () => Promise<{ version: string; electron: string; chromium: string; node: string; platform: string; arch: string }>;
+      clearBrowsingData: (request: { history?: boolean; cache?: boolean; cookies?: boolean; siteData?: boolean }) => Promise<{ ok: boolean; labels: string[]; profiles?: number; error?: string }>;
       takeLaunchUrl: () => Promise<string | null>;
       getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;
       setDefaultBrowser: () => Promise<{ isDefault: boolean; platform: string }>;
