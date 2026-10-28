@@ -86,6 +86,10 @@ contextBridge.exposeInMainWorld('orbApi', {
     ipcRenderer.invoke('adblocker:set-https-only', enabled),
   getHttpsOnlyStatus: () =>
     ipcRenderer.invoke('adblocker:get-https-status'),
+  addHttpsException: (domain: string) =>
+    ipcRenderer.invoke('adblocker:https-exception-add', domain),
+  removeHttpsException: (domain: string) =>
+    ipcRenderer.invoke('adblocker:https-exception-remove', domain),
 
   // Boosts
   getBoosts: () => ipcRenderer.invoke('boosts:get-all'),
@@ -193,7 +197,9 @@ declare global {
       toggleTrackerBlocking: (enabled: boolean) => Promise<{ trackerBlockingEnabled: boolean; trackerRuleCount: number }>;
       getTrackerBlockingStatus: () => Promise<{ trackerBlockingEnabled: boolean; trackerRuleCount: number }>;
       toggleHttpsOnly: (enabled: boolean) => Promise<{ httpsOnlyEnabled: boolean }>;
-      getHttpsOnlyStatus: () => Promise<{ httpsOnlyEnabled: boolean }>;
+      getHttpsOnlyStatus: () => Promise<{ httpsOnlyEnabled: boolean; httpsExceptions: string[] }>;
+      addHttpsException: (domain: string) => Promise<string[]>;
+      removeHttpsException: (domain: string) => Promise<string[]>;
       addAdBlockerAllowlist: (domain: string) => Promise<string[]>;
       removeAdBlockerAllowlist: (domain: string) => Promise<string[]>;
       clearBlockedRequestLog: () => Promise<{ cleared: boolean }>;

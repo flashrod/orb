@@ -41,7 +41,7 @@ import {
   selectTabsToHibernate,
   type MemoryGuardTab,
 } from './lib/memoryGuard';
-import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
+import { ArrowsLeftRight, X, List, NavigationArrow, WarningCircle } from '@phosphor-icons/react';
 import { normalizeGlanceUrl } from './lib/glance';
 import { nextProfileId, nextSpaceIndex } from './lib/spaceNavigation';
 type DownloadItem = {
@@ -93,6 +93,7 @@ export default function App() {
   // Downloads panel state
   const [downloadsOpen, setDownloadsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [httpsFallback, setHttpsFallback] = useState<{ host: string; url: string } | null>(null);
   const [downloads, setDownloads] = useState<DownloadItem[]>([]);
   const [currentDownloadPath, setCurrentDownloadPath] = useState('');
   // Memory guard: last activity per tab, kept in a ref so the guard timer reads
@@ -1247,6 +1248,22 @@ export default function App() {
       if (subscription) api.off(subscription);
     };
   }, []);
+
+  // HTTPS-only fell back to HTTP for a site with no working TLS. Say so: a
+  // silent downgrade is exactly what the setting exists to prevent.
+  useEffect(() => {
+    const api = window.orbApi;
+    if (!api) return;
+    const subscription = api.on('orb:https-fallback', (payload) => {
+      const detail = payload as { host?: unknown; url?: unknown };
+      if (typeof detail?.host !== 'string' || !detail.host) return;
+      setHttpsFallback({ host: detail.host, url: typeof detail.url === 'string' ? detail.url : '' });
+    });
+    return () => {
+      if (subscription) api.off(subscription);
+    };
+  }, []);
+
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, false, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
@@ -1455,6 +1472,14 @@ export default function App() {
         </div>
 
         {/* Command Bar Overlay */}
+        {httpsFallback && <div role="status" className="orb-elevated orb-shadow absolute bottom-3 left-3 z-30 flex max-w-sm items-start gap-3 rounded-lg border orb-border px-3 py-2">
+          <WarningCircle aria-hidden="true" className="orb-accent mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0">
+            <p className="orb-strong text-[11px]">{httpsFallback.host} loaded over HTTP</p>
+            <p className="orb-muted mt-0.5 text-[10px]">Its HTTPS address did not respond, so it was added to HTTPS exceptions.</p>
+          </div>
+          <button type="button" aria-label="Dismiss HTTPS notice" onClick={() => setHttpsFallback(null)} className="orb-control rounded p-1"><X className="h-3 w-3" /></button>
+        </div>}
         {commandBarOpen && <CommandBar onClose={() => setCommandBarOpen(false)} onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); setCommandBarOpen(false); }} onOpenHistory={() => { setHistoryOpen(true); setCommandBarOpen(false); }} />}
         {splitPickerTabId && (() => {
           const anchorTab = spaceTabs.find((tab) => tab.id === splitPickerTabId);

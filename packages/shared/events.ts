@@ -65,6 +65,8 @@ export type OrbEventMap = {
   'orb:find-result': { tabId: string; activeMatchOrdinal: number; matches: number };
   /** The window entered or left macOS fullscreen. */
   'orb:fullscreen-changed': { fullscreen: boolean };
+  /** HTTPS-only fell back to HTTP because the site has no working TLS. */
+  'orb:https-fallback': { host: string; url: string };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -79,6 +81,7 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:tab-focused',
   'orb:find-result',
   'orb:fullscreen-changed',
+  'orb:https-fallback',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {

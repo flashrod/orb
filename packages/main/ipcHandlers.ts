@@ -1,6 +1,7 @@
 import { ipcMain, dialog, BrowserWindow, screen, session, shell } from 'electron';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
+import { normalizeExceptionDomain } from './httpsOnly';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
@@ -164,6 +165,7 @@ export function registerIpcHandlers(): void {
       trackerBlockingEnabled: adBlocker.trackerBlockingEnabled,
       trackerRuleCount: adBlocker.getTrackerRuleCount(),
       httpsOnlyEnabled: adBlocker.isHttpsOnly(),
+      httpsExceptions: adBlocker.getHttpsExceptions(),
       thirdPartyCookieBlockingEnabled: adBlocker.thirdPartyCookieBlockingEnabled,
       webRtcProtectionEnabled: adBlocker.webRtcProtectionEnabled,
       fingerprintingProtectionEnabled: adBlocker.fingerprintingProtectionEnabled,
@@ -242,7 +244,19 @@ export function registerIpcHandlers(): void {
 
   // HTTPS-only: get status
   ipcMain.handle('adblocker:get-https-status', () => {
-    return { httpsOnlyEnabled: adBlocker.isHttpsOnly() };
+    return { httpsOnlyEnabled: adBlocker.isHttpsOnly(), httpsExceptions: adBlocker.getHttpsExceptions() };
+  });
+
+  // HTTPS-only: per-site exceptions, for sites that only work over plain HTTP
+  ipcMain.handle('adblocker:https-exception-add', (_event, value: string) => {
+    if (typeof value !== 'string') throw new Error('Enter a valid site.');
+    const domain = normalizeExceptionDomain(value);
+    if (!domain || domain.includes('..')) throw new Error('Enter a valid domain name.');
+    return adBlocker.addHttpsException(domain);
+  });
+  ipcMain.handle('adblocker:https-exception-remove', (_event, domain: string) => {
+    if (typeof domain !== 'string') return adBlocker.getHttpsExceptions();
+    return adBlocker.removeHttpsException(domain);
   });
 
   // Ad blocker: import uBlock Origin filter list from file

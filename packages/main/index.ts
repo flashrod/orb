@@ -380,7 +380,21 @@ app.whenReady().then(async () => {
       if (contents === mainWindow?.webContents || contents.isDestroyed()) return;
       const url = contents.getURL();
       if (!isWebUrl(url)) return;
+      adBlocker.clearPendingUpgrade(url);
+      adBlocker.confirmFallback(url);
       void historyStore.record(url, contents.getTitle()).catch(() => undefined);
+    });
+
+    // HTTPS-only retries a failed upgrade over HTTP instead of leaving the user
+    // on an error page. Certificate failures are deliberately excluded.
+    contents.on('did-fail-load', (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+      if (!isMainFrame || contents.isDestroyed()) return;
+      adBlocker.rejectFallback(validatedURL);
+      const fallback = adBlocker.fallbackForFailedUpgrade(validatedURL, errorCode);
+      if (!fallback) return;
+      console.warn(`[https-only] ${fallback.host} has no working HTTPS; loading over HTTP.`);
+      void contents.loadURL(fallback.from).catch(() => undefined);
+      mainWindow?.webContents.send('orb:https-fallback', { host: fallback.host, url: fallback.from });
     });
 
     contents.on('will-attach-webview', (_attachEvent, webPreferences) => {

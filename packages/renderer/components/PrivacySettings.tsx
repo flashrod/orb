@@ -5,13 +5,14 @@ import { groupPermissions, permissionLabel, type PermissionEntry } from '../lib/
 
 type BlockedRequest = { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number };
 type FilterList = { id: string; name: string; url: string; enabled: boolean; custom?: boolean; ruleCount: number; error: string | null; lastUpdated: number | null };
-type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[]; filterLists: FilterList[] };
+type Status = { enabled: boolean; ruleCount: number; trackerBlockingEnabled: boolean; trackerRuleCount: number; httpsOnlyEnabled: boolean; httpsExceptions: string[]; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; allowlist: string[]; blockedRequests: BlockedRequest[]; filterLists: FilterList[] };
 
-const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: false, thirdPartyCookieBlockingEnabled: true, webRtcProtectionEnabled: true, fingerprintingProtectionEnabled: true, allowlist: [], blockedRequests: [], filterLists: [] };
+const emptyStatus: Status = { enabled: true, ruleCount: 0, trackerBlockingEnabled: true, trackerRuleCount: 0, httpsOnlyEnabled: true, httpsExceptions: [], thirdPartyCookieBlockingEnabled: true, webRtcProtectionEnabled: true, fingerprintingProtectionEnabled: true, allowlist: [], blockedRequests: [], filterLists: [] };
 
 export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
   const [status, setStatus] = useState<Status>(emptyStatus);
   const [domain, setDomain] = useState('');
+  const [httpsDomain, setHttpsDomain] = useState('');
   const [filterUrl, setFilterUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -88,10 +89,23 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
     finally { setBusy(false); }
   };
 
+  const saveHttpsException = async (value: string) => {
+    const clean = value.trim();
+    if (!clean) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const httpsExceptions = await window.orbApi.addHttpsException(clean);
+      setStatus((current) => ({ ...current, httpsExceptions }));
+      setHttpsDomain('');
+      setNotice(`${clean} will load over HTTP without being upgraded.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not add this HTTPS exception.'); }
+    finally { setBusy(false); }
+  };
+
   const rows = [
     { label: 'Block ads and page trackers', description: `${status.ruleCount.toLocaleString()} advertising rules loaded`, checked: status.enabled, toggle: () => update(() => window.orbApi.toggleAdBlocker(!status.enabled)) },
     { label: 'Block known trackers and cookie scripts', description: `${status.trackerRuleCount.toLocaleString()} privacy rules loaded`, checked: status.trackerBlockingEnabled, toggle: () => update(() => window.orbApi.toggleTrackerBlocking(!status.trackerBlockingEnabled)) },
-    { label: 'Prefer HTTPS connections', description: 'Upgrade HTTP requests; sites that reject HTTPS can be added as exceptions later.', checked: status.httpsOnlyEnabled, toggle: () => update(() => window.orbApi.toggleHttpsOnly(!status.httpsOnlyEnabled)) },
+    { label: 'Prefer HTTPS connections', description: 'Upgrade page loads from HTTP to HTTPS. A site with no working HTTPS falls back automatically and is listed below.', checked: status.httpsOnlyEnabled, toggle: () => update(() => window.orbApi.toggleHttpsOnly(!status.httpsOnlyEnabled)) },
     { label: 'Block third-party cookies', description: 'Strip cross-site Cookie and Set-Cookie headers. Some embedded sign-in flows may need an exception.', checked: status.thirdPartyCookieBlockingEnabled, toggle: () => update(() => window.orbApi.setThirdPartyCookieBlocking(!status.thirdPartyCookieBlockingEnabled)) },
     { label: 'Reduce fingerprinting signals', description: 'Limit Client Hints, normalize language detail, and send Do Not Track and Global Privacy Control signals.', checked: status.fingerprintingProtectionEnabled, toggle: () => update(() => window.orbApi.setFingerprintingProtection(!status.fingerprintingProtectionEnabled)) },
     { label: 'Limit WebRTC IP exposure', description: 'Use Chromium’s disable-non-proxied-UDP policy for profile sessions; VPN and relay behavior can vary.', checked: status.webRtcProtectionEnabled, toggle: () => update(() => window.orbApi.setWebRtcProtection(!status.webRtcProtectionEnabled)) },
@@ -104,6 +118,15 @@ export default function PrivacySettings({ activeUrl }: { activeUrl?: string }) {
         {rows.map((row) => <div key={row.label} className="orb-elevated flex items-center justify-between gap-4 rounded-lg border orb-border p-4"><div className="flex min-w-0 items-center gap-3"><div className="orb-accent-soft orb-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-md"><Shield className="h-4 w-4" /></div><div><p className="orb-strong text-xs font-medium">{row.label}</p><p className="orb-muted mt-1 text-[11px]">{row.description}</p></div></div><Toggle checked={row.checked} onChange={row.toggle} label={row.label} disabled={busy} /></div>)}
       </div>
     </section>
+
+    {(status.httpsOnlyEnabled || status.httpsExceptions.length > 0) && <section className="border-t orb-border pt-5">
+      <h3 className="orb-strong text-xs font-semibold">HTTPS exceptions</h3>
+      <p className="orb-muted mt-1 text-[11px]">Sites here are never upgraded to HTTPS. Orb adds a site automatically when its HTTPS address cannot be reached.</p>
+      <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); void saveHttpsException(httpsDomain); }}><input value={httpsDomain} onChange={(event) => setHttpsDomain(event.target.value)} aria-label="Site to load over HTTP" placeholder="legacy.example.com" className="orb-strong orb-placeholder h-9 min-w-0 flex-1 rounded-md border orb-border bg-transparent px-3 text-xs outline-none focus:border-[var(--orb-accent)]" /><button type="submit" disabled={busy || !httpsDomain.trim()} className="orb-control rounded-md border orb-border px-3 text-xs disabled:opacity-50">Add exception</button></form>
+      {status.httpsExceptions.length > 0
+        ? <div className="mt-3 space-y-1">{status.httpsExceptions.map((item) => <div key={item} className="orb-elevated flex items-center gap-3 rounded-md border orb-border px-3 py-2"><span className="orb-strong min-w-0 flex-1 truncate text-xs">{item}</span><span className="orb-muted text-[10px]">HTTP allowed</span><button type="button" aria-label={`Remove HTTPS exception for ${item}`} onClick={() => void update(() => window.orbApi.removeHttpsException(item))} className="orb-control rounded px-2 py-1 text-[10px]">Remove</button></div>)}</div>
+        : <div className="orb-elevated orb-muted mt-3 rounded-md border orb-border px-3 py-3 text-[11px]">No exceptions. Every plain-HTTP page load is upgraded.</div>}
+    </section>}
 
     <section className="border-t orb-border pt-5">
       <div className="flex items-start justify-between gap-4">

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FilterRequestContext, FilterRuleIndex, cookieContext, NetworkFilterRule, parseFilterLine } from './filterRules';
 import { cosmeticCssForHost } from './cosmeticCss';
+import { httpsUpgradeTarget, normalizeExceptionDomain, shouldFallBackToHttp } from './httpsOnly';
 
 // Filter list sources. These are the public lists most blockers subscribe to;
 // the parser below is Orb's own.
@@ -80,6 +81,12 @@ export class AdBlocker {
   private trackerIndex = new FilterRuleIndex([]);
   private cosmeticRules: CosmeticFilterRule[] = [];
   private userAllowlist: Set<string> = new Set(); // domains the user explicitly allows
+  /** Domains where HTTPS-only must not upgrade, because the site has no TLS. */
+  private httpsExceptions: Set<string> = new Set();
+  /** Upgraded navigations awaiting a load result, keyed by the HTTPS URL. */
+  private pendingUpgrades = new Map<string, { from: string; host: string; at: number }>();
+  /** HTTP retries in flight, keyed by the HTTP URL. */
+  private pendingFallbacks = new Map<string, { host: string; addedException: boolean }>();
   private blockedRequests: { id: string; request: string; site: string; resourceType: string; rule: string; blockedAt: number }[] = [];
   private filterSources = [...FILTER_LIST_SOURCES];
   private filterListStatuses: FilterListStatus[] = this.filterSources.map((source) => ({ ...source, lastUpdated: null, ruleCount: 0, error: null }));
@@ -87,7 +94,7 @@ export class AdBlocker {
   enabled = true;
   trackerBlockingEnabled = true;
   cosmeticFilteringEnabled = true;
-  httpsOnlyEnabled = false;
+  httpsOnlyEnabled = true;
   thirdPartyCookieBlockingEnabled = true;
   webRtcProtectionEnabled = true;
   fingerprintingProtectionEnabled = true;
@@ -98,11 +105,12 @@ export class AdBlocker {
     this.preferencesLoaded = true;
     try {
       const file = path.join(app.getPath('userData'), 'privacy-preferences.json');
-      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; userAllowlist: string[]; filterLists: FilterListSource[] }>;
+      const state = JSON.parse(fs.readFileSync(file, 'utf8')) as Partial<{ enabled: boolean; trackerBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean; httpsOnlyEnabled: boolean; httpsExceptions: string[]; thirdPartyCookieBlockingEnabled: boolean; webRtcProtectionEnabled: boolean; fingerprintingProtectionEnabled: boolean; userAllowlist: string[]; filterLists: FilterListSource[] }>;
       if (typeof state.enabled === 'boolean') this.enabled = state.enabled;
       if (typeof state.trackerBlockingEnabled === 'boolean') this.trackerBlockingEnabled = state.trackerBlockingEnabled;
       if (typeof state.cosmeticFilteringEnabled === 'boolean') this.cosmeticFilteringEnabled = state.cosmeticFilteringEnabled;
       if (typeof state.httpsOnlyEnabled === 'boolean') this.httpsOnlyEnabled = state.httpsOnlyEnabled;
+      if (Array.isArray(state.httpsExceptions)) this.httpsExceptions = new Set(state.httpsExceptions.filter((item) => typeof item === 'string').map((item) => item.toLowerCase()));
       if (typeof state.thirdPartyCookieBlockingEnabled === 'boolean') this.thirdPartyCookieBlockingEnabled = state.thirdPartyCookieBlockingEnabled;
       if (typeof state.webRtcProtectionEnabled === 'boolean') this.webRtcProtectionEnabled = state.webRtcProtectionEnabled;
       if (typeof state.fingerprintingProtectionEnabled === 'boolean') this.fingerprintingProtectionEnabled = state.fingerprintingProtectionEnabled;
@@ -124,6 +132,7 @@ export class AdBlocker {
         trackerBlockingEnabled: this.trackerBlockingEnabled,
         cosmeticFilteringEnabled: this.cosmeticFilteringEnabled,
         httpsOnlyEnabled: this.httpsOnlyEnabled,
+        httpsExceptions: [...this.httpsExceptions],
         thirdPartyCookieBlockingEnabled: this.thirdPartyCookieBlockingEnabled,
         webRtcProtectionEnabled: this.webRtcProtectionEnabled,
         fingerprintingProtectionEnabled: this.fingerprintingProtectionEnabled,
@@ -403,6 +412,103 @@ export class AdBlocker {
     return this.httpsOnlyEnabled;
   }
 
+  // --- HTTPS exceptions ---------------------------------------------------
+
+  /** Domains the user (or an automatic fallback) has exempted from upgrading. */
+  getHttpsExceptions(): string[] {
+    return [...this.httpsExceptions].sort();
+  }
+
+  isHttpsException(hostname: string): boolean {
+    const host = hostname.toLowerCase();
+    return [...this.httpsExceptions].some((item) => host === item || host.endsWith(`.${item}`));
+  }
+
+  addHttpsException(domain: string): string[] {
+    const host = normalizeExceptionDomain(domain);
+    if (host) {
+      this.httpsExceptions.add(host);
+      this.persistPreferences();
+    }
+    return this.getHttpsExceptions();
+  }
+
+  removeHttpsException(domain: string): string[] {
+    const host = normalizeExceptionDomain(domain);
+    if (host) {
+      this.httpsExceptions.delete(host);
+      this.persistPreferences();
+    }
+    return this.getHttpsExceptions();
+  }
+
+  /**
+   * The HTTPS URL to load instead of this request, or null to leave it alone.
+   * Records the upgrade so a failed load can fall back to the original HTTP URL.
+   */
+  upgradeToHttps(url: string, resourceType: string): string | null {
+    if (!this.httpsOnlyEnabled) return null;
+    const target = httpsUpgradeTarget(url, resourceType, (host) => this.isHttpsException(host));
+    if (!target) return null;
+
+    let host = '';
+    try { host = new URL(target).hostname.toLowerCase(); } catch { return target; }
+
+    // Only the most recent navigations matter; keep the map bounded.
+    if (this.pendingUpgrades.size >= 200) {
+      const oldest = this.pendingUpgrades.keys().next().value;
+      if (oldest) this.pendingUpgrades.delete(oldest);
+    }
+    this.pendingUpgrades.set(target, { from: url, host, at: Date.now() });
+    return target;
+  }
+
+  /**
+   * If this failed navigation was an HTTPS upgrade, exempt the site for now and
+   * return the HTTP URL to retry. Returns null when the failure should be shown
+   * to the user instead.
+   *
+   * The exception is only in memory here. `confirmFallback` persists it once the
+   * HTTP page actually loads, so a temporary outage cannot downgrade a site for
+   * good.
+   */
+  fallbackForFailedUpgrade(failedUrl: string, errorCode: number): { from: string; host: string } | null {
+    if (!shouldFallBackToHttp(errorCode)) return null;
+
+    const entry = this.pendingUpgrades.get(failedUrl);
+    if (!entry) return null;
+    this.pendingUpgrades.delete(failedUrl);
+
+    // Ten minutes is far longer than any real navigation takes.
+    if (Date.now() - entry.at > 10 * 60 * 1000) return null;
+
+    const addedException = !this.isHttpsException(entry.host);
+    if (addedException) this.httpsExceptions.add(entry.host);
+    this.pendingFallbacks.set(entry.from, { host: entry.host, addedException });
+    return { from: entry.from, host: entry.host };
+  }
+
+  /** The HTTP retry loaded: keep the exception for future visits. */
+  confirmFallback(url: string): void {
+    const pending = this.pendingFallbacks.get(url);
+    if (!pending) return;
+    this.pendingFallbacks.delete(url);
+    if (pending.addedException) this.persistPreferences();
+  }
+
+  /** The HTTP retry failed too: forget the temporary exception. */
+  rejectFallback(url: string): void {
+    const pending = this.pendingFallbacks.get(url);
+    if (!pending) return;
+    this.pendingFallbacks.delete(url);
+    if (pending.addedException) this.httpsExceptions.delete(pending.host);
+  }
+
+  /** Drop upgrade bookkeeping for a URL that loaded successfully. */
+  clearPendingUpgrade(url: string): void {
+    this.pendingUpgrades.delete(url);
+  }
+
   getRuleCount(): number {
     return this.networkRules.length;
   }
@@ -511,8 +617,11 @@ export function initAdBlocker(ses: Electron.Session): void {
         return;
       }
       if (adBlocker.httpsOnlyEnabled && details.url.startsWith('http://')) {
-        callback({ redirectURL: details.url.replace(/^http:/, 'https:') });
-        return;
+        const upgraded = adBlocker.upgradeToHttps(details.url, details.resourceType);
+        if (upgraded) {
+          callback({ redirectURL: upgraded });
+          return;
+        }
       }
       callback({});
     }
