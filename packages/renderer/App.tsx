@@ -1370,7 +1370,7 @@ export default function App() {
         {/* Traffic lights sit over the sidebar, so only inset the content
             column when there is no sidebar at all. */}
         {!showTopTabs && !showSideTabs && hasMacTrafficLights && !isFullscreen && <div aria-hidden="true" className="h-12 shrink-0" />}
-        {showNavigation && !compactMode && !isFullscreen && <BrowserToolbar
+        {showNavigation && !compactMode && <BrowserToolbar
           activeTab={activeTab}
           onNavigate={handleNavigate}
           onBack={navigateBack}
