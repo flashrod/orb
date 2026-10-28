@@ -43,7 +43,7 @@ export default function Page() {
       <Navbar />
 
       <main id="main-content">
-        <section id="top" aria-labelledby="hero-heading" className="relative px-6 pt-24 pb-32 md:pt-32 md:pb-40 lg:pb-48 overflow-hidden">
+        <section id="top" aria-labelledby="hero-heading" className="relative px-6 pt-32 pb-32 md:pt-40 md:pb-40 lg:pt-48 lg:pb-48 overflow-hidden">
           <div
             aria-hidden="true"
             className="ambient-blob w-[60vw] h-[60vw] md:w-[80vw] md:h-[80vw] z-0"
