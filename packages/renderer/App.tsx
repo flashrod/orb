@@ -327,6 +327,11 @@ export default function App() {
     if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.reload(id); return; }
     getActiveWebView()?.navigateReload();
   }, [getActiveWebView]);
+  const navigateHardReload = useCallback(() => {
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.reload(id, true); return; }
+    getActiveWebView()?.navigateHardReload();
+  }, [getActiveWebView]);
 
   const toggleTabMute = useCallback((tabId: string) => {
     const tab = useTabStore.getState().tabs.find((item) => item.id === tabId);
@@ -801,6 +806,18 @@ export default function App() {
       }
       else if (action === 'toggle-fullscreen') {
         void window.orbApi?.toggleFullscreen();
+      }
+      else if (action === 'nav.back') {
+        navigateBack();
+      }
+      else if (action === 'nav.forward') {
+        navigateForward();
+      }
+      else if (action === 'nav.reload') {
+        navigateReload();
+      }
+      else if (action === 'nav.hard-reload') {
+        navigateHardReload();
       }
       else if (action === 'tab.close') {
         handleCloseActiveTab();

@@ -12,6 +12,7 @@ type WebViewHandle = {
   navigateBack: () => void;
   navigateForward: () => void;
   navigateReload: () => void;
+  navigateHardReload: () => void;
   loadUrl: (url: string) => void;
   applyCSS: (css: string) => Promise<void>;
   pickElement: () => Promise<PickedElement | null>;
@@ -78,6 +79,11 @@ export default forwardRef<WebViewHandle, {
   const navigateReload = useCallback(() => {
     const wv = webviewRef.current;
     if (wv) (wv as any).reload();
+  }, []);
+
+  const navigateHardReload = useCallback(() => {
+    const wv = webviewRef.current;
+    if (wv) (wv as any).reloadIgnoringCache();
   }, []);
 
   const loadUrl = useCallback((newUrl: string) => {
@@ -232,6 +238,7 @@ export default forwardRef<WebViewHandle, {
     navigateBack,
     navigateForward,
     navigateReload,
+    navigateHardReload,
     loadUrl,
     applyCSS,
     isLoading,
@@ -274,7 +281,7 @@ export default forwardRef<WebViewHandle, {
       if (!webview) return Promise.reject(new Error('This tab is not loaded.'));
       return webview.executeJavaScript(code, true);
     },
-  }), [navigateBack, navigateForward, navigateReload, loadUrl, applyCSS, isLoading]);
+  }), [navigateBack, navigateForward, navigateReload, navigateHardReload, loadUrl, applyCSS, isLoading]);
 
   // Set webview src when url changes
   useEffect(() => {

@@ -97,8 +97,8 @@ export class NativeTabHost {
     this.manager.navigate(id, url);
   }
 
-  reload(id: string): void {
-    this.manager.reload(id);
+  reload(id: string, ignoreCache = false): void {
+    this.manager.reload(id, ignoreCache);
   }
 
   goBack(id: string): void {
@@ -513,6 +513,7 @@ export class NativeTabHost {
       setVisible: (visible) => view.setVisible(visible),
       focus: () => contents.focus(),
       reload: () => contents.reload(),
+      reloadIgnoringCache: () => contents.reloadIgnoringCache(),
       goBack: () => contents.navigationHistory.goBack(),
       goForward: () => contents.navigationHistory.goForward(),
       setAudioMuted: (muted) => contents.setAudioMuted(muted),
@@ -651,7 +652,7 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:activate', (host, id) => host.activate(requireString(id, 'tab id')));
   on('tabs:close', (host, id) => host.close(requireString(id, 'tab id')));
   on('tabs:navigate', (host, id, url) => host.navigate(requireString(id, 'tab id'), requireString(url, 'URL')));
-  on('tabs:reload', (host, id) => host.reload(requireString(id, 'tab id')));
+  on('tabs:reload', (host, id, ignoreCache) => host.reload(requireString(id, 'tab id'), ignoreCache === true));
   on('tabs:back', (host, id) => host.goBack(requireString(id, 'tab id')));
   on('tabs:forward', (host, id) => host.goForward(requireString(id, 'tab id')));
   on('tabs:reorder', (host, ids) => {

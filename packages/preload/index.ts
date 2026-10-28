@@ -120,7 +120,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     activate: (id: string) => ipcRenderer.invoke('tabs:activate', id) as Promise<void>,
     close: (id: string) => ipcRenderer.invoke('tabs:close', id) as Promise<void>,
     navigate: (id: string, url: string) => ipcRenderer.invoke('tabs:navigate', id, url) as Promise<void>,
-    reload: (id: string) => ipcRenderer.invoke('tabs:reload', id) as Promise<void>,
+    reload: (id: string, ignoreCache = false) => ipcRenderer.invoke('tabs:reload', id, ignoreCache) as Promise<void>,
     back: (id: string) => ipcRenderer.invoke('tabs:back', id) as Promise<void>,
     forward: (id: string) => ipcRenderer.invoke('tabs:forward', id) as Promise<void>,
     reorder: (ids: string[]) => ipcRenderer.invoke('tabs:reorder', ids) as Promise<TabStateSnapshot | null>,
@@ -224,7 +224,7 @@ declare global {
         activate: (id: string) => Promise<void>;
         close: (id: string) => Promise<void>;
         navigate: (id: string, url: string) => Promise<void>;
-        reload: (id: string) => Promise<void>;
+        reload: (id: string, ignoreCache?: boolean) => Promise<void>;
         back: (id: string) => Promise<void>;
         forward: (id: string) => Promise<void>;
         reorder: (ids: string[]) => Promise<TabStateSnapshot | null>;

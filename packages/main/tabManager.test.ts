@@ -9,6 +9,7 @@ class FakeView implements TabView {
   destroyed = false;
   focused = false;
   reloadCount = 0;
+  hardReloadCount = 0;
   backCount = 0;
   forwardCount = 0;
   muted = false;
@@ -31,6 +32,10 @@ class FakeView implements TabView {
   }
   reload(): void {
     this.reloadCount += 1;
+  }
+  reloadIgnoringCache(): void {
+    this.reloadCount += 1;
+    this.hardReloadCount += 1;
   }
   goBack(): void {
     this.backCount += 1;
@@ -178,6 +183,16 @@ describe('TabManager', () => {
     expect(views[0].reloadCount).toBe(1);
     expect(views[0].backCount).toBe(1);
     expect(views[0].forwardCount).toBe(1);
+  });
+
+  it('hard reloads the view ignoring cache', () => {
+    const { manager, views } = setup();
+    const tab = openTab(manager, 'https://a.com');
+
+    manager.reload(tab.id, true);
+
+    expect(views[0].reloadCount).toBe(1);
+    expect(views[0].hardReloadCount).toBe(1);
   });
 
   it('maps view events onto tab state', () => {

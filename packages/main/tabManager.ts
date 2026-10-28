@@ -24,6 +24,7 @@ export interface TabView {
   setVisible(visible: boolean): void;
   focus(): void;
   reload(): void;
+  reloadIgnoringCache(): void;
   goBack(): void;
   goForward(): void;
   setAudioMuted(muted: boolean): void;
@@ -166,8 +167,11 @@ export class TabManager {
     this.markDirty();
   }
 
-  reload(id: string): void {
-    this.views.get(id)?.reload();
+  reload(id: string, ignoreCache = false): void {
+    const view = this.views.get(id);
+    if (!view) return;
+    if (ignoreCache) view.reloadIgnoringCache();
+    else view.reload();
   }
 
   goBack(id: string): void {
