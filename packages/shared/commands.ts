@@ -174,7 +174,7 @@ export const COMMANDS: readonly Command[] = [
     id: 'tab.reopen-closed',
     title: 'Reopen Closed Tab',
     category: 'Tabs',
-    defaultBindings: [],
+    defaultBindings: ['Mod+Shift+T'],
     scope: 'shell',
   },
   {
@@ -295,7 +295,7 @@ export const COMMANDS: readonly Command[] = [
     id: 'new-space',
     title: 'New Space',
     category: 'Spaces',
-    defaultBindings: ['Mod+Shift+T'],
+    defaultBindings: [],
     scope: 'shell',
   },
   {

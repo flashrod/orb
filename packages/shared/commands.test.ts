@@ -153,9 +153,9 @@ describe('matchBinding', () => {
     expect(matchBinding(darwinInput('w', { meta: true }), 'darwin', COMMANDS, {})).toBe('tab.close');
   });
 
-  it('matches new-space with Mod+Shift+T', () => {
+  it('matches tab.reopen-closed with Mod+Shift+T', () => {
     expect(matchBinding(darwinInput('t', { meta: true, shift: true }), 'darwin', COMMANDS, {})).toBe(
-      'new-space',
+      'tab.reopen-closed',
     );
   });
 });

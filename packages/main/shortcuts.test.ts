@@ -23,7 +23,7 @@ describe('shortcutForInput', () => {
   });
 
   it('maps shift combinations', () => {
-    expect(shortcutForInput(input({ key: 'T', meta: true, shift: true }))).toBe('new-space');
+    expect(shortcutForInput(input({ key: 'T', meta: true, shift: true }))).toBe('tab.reopen-closed');
     expect(shortcutForInput(input({ key: 'M', meta: true, shift: true }))).toBe('toggle-compact');
   });
 
@@ -124,7 +124,7 @@ describe('shortcutForInput guards', () => {
   it('text-field guard allows command+shift in text field', () => {
     expect(
       shortcutForInput(input({ key: 't', meta: true, shift: true }), {}, true),
-    ).toBe('new-space');
+    ).toBe('tab.reopen-closed');
   });
 });
 
