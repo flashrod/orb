@@ -49,7 +49,7 @@ export default function BrowserMockup() {
       aria-label="The Orb browser with a tab strip, address bar, vertical tabs, and an open command bar showing a Linear tab, history, a Space, and an address."
       className="relative mx-auto max-w-5xl"
     >
-      <div aria-hidden="true" className="rounded-2xl border border-line bg-surface p-2 shadow-xl">
+      <div aria-hidden="true" className="rounded-xl border border-line bg-surface p-2">
         <div className="overflow-hidden rounded-lg border border-line bg-canvas">
           <div className="bg-surface p-2">
             <div className="flex items-center gap-2">

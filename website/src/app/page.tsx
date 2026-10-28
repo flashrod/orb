@@ -43,28 +43,32 @@ export default function Page() {
       <Navbar />
 
       <main id="main-content">
-        <section id="top" aria-labelledby="hero-heading" className="px-6 pb-16 pt-24 md:pb-24">
-          <div className="mx-auto max-w-6xl">
+        <section id="top" aria-labelledby="hero-heading" className="relative px-6 pt-24 pb-32 md:pt-32 md:pb-40 lg:pb-48 overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="ambient-blob w-[60vw] h-[60vw] md:w-[80vw] md:h-[80vw] z-0"
+          />
+
+          <div className="mx-auto max-w-6xl relative z-10">
             <Reveal className="mx-auto max-w-[680px] text-center">
               <h1
                 id="hero-heading"
-                className="text-4xl font-semibold tracking-tight sm:text-5xl md:text-7xl"
+                className="text-5xl md:text-7xl lg:text-8xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
-                <span className="hero-heading block">Focus without</span>
-                <span className="hero-heading block">the tab sprawl.</span>
+                Focus without the tab sprawl.
               </h1>
 
-              <p className="mx-auto mt-6 max-w-[680px] text-lg text-muted">
+              <p className="mx-auto mt-8 max-w-[60ch] text-lg text-muted leading-7">
                 Orb is a private browser for macOS that gives every context its own Space. Switch
                 in one keystroke, find anything from the command bar, and block ads and trackers
                 before they load.
               </p>
 
-              <div className="mx-auto mt-8 max-w-xl text-left">
+              <div className="mx-auto mt-12 max-w-xl text-left">
                 <WaitlistForm />
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-muted">
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs text-muted">
                 <a
                   href="https://github.com/flashrod/orb"
                   target="_blank"
@@ -73,14 +77,12 @@ export default function Page() {
                 >
                   Open source under MIT
                 </a>
-                <span aria-hidden="true">·</span>
                 <span>Local data</span>
-                <span aria-hidden="true">·</span>
                 <span>No account</span>
               </div>
             </Reveal>
 
-            <Reveal delay={150} className="mt-12 md:mt-16">
+            <Reveal delay={150} className="mt-20 md:mt-24 lg:mt-28">
               <BrowserMockup />
             </Reveal>
           </div>
