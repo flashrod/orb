@@ -4,6 +4,7 @@ import type { SearchProvider } from '../lib/navigation';
 import type { EssentialsScope } from '../lib/essentials';
 import { normalizeDisplayName } from '../../shared/onboarding';
 import { normalizeNeverHibernateEntry } from '../../shared/siteBehavior';
+import { listPresets, presetOverrides } from '../../shared/keymapPresets';
 
 interface BrowserPreferencesStore {
   searchProvider: SearchProvider;
@@ -20,6 +21,8 @@ interface BrowserPreferencesStore {
   startupBehavior: StartupBehavior;
   /** Per-command keyboard shortcut overrides. commandId → bindings or null (unbound). Missing = default. */
   keymapOverrides: Record<string, string[] | null>;
+  /** The active preset id, or null when the user is on defaults/custom bindings. */
+  keymapPreset: string | null;
   setSearchProvider: (provider: SearchProvider) => void;
   setEssentialsScope: (scope: EssentialsScope) => void;
   setDisplayName: (name: string) => void;
@@ -33,6 +36,12 @@ interface BrowserPreferencesStore {
   setKeymapOverride: (commandId: string, bindings: string[] | null) => void;
   /** Reset every override to defaults. */
   resetKeymap: () => void;
+  /**
+   * Apply a built-in preset: write its overrides to the store and record the
+   * preset id so the UI can show which preset is active. Passing 'default' or
+   * null clears the preset selection without touching overrides.
+   */
+  setKeymapPreset: (presetId: string | null) => void;
 }
 
 export type StartupBehavior = 'ask' | 'restore' | 'fresh';
@@ -48,6 +57,7 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
   showRecentSites: true,
   startupBehavior: 'ask',
   keymapOverrides: {},
+  keymapPreset: null,
   setSearchProvider: (searchProvider) => set({ searchProvider }),
   setEssentialsScope: (essentialsScope) => set({ essentialsScope }),
   setDisplayName: (displayName) => set({ displayName: normalizeDisplayName(displayName) }),
@@ -57,7 +67,22 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
     set((state) => ({
       keymapOverrides: { ...state.keymapOverrides, [commandId]: bindings },
     })),
-  resetKeymap: () => set({ keymapOverrides: {} }),
+  resetKeymap: () => set({ keymapOverrides: {}, keymapPreset: null }),
+  setKeymapPreset: (presetId) => {
+    if (!presetId || presetId === 'default') {
+      set({ keymapPreset: null });
+      return;
+    }
+    const overrides = presetOverrides(presetId);
+    if (!overrides) {
+      set({ keymapPreset: null });
+      return;
+    }
+    set((state) => ({
+      keymapOverrides: { ...state.keymapOverrides, ...overrides },
+      keymapPreset: presetId,
+    }));
+  },
   addNeverHibernate: (entry) => {
     const domain = normalizeNeverHibernateEntry(entry);
     if (!domain) return null;
@@ -84,7 +109,7 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
   },
 }), {
   name: 'orb-preferences',
-  version: 7,
+  version: 8,
   storage: createJSONStorage(() => localStorage),
   migrate: (state: any) => ({
     searchProvider: ['google', 'duckduckgo', 'bing', 'brave', 'startpage'].includes(state?.searchProvider) ? state.searchProvider : 'google',
@@ -103,5 +128,6 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
         .filter((entry: string | null): entry is string => Boolean(entry)))].sort()
       : [],
     keymapOverrides: {},
+    keymapPreset: null,
   }),
 }));

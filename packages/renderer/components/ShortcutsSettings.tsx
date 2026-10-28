@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowCounterClockwise, Check, Code, DotsSixVertical, MagnifyingGlass, SlidersHorizontal, X } from '@phosphor-icons/react';
 import { COMMANDS, bindingToAccelerator, commandsByCategory, effectiveKeymap, findCommand, findConflicts, parseBinding } from '../../shared/commands';
+import { listPresets, getPreset, DEFAULT_PRESET_ID } from '../../shared/keymapPresets';
 import { useBrowserPreferencesStore } from '../stores/preferences';
 
 function formatKey(key: string): string {
@@ -66,8 +67,8 @@ function findCommandWithBinding(
 }
 
 export default function ShortcutsSettings() {
-  const { keymapOverrides, setKeymapOverride, resetKeymap } = useBrowserPreferencesStore(
-    (state) => ({ keymapOverrides: state.keymapOverrides, setKeymapOverride: state.setKeymapOverride, resetKeymap: state.resetKeymap }),
+  const { keymapOverrides, setKeymapOverride, resetKeymap, keymapPreset, setKeymapPreset } = useBrowserPreferencesStore(
+    (state) => ({ keymapOverrides: state.keymapOverrides, setKeymapOverride: state.setKeymapOverride, resetKeymap: state.resetKeymap, keymapPreset: state.keymapPreset, setKeymapPreset: state.setKeymapPreset }),
   );
 
   const [filter, setFilter] = useState('');
@@ -183,6 +184,13 @@ export default function ShortcutsSettings() {
     clearMessages();
   }, [resetKeymap, clearMessages]);
 
+  const applyPreset = useCallback((presetId: string | null) => {
+    setKeymapPreset(presetId);
+    const preset = presetId ? getPreset(presetId) : null;
+    setNotice(preset ? `Applied “${preset.name}” keymap preset.` : 'Keymap preset cleared.');
+    clearMessages();
+  }, [setKeymapPreset, getPreset, clearMessages]);
+
   const handleImport = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -247,6 +255,19 @@ export default function ShortcutsSettings() {
         <button type="button" onClick={resetAll} className="orb-control flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs">
           <ArrowCounterClockwise className="h-3.5 w-3.5" />Reset all
         </button>
+        <div className="flex items-center gap-2">
+          <label className="orb-muted text-[10px] uppercase tracking-wider">Preset</label>
+          <select
+            value={keymapPreset ?? DEFAULT_PRESET_ID}
+            onChange={(event) => applyPreset(event.target.value === DEFAULT_PRESET_ID ? null : event.target.value)}
+            className="orb-control h-8 rounded-md border orb-border bg-transparent text-[10px] px-2 outline-none"
+          >
+            <option value={DEFAULT_PRESET_ID}>Default</option>
+            {listPresets().map((preset) => (
+              <option key={preset.id} value={preset.id}>{preset.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
 
