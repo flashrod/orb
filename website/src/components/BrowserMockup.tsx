@@ -194,7 +194,7 @@ export default function BrowserMockup() {
                     <MagnifyingGlass className="h-4 w-4 shrink-0 text-accent" />
                     <span className="text-sm text-ink">lin</span>
                     <span className="ml-auto rounded border border-line bg-surface px-2 py-0.5 font-mono text-xs text-muted">
-                      ⌘T
+                      ⌘K
                     </span>
                   </div>
 

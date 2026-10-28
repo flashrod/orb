@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   Cookie,
   Fingerprint,
+  Link,
   ListMagnifyingGlass,
   ShieldCheck,
 } from '@phosphor-icons/react';
@@ -15,6 +16,7 @@ const icons = {
   fingerprint: Fingerprint,
   cookie: Cookie,
   log: ListMagnifyingGlass,
+  link: Link,
 } as const;
 
 export default function PrivacySection() {
