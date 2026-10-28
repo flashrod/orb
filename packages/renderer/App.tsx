@@ -288,6 +288,15 @@ export default function App() {
     getActiveWebView()?.stopFindInPage('clearSelection');
   }, [getActiveWebView]);
 
+  // Cold-start instrumentation: report once the first frame has actually been
+  // painted, so the benchmark measures "usable", not "HTML parsed".
+  useEffect(() => {
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => window.orbApi?.reportShellReady?.());
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   // A new query is a fresh search; Enter/Shift+Enter step through matches.
   useEffect(() => {
     if (!findOpen) return;

@@ -15,6 +15,7 @@ export interface ExposedApi {
   savePdf: (data: Uint8Array, suggestedName: string) => Promise<{ saved: boolean; path?: string; error?: string }>;
   getAppVersion: () => Promise<string>;
   getBuildInfo: () => Promise<{ version: string; electron: string; chromium: string; node: string; platform: string; arch: string }>;
+  reportShellReady: () => void;
   clearBrowsingData: (request: { history?: boolean; cache?: boolean; cookies?: boolean; siteData?: boolean }) => Promise<{ ok: boolean; labels: string[]; profiles?: number; error?: string }>;
   takeLaunchUrl?: () => Promise<string | null>;
   getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;
@@ -73,6 +74,7 @@ export const exposedApi: ExposedApi = {
   savePdf: async () => ({ saved: false }),
   getAppVersion: async () => '0.1.0',
   getBuildInfo: async () => ({ version: '0.1.0', electron: '', chromium: '', node: '', platform: 'darwin', arch: 'arm64' }),
+  reportShellReady: () => {},
   clearBrowsingData: async () => ({ ok: true, labels: [] }),
   getDefaultBrowserStatus: async () => ({ isDefault: false, platform: 'darwin' }),
   setDefaultBrowser: async () => ({ isDefault: false, platform: 'darwin' }),

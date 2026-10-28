@@ -24,6 +24,7 @@ import {
   type SessionContext,
 } from './sessions';
 import { planClearBrowsingData, planIsEmpty } from '../shared/browsingData';
+import { startupMarkerPath, writeStartupMarker } from './startupMarker';
 
 app.setAppUserModelId('org.orb.browser');
 
@@ -249,6 +250,12 @@ app.whenReady().then(async () => {
 
   registerCertificateErrorHandler();
   bindMediaKeys();
+
+  // Cold-start instrumentation for scripts/benchmark. Inert unless the harness
+  // sets ORB_STARTUP_MARKER; the renderer reports once React has painted.
+  ipcMain.on('app:shell-ready', () => {
+    writeStartupMarker(startupMarkerPath(), process.uptime() * 1000);
+  });
 
   // Per-site permission choices, persisted under userData.
   const permissionStore = new PermissionStore();
