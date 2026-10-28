@@ -14,6 +14,8 @@ function startFresh(): void {
   const tabState = useTabStore.getState();
   useSplitViewStore.getState().close();
   for (const tab of [...tabState.tabs]) tabState.removeTab(tab.id);
+  // Starting fresh is explicit: do not let Mod+Shift+T resurrect the session.
+  useTabStore.getState().clearClosedTabs();
 
   const spaceState = useSpaceStore.getState();
   let spaceId = spaceState.activeSpaceId || spaceState.spaces[0]?.id;

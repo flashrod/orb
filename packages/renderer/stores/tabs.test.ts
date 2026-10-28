@@ -3,7 +3,7 @@ import './test-localStorage';
 import { useTabStore } from './tabs';
 
 function resetStore() {
-  useTabStore.setState({ tabs: [], activeTabId: null, groups: [] });
+  useTabStore.setState({ tabs: [], activeTabId: null, groups: [], closedTabs: [] });
 }
 
 function get() {
@@ -100,5 +100,53 @@ describe('tab store — shortcut handler operations', () => {
     const next = get();
     expect(next.tabs.length).toBe(0);
     expect(next.activeTabId).toBeNull();
+  });
+
+  it('reopenClosedTab restores the most recently closed page', () => {
+    const state = get();
+    state.addTab({ spaceId: 's1', url: 'https://a.com', title: 'A', favicon: 'a.png', isPinned: true, isActive: true });
+    const id = get().tabs[0].id;
+    state.removeTab(id);
+    expect(get().tabs.length).toBe(0);
+
+    get().reopenClosedTab();
+    const next = get();
+    expect(next.tabs.length).toBe(1);
+    expect(next.tabs[0]).toMatchObject({ url: 'https://a.com', title: 'A', spaceId: 's1', isPinned: true, isActive: true });
+    expect(next.activeTabId).toBe(next.tabs[0].id);
+    expect(next.closedTabs.length).toBe(0);
+  });
+
+  it('reopenClosedTab restores tabs newest-first and skips blank tabs', () => {
+    const state = get();
+    state.addTab({ spaceId: 's1', url: 'https://a.com', title: 'A', favicon: '', isPinned: false, isActive: true });
+    state.addTab({ spaceId: 's1', url: 'https://b.com', title: 'B', favicon: '', isPinned: false, isActive: true });
+    state.addTab({ spaceId: 's1', url: 'about:blank', title: 'New Tab', favicon: '', isPinned: false, isActive: true });
+
+    const tabs = get().tabs;
+    state.removeTab(tabs[0].id);
+    state.removeTab(tabs[1].id);
+    state.removeTab(tabs[2].id);
+
+    expect(get().closedTabs.map((tab) => tab.url)).toEqual(['https://b.com', 'https://a.com']);
+
+    get().reopenClosedTab();
+    expect(get().tabs[0].url).toBe('https://b.com');
+    get().reopenClosedTab();
+    expect(get().tabs.some((tab) => tab.url === 'https://a.com')).toBe(true);
+  });
+
+  it('reopenClosedTab does nothing when history is empty', () => {
+    get().reopenClosedTab('s1');
+    expect(get().tabs.length).toBe(0);
+  });
+
+  it('clearClosedTabs drops the history', () => {
+    const state = get();
+    state.addTab({ spaceId: 's1', url: 'https://a.com', title: 'A', favicon: '', isPinned: false, isActive: true });
+    state.removeTab(get().tabs[0].id);
+    expect(get().closedTabs.length).toBe(1);
+    get().clearClosedTabs();
+    expect(get().closedTabs.length).toBe(0);
   });
 });

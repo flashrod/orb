@@ -29,12 +29,28 @@ export interface TabGroup {
   createdAt: number;
 }
 
+/** A tab removed during this session, kept so Mod+Shift+T can bring it back. */
+export interface ClosedTab {
+  url: string;
+  title: string;
+  favicon: string;
+  spaceId: string;
+  isPinned: boolean;
+  closedAt: number;
+}
+
+const MAX_CLOSED_TABS = 20;
+
 interface TabStore {
   tabs: Tab[];
   activeTabId: string | null;
   groups: TabGroup[];
+  /** Most recently closed first. In-memory only; session restore covers relaunch. */
+  closedTabs: ClosedTab[];
   addTab: (tab: Omit<Tab, 'id' | 'createdAt' | 'updatedAt'>) => void;
   removeTab: (id: string) => void;
+  reopenClosedTab: (fallbackSpaceId?: string) => void;
+  clearClosedTabs: () => void;
   setActiveTab: (id: string | null) => void;
   updateTab: (id: string, partial: Partial<Tab>) => void;
   unloadTab: (id: string) => void;
@@ -51,6 +67,7 @@ export const useTabStore = create<TabStore>()(persist((set, get) => ({
   tabs: [],
   activeTabId: null,
   groups: [],
+  closedTabs: [],
 
   addTab: (tab: Omit<Tab, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = crypto.randomUUID();
@@ -66,6 +83,19 @@ export const useTabStore = create<TabStore>()(persist((set, get) => ({
 
   removeTab: (id: string) =>
     set((state) => {
+      const closing = state.tabs.find((t: Tab) => t.id === id);
+      // Blank new tabs are not worth reopening; real pages are.
+      const closedTabs = closing && closing.url && closing.url !== 'about:blank'
+        ? [{
+            url: closing.url,
+            title: closing.title,
+            favicon: closing.favicon,
+            spaceId: closing.spaceId,
+            isPinned: closing.isPinned,
+            closedAt: Date.now(),
+          }, ...state.closedTabs].slice(0, MAX_CLOSED_TABS)
+        : state.closedTabs;
+
       const newTabs = state.tabs.filter((t: Tab) => t.id !== id);
       let newActiveId = state.activeTabId;
 
@@ -76,8 +106,41 @@ export const useTabStore = create<TabStore>()(persist((set, get) => ({
       }
 
       const remainingGroupIds = new Set(newTabs.map((item) => item.groupId).filter((groupId): groupId is string => Boolean(groupId)));
-      return { tabs: newTabs.map((t) => ({ ...t, isActive: t.id === newActiveId })), activeTabId: newActiveId, groups: state.groups.filter((group) => remainingGroupIds.has(group.id)) };
+      return { tabs: newTabs.map((t) => ({ ...t, isActive: t.id === newActiveId })), activeTabId: newActiveId, groups: state.groups.filter((group) => remainingGroupIds.has(group.id)), closedTabs };
     }),
+
+  reopenClosedTab: (fallbackSpaceId?: string) =>
+    set((state) => {
+      const [entry, ...rest] = state.closedTabs;
+      if (!entry) return state;
+
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const spaceId = entry.spaceId || fallbackSpaceId || state.tabs[0]?.spaceId;
+      if (!spaceId) return state;
+
+      return {
+        tabs: [
+          ...state.tabs.map((tab) => ({ ...tab, isActive: false })),
+          {
+            id,
+            spaceId,
+            url: entry.url,
+            title: entry.title,
+            favicon: entry.favicon,
+            isPinned: entry.isPinned,
+            groupId: null,
+            isActive: true,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+        activeTabId: id,
+        closedTabs: rest,
+      };
+    }),
+
+  clearClosedTabs: () => set({ closedTabs: [] }),
 
   setActiveTab: (id: string | null) => set((state) => ({
     activeTabId: id,

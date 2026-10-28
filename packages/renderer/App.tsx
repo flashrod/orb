@@ -685,6 +685,12 @@ export default function App() {
     }
   }, []);
 
+  const handleReopenClosedTab = useCallback(() => {
+    const spaceStore = useSpaceStore.getState();
+    const fallbackSpaceId = spaceStore.activeSpaceId || spaceStore.spaces[0]?.id;
+    useTabStore.getState().reopenClosedTab(fallbackSpaceId);
+  }, []);
+
   // --- Space navigation shortcut handlers ---
 
   const handleSwitchSpaceByIndex = useCallback((zeroBasedIndex: number) => {
@@ -868,6 +874,9 @@ export default function App() {
     else if (action === 'tab.hibernate-others') {
       handleHibernateOtherTabs();
     }
+    else if (action === 'tab.reopen-closed') {
+      handleReopenClosedTab();
+    }
     else if (action === 'space.switch') {
       const index = typeof params?.index === 'number' ? params.index : 1;
       handleSwitchSpaceByIndex(index - 1);
@@ -929,7 +938,7 @@ export default function App() {
     navigateBack, navigateForward, navigateReload, navigateHardReload,
     handleCloseActiveTab, handleActivateTabByOffset, handleGoToTabIndex, spaceTabsFor,
     handleTogglePinActiveTab, handleToggleMuteActiveTab, handleDuplicateActiveTab,
-    handleHibernateActiveTab, handleHibernateOtherTabs,
+    handleHibernateActiveTab, handleHibernateOtherTabs, handleReopenClosedTab,
     handleSwitchSpaceByIndex, handleSwitchSpaceByOffset, handleCycleSpaceProfile,
     handleZoom, handleToggleSidebar, handleDevtools, handleCopyUrl, handleDownloads, handlePickElementShortcut,
     handleToggleBlocker, handleToggleHttpsOnly, handleSplitOpen, handleSplitSwap, handleSplitClose,
