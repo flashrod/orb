@@ -67,8 +67,8 @@ function findCommandWithBinding(
 }
 
 export default function ShortcutsSettings() {
-  const { keymapOverrides, setKeymapOverride, resetKeymap, keymapPreset, setKeymapPreset } = useBrowserPreferencesStore(
-    (state) => ({ keymapOverrides: state.keymapOverrides, setKeymapOverride: state.setKeymapOverride, resetKeymap: state.resetKeymap, keymapPreset: state.keymapPreset, setKeymapPreset: state.setKeymapPreset }),
+  const { keymapOverrides, setKeymapOverride, resetKeymap, keymapPreset, setKeymapPreset, passthroughRules, setPassthroughRule } = useBrowserPreferencesStore(
+    (state) => ({ keymapOverrides: state.keymapOverrides, setKeymapOverride: state.setKeymapOverride, resetKeymap: state.resetKeymap, keymapPreset: state.keymapPreset, setKeymapPreset: state.setKeymapPreset, passthroughRules: state.passthroughRules, setPassthroughRule: state.setPassthroughRule }),
   );
 
   const [filter, setFilter] = useState('');
@@ -77,6 +77,8 @@ export default function ShortcutsSettings() {
   const [conflict, setConflict] = useState<{ commandId: string; binding: string; existing: string[] } | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [passthroughDomain, setPassthroughDomain] = useState('');
+  const [passthroughCommands, setPassthroughCommands] = useState<string[]>([]);
 
   const commandsByCat = useMemo(() => commandsByCategory(), []);
   const keymap = useMemo(() => effectiveKeymap(COMMANDS, keymapOverrides), [keymapOverrides]);
@@ -191,6 +193,26 @@ export default function ShortcutsSettings() {
     clearMessages();
   }, [setKeymapPreset, getPreset, clearMessages]);
 
+  const handleAddPassthroughRule = useCallback(() => {
+    const domain = passthroughDomain.trim().toLowerCase();
+    if (!domain) return;
+    if (!passthroughCommands.length) {
+      setError('Pick at least one command to pass through.');
+      return;
+    }
+    setPassthroughRule(domain, [...passthroughCommands]);
+    setNotice(`Passthrough rule saved for ${domain}.`);
+    setPassthroughDomain('');
+    setPassthroughCommands([]);
+    clearMessages();
+  }, [passthroughDomain, passthroughCommands, setPassthroughRule, clearMessages]);
+
+  const handleRemovePassthroughRule = useCallback((domain: string) => {
+    setPassthroughRule(domain, []);
+    setNotice(`Passthrough rule removed for ${domain}.`);
+    clearMessages();
+  }, [setPassthroughRule, clearMessages]);
+
   const handleImport = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -273,6 +295,88 @@ export default function ShortcutsSettings() {
 
     {error && <p role="alert" className="rounded-md bg-red-100 border border-red-200 px-3 py-2 text-xs text-red-800">{error}</p>}
     {notice && <p role="status" className="rounded-md border border-accent-soft/50 bg-accent-soft/20 px-3 py-2 text-xs text-accent">{notice}</p>}
+
+    {/* Per-site passthrough rules */}
+    <div className="orb-elevated rounded-lg border orb-border p-4">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <h3 className="orb-strong text-[10px] uppercase tracking-wider">Per-site passthrough</h3>
+          <p className="orb-muted text-[10px] mt-1">Commands listed here are passed to the page instead of being intercepted by Orb on that domain.</p>
+        </div>
+      </div>
+
+      {/* Add rule form */}
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="domain (e.g. docs.google.com)"
+            value={passthroughDomain}
+            onChange={(event) => setPassthroughDomain(event.target.value)}
+            className="orb-control flex-1 h-8 rounded-md border orb-border bg-transparent text-[10px] px-2 outline-none"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="orb-muted text-[10px]">Commands to pass through</p>
+            <div className="flex flex-wrap gap-1 mb-1">
+              {allCommands.map((command) => {
+                const active = passthroughCommands.includes(command.id);
+                return (
+                  <button
+                    key={command.id}
+                    type="button"
+                    onClick={() => {
+                      if (active) setPassthroughCommands(passthroughCommands.filter((id) => id !== command.id));
+                      else setPassthroughCommands([...passthroughCommands, command.id]);
+                    }}
+                    className={`orb-control h-6 rounded-md border px-2 py-0.5 text-[10px] transition-colors ${
+                      active
+                        ? 'bg-accent border-accent text-accent-strong'
+                        : 'bg-transparent border orb-border orb-muted hover:bg-accent-soft/50'
+                    }`}
+                  >
+                    {command.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddPassthroughRule}
+            disabled={!passthroughDomain.trim() || !passthroughCommands.length}
+            className="orb-control h-8 rounded-md border orb-border px-3 py-2 text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Add rule
+          </button>
+        </div>
+      </div>
+
+      {/* Existing rules */}
+      <div className="space-y-1">
+        {Object.entries(passthroughRules).length === 0 ? (
+          <p className="orb-muted text-[10px] text-center py-3">No per-site passthrough rules.</p>
+        ) : (
+          Object.entries(passthroughRules).map(([domain, commandIds]) => (
+            <div key={domain} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border orb-border bg-transparent hover:bg-accent-soft/50">
+              <div>
+                <p className="orb-strong text-[10px] truncate">{domain}</p>
+                <p className="orb-muted text-[9px]">
+                  {commandIds.map((cid) => findCommand(cid)?.title ?? cid).join(', ') || 'none'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemovePassthroughRule(domain)}
+                className="orb-control h-6 rounded-md border orb-border px-2 text-[9px] hover:bg-red-50 hover:text-red-800"
+                aria-label={`Remove passthrough rule for ${domain}`}
+              >
+                Remove
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
 
     <div className="relative">
       <MagnifyingGlass aria-hidden="true" className="orb-muted absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
