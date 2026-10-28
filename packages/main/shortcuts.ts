@@ -1,5 +1,7 @@
-import { COMMANDS, matchBinding } from '../shared/commands';
+import { COMMANDS, bindingSafeInTextField, matchBinding } from '../shared/commands';
 import type { MatchedShortcut, OrbShortcutAction } from '../shared/events';
+
+export { bindingSafeInTextField, bindingUsesModifier } from '../shared/commands';
 
 export interface ShortcutInput {
   type: string;
@@ -20,23 +22,6 @@ function toMatchInput(input: ShortcutInput) {
     shift: !!input.shift,
     meta: !!input.meta,
   };
-}
-
-/** True if the binding uses a command modifier (Ctrl, Alt, Mod). */
-export function bindingUsesModifier(binding: string): boolean {
-  const parts = binding.split('+').map((p) => p.trim().toLowerCase());
-  return parts.some((p) => p === 'ctrl' || p === 'alt' || p === 'mod');
-}
-
-/** True if the binding is safe to trigger inside a text field:
- *  a command modifier (Ctrl, Alt, Mod), or Escape, or a function key (F1–F12).
- *  Shift alone does not count — it would steal typing. */
-export function bindingSafeInTextField(binding: string): boolean {
-  const parts = binding.split('+').map((p) => p.trim().toLowerCase());
-  if (parts.some((p) => p === 'ctrl' || p === 'alt' || p === 'mod')) return true;
-  const key = parts[parts.length - 1] ?? '';
-  if (key === 'escape') return true;
-  return /^f([1-9]|1[0-2])$/.test(key);
 }
 
 /** Module-level overrides synced from the renderer preferences store.

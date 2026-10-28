@@ -24,6 +24,7 @@ import PermissionPrompt from './components/PermissionPrompt';
 import DownloadsPanel from './components/DownloadsPanel';
 import HistoryPage from './components/HistoryPage';
 import { getTabRailPresentation, matchesTabRailShortcut } from './lib/tabRail';
+import { shortcutForKeyboardEvent } from './lib/shellShortcuts';
 import { bindMainEvents } from './lib/mainEvents';
 import { nativeTabsEnabled, useNativeTabBridge } from './lib/nativeTabs';
 import { captureSession, SESSION_SNAPSHOT_KEY } from './lib/sessionSnapshot';
@@ -782,7 +783,7 @@ export default function App() {
     const { action, params } = customEvent.detail;
     if (action === 'new-tab') window.dispatchEvent(new CustomEvent('orb:new-tab'));
     else if (action === 'new-space') window.dispatchEvent(new CustomEvent('orb:new-space'));
-    else if (action === 'command-bar') setCommandBarOpen(true);
+    else if (action === 'command-bar') setCommandBarOpen((open) => !open);
     else if (action === 'find') openFind();
     else if (action === 'history') setHistoryOpen((open) => !open);
     else if (action === 'print') printActive();
@@ -790,6 +791,8 @@ export default function App() {
     else if (action === 'toggle-pip') void togglePictureInPicture();
     else if (action === 'media-play-pause') void toggleMediaPlayback();
     else if (action === 'focus-address') {
+      useAppearanceStore.getState().setCompactMode(false);
+      useAppearanceStore.getState().setShowNavigation(true);
       requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
     }
     else if (action === 'toggle-compact') {
@@ -809,6 +812,9 @@ export default function App() {
     else if (action === 'close-overlays') {
       setCommandBarOpen(false);
       setSettingsOpen(false);
+      setHistoryOpen(false);
+      setDownloadsOpen(false);
+      if (findOpen) closeFind();
     }
     else if (action === 'toggle-fullscreen') {
       void window.orbApi?.toggleFullscreen();
@@ -919,6 +925,7 @@ export default function App() {
     }
   }, [
     welcomeOpen, openFind, printActive, exportActivePdf, togglePictureInPicture, toggleMediaPlayback, replayOnboarding,
+    findOpen, closeFind,
     navigateBack, navigateForward, navigateReload, navigateHardReload,
     handleCloseActiveTab, handleActivateTabByOffset, handleGoToTabIndex, spaceTabsFor,
     handleTogglePinActiveTab, handleToggleMuteActiveTab, handleDuplicateActiveTab,
@@ -937,70 +944,31 @@ export default function App() {
     // Keyboard shortcuts
     const handleKeyDown = (e: KeyboardEvent) => {
       if (welcomeOpen) return;
+      // A dialog (e.g. the shortcut recorder) already handled this key.
+      if (e.defaultPrevented) return;
 
-      // Text-field guard: never steal typing from a focused input/textarea/
-      // contenteditable unless the shortcut uses a command modifier
-      // (Cmd/Ctrl/Alt), or is Escape or a function key.
       const active = document.activeElement;
-      const isTextField =
+      const isTextField = Boolean(
         active &&
-        (active.tagName === 'INPUT' ||
-          active.tagName === 'TEXTAREA' ||
-          (active as HTMLElement).isContentEditable);
-      if (
-        isTextField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        e.key !== 'Escape' &&
-        !/^F([1-9]|1[0-2])$/i.test(e.key)
-      ) {
-        return;
+          (active.tagName === 'INPUT' ||
+            active.tagName === 'TEXTAREA' ||
+            (active as HTMLElement).isContentEditable),
+      );
+
+      // Shell-UI dispatch: the same registry the page-focus path and the menu
+      // use. The text-field guard lives in the matcher, so typing is safe.
+      const matched = shortcutForKeyboardEvent(e, useBrowserPreferencesStore.getState().keymapOverrides, {
+        inTextField: isTextField,
+      });
+      if (matched) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('orb:shortcut', { detail: matched }));
       }
 
-      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
-        e.preventDefault();
-        window.dispatchEvent(new CustomEvent('orb:new-tab'));
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCommandBarOpen(!commandBarOpen);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
-        e.preventDefault();
-        setSettingsSection('appearance');
-        setSettingsOpen(true);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'l') {
-        e.preventDefault();
-        useAppearanceStore.getState().setCompactMode(false);
-        useAppearanceStore.getState().setShowNavigation(true);
-        requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
-      }
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
-        e.preventDefault();
-        useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
-        e.preventDefault();
-        openFind();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        printActive();
-      }
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        setHistoryOpen((open) => !open);
-      }
       if (matchesTabRailShortcut(e) && useAppearanceStore.getState().tabLayout === 'split') {
         e.preventDefault();
         if (useAppearanceStore.getState().compactSideTabs) setRailPeek((peeked) => !peeked);
         else useAppearanceStore.getState().setCompactSideTabs(true);
-      }
-      if (e.key === 'Escape') {
-        setCommandBarOpen(false);
-        if (findOpen) closeFind();
       }
     };
 

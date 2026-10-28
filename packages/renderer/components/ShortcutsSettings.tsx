@@ -102,7 +102,12 @@ export default function ShortcutsSettings() {
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!recordingCommand) return;
+    // Capture phase: stop the shell from dispatching the command being
+    // recorded. Without stopPropagation, Cmd+T would open a tab while the
+    // recorder is waiting for it.
     event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
 
     const binding = normalizeUserInput(event.key, event.ctrlKey, event.altKey, event.shiftKey, event.metaKey);
     if (!binding) return;
@@ -125,8 +130,10 @@ export default function ShortcutsSettings() {
 
   useEffect(() => {
     if (!recordingCommand) return;
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // Capture phase so the recorder sees the key before the shell shortcut
+    // handler, even though both listen on window.
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [recordingCommand, handleKeyDown]);
 
   const applyConflictChoice = useCallback((choice: 'replace' | 'swap' | 'cancel') => {
