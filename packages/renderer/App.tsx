@@ -806,6 +806,58 @@ export default function App() {
       appearance.setShowTabStrip(!appearance.showTabStrip);
     }, []);
 
+    // --- Split view shortcut handlers ---
+
+    const handleSplitOpen = useCallback(() => {
+      const state = useTabStore.getState();
+      const id = state.activeTabId;
+      if (!id) return;
+      openSplit([id, id]);
+    }, [openSplit]);
+
+    const handleSplitSwap = useCallback(() => {
+      if (!splitTabIds) return;
+      swapSplit();
+    }, [splitTabIds, swapSplit]);
+
+    const handleSplitClose = useCallback(() => {
+      if (!splitTabIds) return;
+      closeSplit();
+    }, [splitTabIds, closeSplit]);
+
+    // --- Tools shortcut handlers ---
+
+    const handleDevtools = useCallback(() => {
+      void window.orbApi?.toggleDevTools();
+    }, []);
+
+    const handleCopyUrl = useCallback(() => {
+      const tab = useTabStore.getState().tabs.find((t) => t.id === useTabStore.getState().activeTabId);
+      if (!tab || tab.url === 'about:blank') return;
+      void navigator.clipboard.writeText(tab.url);
+    }, []);
+
+    const handleDownloads = useCallback(() => {
+      setDownloadsOpen((open) => !open);
+    }, []);
+
+    const handlePickElementShortcut = useCallback(() => {
+      handlePickElement();
+    }, [handlePickElement]);
+
+    // --- Privacy shortcut handlers ---
+
+    const handleToggleBlocker = useCallback(async () => {
+      const status = await window.orbApi?.getAdBlockerStatus?.();
+      void window.orbApi?.toggleAdBlocker(status?.enabled !== true);
+    }, []);
+
+    const handleToggleHttpsOnly = useCallback(async () => {
+      const status = await window.orbApi?.getHttpsOnlyStatus?.();
+      void window.orbApi?.toggleHttpsOnly(status?.httpsOnlyEnabled !== true);
+    }, []);
+
+
     // A link that launched the app arrives once the shell is listening.
     void window.orbApi?.takeLaunchUrl?.().then((url) => {
       if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
@@ -952,6 +1004,36 @@ export default function App() {
       }
       else if (action === 'view.toggle-sidebar') {
         handleToggleSidebar();
+      }
+      else if (action === 'tools.devtools') {
+        handleDevtools();
+      }
+      else if (action === 'tools.copy-url') {
+        handleCopyUrl();
+      }
+      else if (action === 'tools.downloads') {
+        handleDownloads();
+      }
+      else if (action === 'tools.element-picker') {
+        handlePickElementShortcut();
+      }
+      else if (action === 'privacy.toggle-blocker') {
+        void handleToggleBlocker();
+      }
+      else if (action === 'privacy.toggle-https-only') {
+        void handleToggleHttpsOnly();
+      }
+      else if (action === 'app.toggle-devtools') {
+        handleDevtools();
+      }
+      else if (action === 'split.open') {
+        handleSplitOpen();
+      }
+      else if (action === 'split.swap') {
+        handleSplitSwap();
+      }
+      else if (action === 'split.close') {
+        handleSplitClose();
       }
     };
     window.addEventListener('orb:shortcut', handleShortcut as EventListener);
