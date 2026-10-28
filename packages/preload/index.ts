@@ -156,6 +156,13 @@ contextBridge.exposeInMainWorld('orbApi', {
     setOverrides: (overrides: Record<string, string[] | null>) =>
       ipcRenderer.invoke('keymap:set-overrides', overrides),
   },
+  passthrough: {
+    getRules: () => ipcRenderer.invoke('keymap:get-passthrough-rules'),
+    setRule: (domain: string, commandIds: string[]) =>
+      ipcRenderer.invoke('keymap:set-passthrough-rule', domain, commandIds),
+    setRules: (rules: Record<string, string[]>) =>
+      ipcRenderer.invoke('keymap:set-passthrough-rules', rules),
+  },
 });
 
 declare global {
@@ -260,6 +267,12 @@ declare global {
         getOverrides: () => Promise<Record<string, string[] | null>>;
         setOverride: (commandId: string, bindings: string[] | null) => Promise<void>;
         setOverrides: (overrides: Record<string, string[] | null>) => Promise<void>;
+      },
+      // Per-site shortcut passthrough rules synced to the main process.
+      passthrough: {
+        getRules: () => Promise<Record<string, string[]>>;
+        setRule: (domain: string, commandIds: string[]) => Promise<void>;
+        setRules: (rules: Record<string, string[]>) => Promise<void>;
       };
       // Main -> renderer events (allowlisted channels only)
       on: (channel: string, listener: (payload: unknown) => void) => number;

@@ -42,6 +42,16 @@ interface BrowserPreferencesStore {
    * null clears the preset selection without touching overrides.
    */
   setKeymapPreset: (presetId: string | null) => void;
+  /**
+   * Per-site shortcut passthrough rules. domain → command ids that should
+   * not be intercepted by Orb on that site (they are passed to the page instead).
+   */
+  passthroughRules: Record<string, string[]>;
+  /**
+   * Set the commands to pass through on a given domain. Empty array clears
+   * the rule for that domain.
+   */
+  setPassthroughRule: (domain: string, commandIds: string[]) => void;
 }
 
 export type StartupBehavior = 'ask' | 'restore' | 'fresh';
@@ -58,6 +68,7 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
   startupBehavior: 'ask',
   keymapOverrides: {},
   keymapPreset: null,
+  passthroughRules: {},
   setSearchProvider: (searchProvider) => set({ searchProvider }),
   setEssentialsScope: (essentialsScope) => set({ essentialsScope }),
   setDisplayName: (displayName) => set({ displayName: normalizeDisplayName(displayName) }),
@@ -83,6 +94,10 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
       keymapPreset: presetId,
     }));
   },
+  setPassthroughRule: (domain, commandIds) =>
+    set((state) => ({
+      passthroughRules: { ...state.passthroughRules, [domain]: commandIds },
+    })),
   addNeverHibernate: (entry) => {
     const domain = normalizeNeverHibernateEntry(entry);
     if (!domain) return null;
@@ -109,7 +124,7 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
   },
 }), {
   name: 'orb-preferences',
-  version: 8,
+  version: 9,
   storage: createJSONStorage(() => localStorage),
   migrate: (state: any) => ({
     searchProvider: ['google', 'duckduckgo', 'bing', 'brave', 'startpage'].includes(state?.searchProvider) ? state.searchProvider : 'google',
@@ -129,5 +144,6 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
       : [],
     keymapOverrides: {},
     keymapPreset: null,
+    passthroughRules: {},
   }),
 }));

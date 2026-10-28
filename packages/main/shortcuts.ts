@@ -44,6 +44,10 @@ export function bindingSafeInTextField(binding: string): boolean {
  *  (forwarded via before-input-event) can be matched without a round trip. */
 export let keymapOverrides: Record<string, string[] | null | undefined> = {};
 
+/** Per-site passthrough rules synced from the renderer preferences store.
+ *  domain → command ids that should NOT be intercepted on that site. */
+export let passthroughRules: Record<string, string[]> = {};
+
 /** Replace the entire override map (used on initial sync). */
 export function setKeymapOverrides(overrides: Record<string, string[] | null | undefined>): void {
   keymapOverrides = { ...overrides };
@@ -52,6 +56,11 @@ export function setKeymapOverrides(overrides: Record<string, string[] | null | u
 /** Override a single command's bindings (null = unbind). */
 export function setKeymapOverride(commandId: string, bindings: string[] | null): void {
   keymapOverrides = { ...keymapOverrides, [commandId]: bindings };
+}
+
+/** Replace the entire passthrough rules map (used on initial sync). */
+export function setPassthroughRules(rules: Record<string, string[]>): void {
+  passthroughRules = { ...rules };
 }
 
 /** Maps a key event to the shell action it should trigger, if any.

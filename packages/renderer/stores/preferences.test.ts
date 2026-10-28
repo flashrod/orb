@@ -69,4 +69,31 @@ describe('preferences — keymap presets', () => {
     expect(state.keymapOverrides).toEqual({});
     expect(state.keymapPreset).toBeNull();
   });
+
+  it('setPassthroughRule stores commands to bypass on a domain', () => {
+    const store = useBrowserPreferencesStore.getState();
+    store.setPassthroughRule('docs.google.com', ['tab.go-to', 'space.switch']);
+
+    const state = useBrowserPreferencesStore.getState();
+    expect(state.passthroughRules['docs.google.com']).toEqual(['tab.go-to', 'space.switch']);
+  });
+
+  it('setPassthroughRule with empty array clears the domain rule', () => {
+    const store = useBrowserPreferencesStore.getState();
+    store.setPassthroughRule('example.com', ['new-tab']);
+    store.setPassthroughRule('example.com', []);
+
+    const state = useBrowserPreferencesStore.getState();
+    expect(state.passthroughRules['example.com']).toEqual([]);
+  });
+
+  it('setPassthroughRule does not affect other domains', () => {
+    const store = useBrowserPreferencesStore.getState();
+    store.setPassthroughRule('a.com', ['new-tab']);
+    store.setPassthroughRule('b.com', ['print']);
+
+    const state = useBrowserPreferencesStore.getState();
+    expect(state.passthroughRules['a.com']).toEqual(['new-tab']);
+    expect(state.passthroughRules['b.com']).toEqual(['print']);
+  });
 });

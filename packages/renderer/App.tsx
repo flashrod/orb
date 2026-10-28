@@ -1059,6 +1059,23 @@ export default function App() {
     return () => sub();
   }, []);
 
+  // Sync per-site passthrough rules to the main process so key events inside
+  // web pages can be checked against site-specific bypass lists.
+  useEffect(() => {
+    const api = window.orbApi?.passthrough;
+    if (!api) return;
+    const store = useBrowserPreferencesStore;
+    let prev = store.getState().passthroughRules;
+    void api.setRules(prev);
+    const sub = store.subscribe((state) => {
+      const next = state.passthroughRules;
+      if (next === prev) return;
+      prev = next;
+      void api.setRules(next);
+    });
+    return () => sub();
+  }, []);
+
   // Memory guard: hibernate idle background tabs and keep the live-tab count
   // inside the budget. Reads stores and refs directly so the timer never needs
   // to be recreated when tab state changes.

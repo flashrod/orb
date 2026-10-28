@@ -4,7 +4,7 @@ import { adBlocker } from './adBlocker';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
-import { setKeymapOverride, setKeymapOverrides, keymapOverrides } from './shortcuts';
+import { setKeymapOverride, setKeymapOverrides, keymapOverrides, setPassthroughRules, passthroughRules } from './shortcuts';
 import { profilePartition } from '../shared/profiles';
 import { getDefaultBrowserStatus, openDefaultBrowserSettings, requestDefaultBrowser } from './defaultBrowser';
 import { savePdfBuffer } from './pdf';
@@ -287,6 +287,16 @@ export function registerIpcHandlers(): void {
   });
   ipcMain.handle('keymap:set-overrides', (_, overrides: Record<string, string[] | null>) => {
     setKeymapOverrides(overrides);
+    return { ok: true };
+  });
+  ipcMain.handle('keymap:get-passthrough-rules', () => passthroughRules);
+  ipcMain.handle('keymap:set-passthrough-rule', (_, domain: string, commandIds: string[]) => {
+    if (typeof domain !== 'string' || !Array.isArray(commandIds)) throw new Error('Invalid passthrough rule.');
+    setPassthroughRules({ ...passthroughRules, [domain]: commandIds });
+    return { ok: true };
+  });
+  ipcMain.handle('keymap:set-passthrough-rules', (_, rules: Record<string, string[]>) => {
+    setPassthroughRules(rules);
     return { ok: true };
   });
 }

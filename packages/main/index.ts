@@ -12,7 +12,7 @@ import { PermissionStore, type PermissionName, type PermissionState } from './pe
 import { DownloadStore } from './downloads';
 import { HistoryStore, fileHistoryStorage } from './historyStore';
 import { findOpenUrl } from './cli';
-import { shortcutForInput } from './shortcuts';
+import { shortcutForInput, setKeymapOverrides, setKeymapOverride, passthroughRules } from './shortcuts';
 import { decideWindowIntent } from './popupPolicy';
 import {
   broadcast,
@@ -221,9 +221,24 @@ function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input):
   const matched = shortcutForInput(input);
   if (!matched) return;
 
+  // Per-site passthrough: if the matched command is in the passthrough rules
+  // for the current domain, let the page handle the key instead of Orb.
+  const domain = hostnameFromUrl(contents.getURL());
+  const passthrough = domain ? passthroughRules[domain] : undefined;
+  if (passthrough?.includes(matched.action)) return;
+
   const host = contents.hostWebContents;
   const target = host && !host.isDestroyed() ? host : mainWindow?.webContents;
   if (target && !target.isDestroyed()) target.send('orb:shortcut', matched);
+}
+
+/** Extract the bare hostname from a URL, e.g. 'https://docs.google.com/x' → 'docs.google.com'. */
+function hostnameFromUrl(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
 }
 
 app.whenReady().then(async () => {
