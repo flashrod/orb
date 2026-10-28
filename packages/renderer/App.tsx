@@ -42,6 +42,7 @@ import {
 } from './lib/memoryGuard';
 import { ArrowsLeftRight, X, List, NavigationArrow } from '@phosphor-icons/react';
 import { normalizeGlanceUrl } from './lib/glance';
+import { nextProfileId, nextSpaceIndex } from './lib/spaceNavigation';
 type DownloadItem = {
   id: string;
   url: string;
@@ -765,6 +766,33 @@ export default function App() {
       }
     }, []);
 
+    // --- Space navigation shortcut handlers ---
+
+    const handleSwitchSpaceByIndex = useCallback((zeroBasedIndex: number) => {
+      const store = useSpaceStore.getState();
+      const space = store.spaces[zeroBasedIndex];
+      if (space) store.setActiveSpace(space.id);
+    }, []);
+
+    const handleSwitchSpaceByOffset = useCallback((offset: number) => {
+      const store = useSpaceStore.getState();
+      const { spaces, activeSpaceId: currentSpaceId } = store;
+      if (spaces.length === 0) return;
+      const index = spaces.findIndex((space) => space.id === currentSpaceId);
+      const nextIndex = nextSpaceIndex(index, spaces.length, offset);
+      if (nextIndex >= 0) store.setActiveSpace(spaces[nextIndex].id);
+    }, []);
+
+    const handleCycleSpaceProfile = useCallback(() => {
+      const spaceStore = useSpaceStore.getState();
+      const { profiles } = useProfileStore.getState();
+      const space = spaceStore.spaces.find((item) => item.id === spaceStore.activeSpaceId);
+      if (!space) return;
+      const next = nextProfileId(profiles.map((profile) => profile.id), space.profileId);
+      if (!next || next === space.profileId) return;
+      spaceStore.updateSpace(space.id, { profileId: next });
+    }, []);
+
     // A link that launched the app arrives once the shell is listening.
     void window.orbApi?.takeLaunchUrl?.().then((url) => {
       if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
@@ -875,6 +903,30 @@ export default function App() {
       }
       else if (action === 'tab.hibernate-others') {
         handleHibernateOtherTabs();
+      }
+      else if (action === 'space.switch-1') {
+        handleSwitchSpaceByIndex(0);
+      }
+      else if (action === 'space.switch-2') {
+        handleSwitchSpaceByIndex(1);
+      }
+      else if (action === 'space.switch-3') {
+        handleSwitchSpaceByIndex(2);
+      }
+      else if (action === 'space.switch-4') {
+        handleSwitchSpaceByIndex(3);
+      }
+      else if (action === 'space.switch-5') {
+        handleSwitchSpaceByIndex(4);
+      }
+      else if (action === 'space.next') {
+        handleSwitchSpaceByOffset(1);
+      }
+      else if (action === 'space.previous') {
+        handleSwitchSpaceByOffset(-1);
+      }
+      else if (action === 'space.switch-profile') {
+        handleCycleSpaceProfile();
       }
     };
     window.addEventListener('orb:shortcut', handleShortcut as EventListener);
