@@ -8,6 +8,7 @@ import {
   type ViewBounds,
 } from '../shared/tabModel';
 import { stripTrackingParams } from '../shared/privacy';
+import { nextZoomFactor, type ZoomDirection } from '../shared/zoom';
 import {
   MEMORY_GUARD_IDLE_MS,
   MEMORY_GUARD_MAX_LIVE_TABS,
@@ -25,6 +26,8 @@ export interface TabView {
   focus(): void;
   reload(): void;
   reloadIgnoringCache(): void;
+  getZoomFactor(): number;
+  setZoomFactor(factor: number): void;
   goBack(): void;
   goForward(): void;
   setAudioMuted(muted: boolean): void;
@@ -172,6 +175,12 @@ export class TabManager {
     if (!view) return;
     if (ignoreCache) view.reloadIgnoringCache();
     else view.reload();
+  }
+
+  zoom(id: string, direction: ZoomDirection): void {
+    const view = this.views.get(id);
+    if (!view) return;
+    view.setZoomFactor(nextZoomFactor(view.getZoomFactor(), direction));
   }
 
   goBack(id: string): void {

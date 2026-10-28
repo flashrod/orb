@@ -10,6 +10,7 @@ class FakeView implements TabView {
   focused = false;
   reloadCount = 0;
   hardReloadCount = 0;
+  zoomFactor = 1;
   backCount = 0;
   forwardCount = 0;
   muted = false;
@@ -36,6 +37,12 @@ class FakeView implements TabView {
   reloadIgnoringCache(): void {
     this.reloadCount += 1;
     this.hardReloadCount += 1;
+  }
+  getZoomFactor(): number {
+    return this.zoomFactor;
+  }
+  setZoomFactor(factor: number): void {
+    this.zoomFactor = factor;
   }
   goBack(): void {
     this.backCount += 1;
@@ -193,6 +200,23 @@ describe('TabManager', () => {
 
     expect(views[0].reloadCount).toBe(1);
     expect(views[0].hardReloadCount).toBe(1);
+  });
+
+  it('steps zoom through the shared factor list', () => {
+    const { manager, views } = setup();
+    const tab = openTab(manager, 'https://a.com');
+
+    manager.zoom(tab.id, 'in');
+    expect(views[0].zoomFactor).toBeCloseTo(1.1);
+
+    manager.zoom(tab.id, 'out');
+    expect(views[0].zoomFactor).toBe(1);
+
+    manager.zoom(tab.id, 'out');
+    expect(views[0].zoomFactor).toBeCloseTo(0.9);
+
+    manager.zoom(tab.id, 'reset');
+    expect(views[0].zoomFactor).toBe(1);
   });
 
   it('maps view events onto tab state', () => {

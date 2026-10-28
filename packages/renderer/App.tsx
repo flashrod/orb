@@ -793,6 +793,19 @@ export default function App() {
       spaceStore.updateSpace(space.id, { profileId: next });
     }, []);
 
+    // --- View shortcut handlers ---
+
+    const handleZoom = useCallback((direction: 'in' | 'out' | 'reset') => {
+      const id = useTabStore.getState().activeTabId;
+      if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.zoom(id, direction); return; }
+      getActiveWebView()?.zoom(direction);
+    }, [getActiveWebView]);
+
+    const handleToggleSidebar = useCallback(() => {
+      const appearance = useAppearanceStore.getState();
+      appearance.setShowTabStrip(!appearance.showTabStrip);
+    }, []);
+
     // A link that launched the app arrives once the shell is listening.
     void window.orbApi?.takeLaunchUrl?.().then((url) => {
       if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
@@ -927,6 +940,18 @@ export default function App() {
       }
       else if (action === 'space.switch-profile') {
         handleCycleSpaceProfile();
+      }
+      else if (action === 'view.zoom-in') {
+        handleZoom('in');
+      }
+      else if (action === 'view.zoom-out') {
+        handleZoom('out');
+      }
+      else if (action === 'view.zoom-reset') {
+        handleZoom('reset');
+      }
+      else if (action === 'view.toggle-sidebar') {
+        handleToggleSidebar();
       }
     };
     window.addEventListener('orb:shortcut', handleShortcut as EventListener);

@@ -7,12 +7,14 @@ import {
   TOGGLE_PIP_SCRIPT,
   type MediaActionResult,
 } from '../../shared/media';
+import { nextZoomFactor } from '../../shared/zoom';
 
 type WebViewHandle = {
   navigateBack: () => void;
   navigateForward: () => void;
   navigateReload: () => void;
   navigateHardReload: () => void;
+  zoom: (direction: 'in' | 'out' | 'reset') => void;
   loadUrl: (url: string) => void;
   applyCSS: (css: string) => Promise<void>;
   pickElement: () => Promise<PickedElement | null>;
@@ -84,6 +86,13 @@ export default forwardRef<WebViewHandle, {
   const navigateHardReload = useCallback(() => {
     const wv = webviewRef.current;
     if (wv) (wv as any).reloadIgnoringCache();
+  }, []);
+
+  const zoom = useCallback((direction: 'in' | 'out' | 'reset') => {
+    const wv = webviewRef.current as any;
+    if (!wv) return;
+    const current = typeof wv.getZoomFactor === 'function' ? wv.getZoomFactor() : 1;
+    wv.setZoomFactor(nextZoomFactor(current, direction));
   }, []);
 
   const loadUrl = useCallback((newUrl: string) => {
@@ -239,6 +248,7 @@ export default forwardRef<WebViewHandle, {
     navigateForward,
     navigateReload,
     navigateHardReload,
+    zoom,
     loadUrl,
     applyCSS,
     isLoading,
@@ -281,7 +291,7 @@ export default forwardRef<WebViewHandle, {
       if (!webview) return Promise.reject(new Error('This tab is not loaded.'));
       return webview.executeJavaScript(code, true);
     },
-  }), [navigateBack, navigateForward, navigateReload, navigateHardReload, loadUrl, applyCSS, isLoading]);
+  }), [navigateBack, navigateForward, navigateReload, navigateHardReload, zoom, loadUrl, applyCSS, isLoading]);
 
   // Set webview src when url changes
   useEffect(() => {

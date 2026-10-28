@@ -10,6 +10,7 @@ import { adBlocker, initAdBlocker } from './adBlocker';
 import { PrewarmPool } from './prewarmPool';
 import { buildPageContextMenu } from './pageContextMenu';
 import { stripTrackingParams } from '../shared/privacy';
+import type { ZoomDirection } from '../shared/zoom';
 import { hostFromUrl } from '../shared/sessionPolicy';
 import type { TabMemorySample } from '../shared/memory';
 import { PICK_ELEMENT_SCRIPT, type PickedElement } from '../shared/elementPicker';
@@ -99,6 +100,10 @@ export class NativeTabHost {
 
   reload(id: string, ignoreCache = false): void {
     this.manager.reload(id, ignoreCache);
+  }
+
+  zoom(id: string, direction: ZoomDirection): void {
+    this.manager.zoom(id, direction);
   }
 
   goBack(id: string): void {
@@ -514,6 +519,8 @@ export class NativeTabHost {
       focus: () => contents.focus(),
       reload: () => contents.reload(),
       reloadIgnoringCache: () => contents.reloadIgnoringCache(),
+      getZoomFactor: () => contents.getZoomFactor(),
+      setZoomFactor: (factor) => contents.setZoomFactor(factor),
       goBack: () => contents.navigationHistory.goBack(),
       goForward: () => contents.navigationHistory.goForward(),
       setAudioMuted: (muted) => contents.setAudioMuted(muted),
@@ -653,6 +660,10 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
   on('tabs:close', (host, id) => host.close(requireString(id, 'tab id')));
   on('tabs:navigate', (host, id, url) => host.navigate(requireString(id, 'tab id'), requireString(url, 'URL')));
   on('tabs:reload', (host, id, ignoreCache) => host.reload(requireString(id, 'tab id'), ignoreCache === true));
+  on('tabs:zoom', (host, id, direction) => {
+    if (direction !== 'in' && direction !== 'out' && direction !== 'reset') throw new Error('Invalid zoom direction.');
+    host.zoom(requireString(id, 'tab id'), direction);
+  });
   on('tabs:back', (host, id) => host.goBack(requireString(id, 'tab id')));
   on('tabs:forward', (host, id) => host.goForward(requireString(id, 'tab id')));
   on('tabs:reorder', (host, ids) => {

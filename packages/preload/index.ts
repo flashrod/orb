@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { BoostRecord, NewBoost } from '../shared/boosts';
 import { isOrbEventChannel } from '../shared/events';
 import type { TabOpenInput, TabStateSnapshot, ViewBounds } from '../shared/tabModel';
+import type { ZoomDirection } from '../shared/zoom';
 
 // Main -> renderer push events. Only allowlisted channels are subscribable, and
 // each subscription gets an id so the renderer can cancel it without needing to
@@ -121,6 +122,7 @@ contextBridge.exposeInMainWorld('orbApi', {
     close: (id: string) => ipcRenderer.invoke('tabs:close', id) as Promise<void>,
     navigate: (id: string, url: string) => ipcRenderer.invoke('tabs:navigate', id, url) as Promise<void>,
     reload: (id: string, ignoreCache = false) => ipcRenderer.invoke('tabs:reload', id, ignoreCache) as Promise<void>,
+    zoom: (id: string, direction: ZoomDirection) => ipcRenderer.invoke('tabs:zoom', id, direction) as Promise<void>,
     back: (id: string) => ipcRenderer.invoke('tabs:back', id) as Promise<void>,
     forward: (id: string) => ipcRenderer.invoke('tabs:forward', id) as Promise<void>,
     reorder: (ids: string[]) => ipcRenderer.invoke('tabs:reorder', ids) as Promise<TabStateSnapshot | null>,
@@ -225,6 +227,7 @@ declare global {
         close: (id: string) => Promise<void>;
         navigate: (id: string, url: string) => Promise<void>;
         reload: (id: string, ignoreCache?: boolean) => Promise<void>;
+        zoom: (id: string, direction: ZoomDirection) => Promise<void>;
         back: (id: string) => Promise<void>;
         forward: (id: string) => Promise<void>;
         reorder: (ids: string[]) => Promise<TabStateSnapshot | null>;
