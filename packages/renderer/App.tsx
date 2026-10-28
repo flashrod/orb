@@ -101,6 +101,7 @@ export default function App() {
   const { spaces, activeSpaceId, addSpace, setActiveSpace } = useSpaceStore();
   const profiles = useProfileStore((state) => state.profiles);
   const { activeTabId, tabs, groups, setActiveTab, updateTab, loadTab } = useTabStore();
+  const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const splitTabIds = useSplitViewStore((state) => state.tabIds);
   const splitRatio = useSplitViewStore((state) => state.ratio);
   const activePane = useSplitViewStore((state) => state.activePane);
@@ -556,6 +557,377 @@ export default function App() {
     if (targetTabId) useTabStore.getState().updateTab(targetTabId, { url });
   }, []);
 
+  // --- Element picker ---
+
+  const handlePickElement = useCallback(async () => {
+    if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
+    let hostname = '';
+    try {
+      const url = new URL(activeTab.url);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('This page does not support Boosts.');
+      hostname = url.hostname.toLowerCase();
+    } catch {
+      setPickerNotice('Open a website before starting the element picker.');
+      return;
+    }
+
+    setPickerBusy(true);
+    setPickerNotice('Move over an element and click to create a hide rule. Press Esc to cancel.');
+    try {
+      const selection = NATIVE_TABS
+        ? await window.orbApi?.tabs.pickElement(activeTab.id)
+        : await getActiveWebView()?.pickElement();
+      if (!selection) {
+        setPickerNotice('Element picker closed.');
+        return;
+      }
+      const boosts = useBoostStore.getState();
+      await boosts.loadBoosts();
+      const existing = useBoostStore.getState().getBoostForDomain(hostname);
+      const rule = `${selection.selector} {\n  display: none !important;\n}`;
+      if (existing) {
+        const css = existing.css.trim() ? `${existing.css.trimEnd()}\n\n${rule}` : rule;
+        await useBoostStore.getState().updateBoost(existing.id, { css });
+      } else {
+        await useBoostStore.getState().addBoost({ domain: hostname, css: rule, js: '', enabled: true });
+      }
+      const error = useBoostStore.getState().error;
+      if (error) throw new Error(error);
+      if (NATIVE_TABS) await window.orbApi?.tabs.applyCss(activeTab.id, rule);
+      else await getActiveWebView()?.applyCSS(rule);
+      setPickerNotice(`Saved and hid “${selection.label || selection.selector}” on ${hostname}.`);
+    } catch (error) {
+      setPickerNotice(error instanceof Error ? error.message : 'Could not save this Boost.');
+    } finally {
+      setPickerBusy(false);
+    }
+  }, [activeTab, pickerBusy, getActiveWebView]);
+
+  // --- Tab navigation shortcut handlers ---
+
+  const spaceTabsFor = useCallback((spaceId: string) => {
+    return useTabStore.getState().tabs
+      .filter((tab) => tab.spaceId === spaceId)
+      .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+  }, []);
+
+  const handleCloseActiveTab = useCallback(() => {
+    const state = useTabStore.getState();
+    const id = state.activeTabId;
+    if (!id) return;
+    state.removeTab(id);
+  }, []);
+
+  const handleActivateTabByOffset = useCallback((offset: number) => {
+    const state = useTabStore.getState();
+    const currentId = state.activeTabId;
+    if (!currentId) return;
+    const current = state.tabs.find((tab) => tab.id === currentId);
+    if (!current) return;
+    const siblings = spaceTabsFor(current.spaceId);
+    const index = siblings.findIndex((tab) => tab.id === currentId);
+    if (index < 0) return;
+    const nextIndex = (index + offset + siblings.length) % siblings.length;
+    useTabStore.getState().setActiveTab(siblings[nextIndex].id);
+  }, [spaceTabsFor]);
+
+  const handleGoToTabIndex = useCallback((zeroBasedIndex: number) => {
+    const state = useTabStore.getState();
+    const currentId = state.activeTabId;
+    if (!currentId) return;
+    const current = state.tabs.find((tab) => tab.id === currentId);
+    if (!current) return;
+    const siblings = spaceTabsFor(current.spaceId);
+    if (zeroBasedIndex < 0 || zeroBasedIndex >= siblings.length) return;
+    useTabStore.getState().setActiveTab(siblings[zeroBasedIndex].id);
+  }, [spaceTabsFor]);
+
+  const handleTogglePinActiveTab = useCallback(() => {
+    const state = useTabStore.getState();
+    const id = state.activeTabId;
+    if (!id) return;
+    const tab = state.tabs.find((t) => t.id === id);
+    if (!tab) return;
+    state.updateTab(id, { isPinned: !tab.isPinned });
+  }, []);
+
+  const handleToggleMuteActiveTab = useCallback(() => {
+    const state = useTabStore.getState();
+    const id = state.activeTabId;
+    if (!id) return;
+    const tab = state.tabs.find((t) => t.id === id);
+    if (!tab) return;
+    toggleTabMute(id);
+  }, [toggleTabMute]);
+
+  const handleDuplicateActiveTab = useCallback(() => {
+    const state = useTabStore.getState();
+    const tab = state.tabs.find((t) => t.id === state.activeTabId);
+    if (!tab || tab.url === 'about:blank') return;
+    const spaceId = tab.spaceId;
+    state.addTab({ spaceId, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: false, isActive: true });
+  }, []);
+
+  const handleHibernateActiveTab = useCallback(() => {
+    const id = useTabStore.getState().activeTabId;
+    if (!id) return;
+    void window.orbApi?.tabs.hibernate(id);
+  }, []);
+
+  const handleHibernateOtherTabs = useCallback(() => {
+    const state = useTabStore.getState();
+    const id = state.activeTabId;
+    if (!id) return;
+    for (const tab of state.tabs) {
+      if (tab.id === id) continue;
+      void window.orbApi?.tabs.hibernate(tab.id);
+    }
+  }, []);
+
+  // --- Space navigation shortcut handlers ---
+
+  const handleSwitchSpaceByIndex = useCallback((zeroBasedIndex: number) => {
+    const store = useSpaceStore.getState();
+    const space = store.spaces[zeroBasedIndex];
+    if (space) store.setActiveSpace(space.id);
+  }, []);
+
+  const handleSwitchSpaceByOffset = useCallback((offset: number) => {
+    const store = useSpaceStore.getState();
+    const { spaces, activeSpaceId: currentSpaceId } = store;
+    if (spaces.length === 0) return;
+    const index = spaces.findIndex((space) => space.id === currentSpaceId);
+    const nextIndex = nextSpaceIndex(index, spaces.length, offset);
+    if (nextIndex >= 0) store.setActiveSpace(spaces[nextIndex].id);
+  }, []);
+
+  const handleCycleSpaceProfile = useCallback(() => {
+    const spaceStore = useSpaceStore.getState();
+    const { profiles } = useProfileStore.getState();
+    const space = spaceStore.spaces.find((item) => item.id === spaceStore.activeSpaceId);
+    if (!space) return;
+    const next = nextProfileId(profiles.map((profile) => profile.id), space.profileId);
+    if (!next || next === space.profileId) return;
+    spaceStore.updateSpace(space.id, { profileId: next });
+  }, []);
+
+  // --- View shortcut handlers ---
+
+  const handleZoom = useCallback((direction: 'in' | 'out' | 'reset') => {
+    const id = useTabStore.getState().activeTabId;
+    if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.zoom(id, direction); return; }
+    getActiveWebView()?.zoom(direction);
+  }, [getActiveWebView]);
+
+  const handleToggleSidebar = useCallback(() => {
+    const appearance = useAppearanceStore.getState();
+    appearance.setShowTabStrip(!appearance.showTabStrip);
+  }, []);
+
+  // --- Split view shortcut handlers ---
+
+  const handleSplitOpen = useCallback(() => {
+    const state = useTabStore.getState();
+    const id = state.activeTabId;
+    if (!id) return;
+    openSplit([id, id]);
+  }, [openSplit]);
+
+  const handleSplitSwap = useCallback(() => {
+    if (!splitTabIds) return;
+    swapSplit();
+  }, [splitTabIds, swapSplit]);
+
+  const handleSplitClose = useCallback(() => {
+    if (!splitTabIds) return;
+    closeSplit();
+  }, [splitTabIds, closeSplit]);
+
+  // --- Tools shortcut handlers ---
+
+  const handleDevtools = useCallback(() => {
+    void window.orbApi?.toggleDevTools();
+  }, []);
+
+  const handleCopyUrl = useCallback(() => {
+    const tab = useTabStore.getState().tabs.find((t) => t.id === useTabStore.getState().activeTabId);
+    if (!tab || tab.url === 'about:blank') return;
+    void navigator.clipboard.writeText(tab.url);
+  }, []);
+
+  const handleDownloads = useCallback(() => {
+    setDownloadsOpen((open) => !open);
+  }, []);
+
+  const handlePickElementShortcut = useCallback(() => {
+    handlePickElement();
+  }, [handlePickElement]);
+
+  // --- Privacy shortcut handlers ---
+
+  const handleToggleBlocker = useCallback(async () => {
+    const status = await window.orbApi?.getAdBlockerStatus?.();
+    void window.orbApi?.toggleAdBlocker(status?.enabled !== true);
+  }, []);
+
+  const handleToggleHttpsOnly = useCallback(async () => {
+    const status = await window.orbApi?.getHttpsOnlyStatus?.();
+    void window.orbApi?.toggleHttpsOnly(status?.httpsOnlyEnabled !== true);
+  }, []);
+
+
+  const handleShortcut = useCallback((e: Event) => {
+    if (welcomeOpen) return;
+    const customEvent = e as CustomEvent<{ action: string; params?: Record<string, string | number> }>;
+    const { action, params } = customEvent.detail;
+    if (action === 'new-tab') window.dispatchEvent(new CustomEvent('orb:new-tab'));
+    else if (action === 'new-space') window.dispatchEvent(new CustomEvent('orb:new-space'));
+    else if (action === 'command-bar') setCommandBarOpen(true);
+    else if (action === 'find') openFind();
+    else if (action === 'history') setHistoryOpen((open) => !open);
+    else if (action === 'print') printActive();
+    else if (action === 'save-pdf') void exportActivePdf();
+    else if (action === 'toggle-pip') void togglePictureInPicture();
+    else if (action === 'media-play-pause') void toggleMediaPlayback();
+    else if (action === 'focus-address') {
+      requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
+    }
+    else if (action === 'toggle-compact') {
+      useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
+    }
+    else if (action === 'settings') {
+      setSettingsSection('appearance');
+      setSettingsOpen(true);
+    }
+    else if (action === 'default-browser') {
+      setSettingsSection('browser');
+      setSettingsOpen(true);
+    }
+    else if (action === 'show-welcome') {
+      replayOnboarding();
+    }
+    else if (action === 'close-overlays') {
+      setCommandBarOpen(false);
+      setSettingsOpen(false);
+    }
+    else if (action === 'toggle-fullscreen') {
+      void window.orbApi?.toggleFullscreen();
+    }
+    else if (action === 'nav.back') {
+      navigateBack();
+    }
+    else if (action === 'nav.forward') {
+      navigateForward();
+    }
+    else if (action === 'nav.reload') {
+      navigateReload();
+    }
+    else if (action === 'nav.hard-reload') {
+      navigateHardReload();
+    }
+    else if (action === 'tab.close') {
+      handleCloseActiveTab();
+    }
+    else if (action === 'tab.next') {
+      handleActivateTabByOffset(1);
+    }
+    else if (action === 'tab.previous') {
+      handleActivateTabByOffset(-1);
+    }
+    else if (action === 'tab.go-to') {
+      const index = typeof params?.index === 'number' ? params.index : 1;
+      handleGoToTabIndex(index - 1);
+    }
+    else if (action === 'tab.go-to-last') {
+      const state = useTabStore.getState();
+      const currentId = state.activeTabId;
+      if (!currentId) return;
+      const current = state.tabs.find((tab) => tab.id === currentId);
+      if (!current) return;
+      const siblings = spaceTabsFor(current.spaceId);
+      if (siblings.length > 0) useTabStore.getState().setActiveTab(siblings[siblings.length - 1].id);
+    }
+    else if (action === 'tab.pin') {
+      handleTogglePinActiveTab();
+    }
+    else if (action === 'tab.mute') {
+      handleToggleMuteActiveTab();
+    }
+    else if (action === 'tab.duplicate') {
+      handleDuplicateActiveTab();
+    }
+    else if (action === 'tab.hibernate') {
+      handleHibernateActiveTab();
+    }
+    else if (action === 'tab.hibernate-others') {
+      handleHibernateOtherTabs();
+    }
+    else if (action === 'space.switch') {
+      const index = typeof params?.index === 'number' ? params.index : 1;
+      handleSwitchSpaceByIndex(index - 1);
+    }
+    else if (action === 'space.next') {
+      handleSwitchSpaceByOffset(1);
+    }
+    else if (action === 'space.previous') {
+      handleSwitchSpaceByOffset(-1);
+    }
+    else if (action === 'space.switch-profile') {
+      handleCycleSpaceProfile();
+    }
+    else if (action === 'view.zoom-in') {
+      handleZoom('in');
+    }
+    else if (action === 'view.zoom-out') {
+      handleZoom('out');
+    }
+    else if (action === 'view.zoom-reset') {
+      handleZoom('reset');
+    }
+    else if (action === 'view.toggle-sidebar') {
+      handleToggleSidebar();
+    }
+    else if (action === 'tools.devtools') {
+      handleDevtools();
+    }
+    else if (action === 'tools.copy-url') {
+      handleCopyUrl();
+    }
+    else if (action === 'tools.downloads') {
+      handleDownloads();
+    }
+    else if (action === 'tools.element-picker') {
+      handlePickElementShortcut();
+    }
+    else if (action === 'privacy.toggle-blocker') {
+      void handleToggleBlocker();
+    }
+    else if (action === 'privacy.toggle-https-only') {
+      void handleToggleHttpsOnly();
+    }
+    else if (action === 'app.toggle-devtools') {
+      handleDevtools();
+    }
+    else if (action === 'split.open') {
+      handleSplitOpen();
+    }
+    else if (action === 'split.swap') {
+      handleSplitSwap();
+    }
+    else if (action === 'split.close') {
+      handleSplitClose();
+    }
+  }, [
+    welcomeOpen, openFind, printActive, exportActivePdf, togglePictureInPicture, toggleMediaPlayback, replayOnboarding,
+    navigateBack, navigateForward, navigateReload, navigateHardReload,
+    handleCloseActiveTab, handleActivateTabByOffset, handleGoToTabIndex, spaceTabsFor,
+    handleTogglePinActiveTab, handleToggleMuteActiveTab, handleDuplicateActiveTab,
+    handleHibernateActiveTab, handleHibernateOtherTabs,
+    handleSwitchSpaceByIndex, handleSwitchSpaceByOffset, handleCycleSpaceProfile,
+    handleZoom, handleToggleSidebar, handleDevtools, handleCopyUrl, handleDownloads, handlePickElementShortcut,
+    handleToggleBlocker, handleToggleHttpsOnly, handleSplitOpen, handleSplitSwap, handleSplitClose,
+  ]);
+
   useEffect(() => {
     // Initialize default space if none exist
     if (spaces.length === 0) {
@@ -685,327 +1057,7 @@ export default function App() {
     window.addEventListener('orb:new-space', handleNewSpace);
     window.addEventListener('orb:popup-requested', handlePopupRequestedEvent);
 
-    // --- Tab navigation shortcut handlers ---
 
-    const spaceTabsFor = useCallback((spaceId: string) => {
-      return useTabStore.getState().tabs
-        .filter((tab) => tab.spaceId === spaceId)
-        .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
-    }, []);
-
-    const handleCloseActiveTab = useCallback(() => {
-      const state = useTabStore.getState();
-      const id = state.activeTabId;
-      if (!id) return;
-      state.removeTab(id);
-    }, []);
-
-    const handleActivateTabByOffset = useCallback((offset: number) => {
-      const state = useTabStore.getState();
-      const currentId = state.activeTabId;
-      if (!currentId) return;
-      const current = state.tabs.find((tab) => tab.id === currentId);
-      if (!current) return;
-      const siblings = spaceTabsFor(current.spaceId);
-      const index = siblings.findIndex((tab) => tab.id === currentId);
-      if (index < 0) return;
-      const nextIndex = (index + offset + siblings.length) % siblings.length;
-      useTabStore.getState().setActiveTab(siblings[nextIndex].id);
-    }, [spaceTabsFor]);
-
-    const handleGoToTabIndex = useCallback((zeroBasedIndex: number) => {
-      const state = useTabStore.getState();
-      const currentId = state.activeTabId;
-      if (!currentId) return;
-      const current = state.tabs.find((tab) => tab.id === currentId);
-      if (!current) return;
-      const siblings = spaceTabsFor(current.spaceId);
-      if (zeroBasedIndex < 0 || zeroBasedIndex >= siblings.length) return;
-      useTabStore.getState().setActiveTab(siblings[zeroBasedIndex].id);
-    }, [spaceTabsFor]);
-
-    const handleTogglePinActiveTab = useCallback(() => {
-      const state = useTabStore.getState();
-      const id = state.activeTabId;
-      if (!id) return;
-      const tab = state.tabs.find((t) => t.id === id);
-      if (!tab) return;
-      state.updateTab(id, { isPinned: !tab.isPinned });
-    }, []);
-
-    const handleToggleMuteActiveTab = useCallback(() => {
-      const state = useTabStore.getState();
-      const id = state.activeTabId;
-      if (!id) return;
-      const tab = state.tabs.find((t) => t.id === id);
-      if (!tab) return;
-      toggleTabMute(id);
-    }, [toggleTabMute]);
-
-    const handleDuplicateActiveTab = useCallback(() => {
-      const state = useTabStore.getState();
-      const tab = state.tabs.find((t) => t.id === state.activeTabId);
-      if (!tab || tab.url === 'about:blank') return;
-      const spaceId = tab.spaceId;
-      state.addTab({ spaceId, url: tab.url, title: tab.title, favicon: tab.favicon, isPinned: false, isActive: true });
-    }, []);
-
-    const handleHibernateActiveTab = useCallback(() => {
-      const id = useTabStore.getState().activeTabId;
-      if (!id) return;
-      void window.orbApi?.tabs.hibernate(id);
-    }, []);
-
-    const handleHibernateOtherTabs = useCallback(() => {
-      const state = useTabStore.getState();
-      const id = state.activeTabId;
-      if (!id) return;
-      for (const tab of state.tabs) {
-        if (tab.id === id) continue;
-        void window.orbApi?.tabs.hibernate(tab.id);
-      }
-    }, []);
-
-    // --- Space navigation shortcut handlers ---
-
-    const handleSwitchSpaceByIndex = useCallback((zeroBasedIndex: number) => {
-      const store = useSpaceStore.getState();
-      const space = store.spaces[zeroBasedIndex];
-      if (space) store.setActiveSpace(space.id);
-    }, []);
-
-    const handleSwitchSpaceByOffset = useCallback((offset: number) => {
-      const store = useSpaceStore.getState();
-      const { spaces, activeSpaceId: currentSpaceId } = store;
-      if (spaces.length === 0) return;
-      const index = spaces.findIndex((space) => space.id === currentSpaceId);
-      const nextIndex = nextSpaceIndex(index, spaces.length, offset);
-      if (nextIndex >= 0) store.setActiveSpace(spaces[nextIndex].id);
-    }, []);
-
-    const handleCycleSpaceProfile = useCallback(() => {
-      const spaceStore = useSpaceStore.getState();
-      const { profiles } = useProfileStore.getState();
-      const space = spaceStore.spaces.find((item) => item.id === spaceStore.activeSpaceId);
-      if (!space) return;
-      const next = nextProfileId(profiles.map((profile) => profile.id), space.profileId);
-      if (!next || next === space.profileId) return;
-      spaceStore.updateSpace(space.id, { profileId: next });
-    }, []);
-
-    // --- View shortcut handlers ---
-
-    const handleZoom = useCallback((direction: 'in' | 'out' | 'reset') => {
-      const id = useTabStore.getState().activeTabId;
-      if (NATIVE_TABS) { if (id) void window.orbApi?.tabs.zoom(id, direction); return; }
-      getActiveWebView()?.zoom(direction);
-    }, [getActiveWebView]);
-
-    const handleToggleSidebar = useCallback(() => {
-      const appearance = useAppearanceStore.getState();
-      appearance.setShowTabStrip(!appearance.showTabStrip);
-    }, []);
-
-    // --- Split view shortcut handlers ---
-
-    const handleSplitOpen = useCallback(() => {
-      const state = useTabStore.getState();
-      const id = state.activeTabId;
-      if (!id) return;
-      openSplit([id, id]);
-    }, [openSplit]);
-
-    const handleSplitSwap = useCallback(() => {
-      if (!splitTabIds) return;
-      swapSplit();
-    }, [splitTabIds, swapSplit]);
-
-    const handleSplitClose = useCallback(() => {
-      if (!splitTabIds) return;
-      closeSplit();
-    }, [splitTabIds, closeSplit]);
-
-    // --- Tools shortcut handlers ---
-
-    const handleDevtools = useCallback(() => {
-      void window.orbApi?.toggleDevTools();
-    }, []);
-
-    const handleCopyUrl = useCallback(() => {
-      const tab = useTabStore.getState().tabs.find((t) => t.id === useTabStore.getState().activeTabId);
-      if (!tab || tab.url === 'about:blank') return;
-      void navigator.clipboard.writeText(tab.url);
-    }, []);
-
-    const handleDownloads = useCallback(() => {
-      setDownloadsOpen((open) => !open);
-    }, []);
-
-    const handlePickElementShortcut = useCallback(() => {
-      handlePickElement();
-    }, [handlePickElement]);
-
-    // --- Privacy shortcut handlers ---
-
-    const handleToggleBlocker = useCallback(async () => {
-      const status = await window.orbApi?.getAdBlockerStatus?.();
-      void window.orbApi?.toggleAdBlocker(status?.enabled !== true);
-    }, []);
-
-    const handleToggleHttpsOnly = useCallback(async () => {
-      const status = await window.orbApi?.getHttpsOnlyStatus?.();
-      void window.orbApi?.toggleHttpsOnly(status?.httpsOnlyEnabled !== true);
-    }, []);
-
-
-    // A link that launched the app arrives once the shell is listening.
-    void window.orbApi?.takeLaunchUrl?.().then((url) => {
-      if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
-    }).catch(() => undefined);
-
-    const handleShortcut = (e: Event) => {
-      if (welcomeOpen) return;
-      const customEvent = e as CustomEvent<{ action: string; params?: Record<string, string | number> }>;
-      const { action, params } = customEvent.detail;
-      if (action === 'new-tab') handleNewTab();
-      else if (action === 'new-space') handleNewSpace();
-      else if (action === 'command-bar') setCommandBarOpen(true);
-      else if (action === 'find') openFind();
-      else if (action === 'history') setHistoryOpen((open) => !open);
-      else if (action === 'print') printActive();
-      else if (action === 'save-pdf') void exportActivePdf();
-      else if (action === 'toggle-pip') void togglePictureInPicture();
-      else if (action === 'media-play-pause') void toggleMediaPlayback();
-      else if (action === 'focus-address') {
-        requestAnimationFrame(() => document.querySelector<HTMLInputElement>('[aria-label="Search or enter address"]')?.focus());
-      }
-      else if (action === 'toggle-compact') {
-        useAppearanceStore.getState().setCompactMode(!useAppearanceStore.getState().compactMode);
-      }
-      else if (action === 'settings') {
-        setSettingsSection('appearance');
-        setSettingsOpen(true);
-      }
-      else if (action === 'default-browser') {
-        setSettingsSection('browser');
-        setSettingsOpen(true);
-      }
-      else if (action === 'show-welcome') {
-        replayOnboarding();
-      }
-      else if (action === 'close-overlays') {
-        setCommandBarOpen(false);
-        setSettingsOpen(false);
-      }
-      else if (action === 'toggle-fullscreen') {
-        void window.orbApi?.toggleFullscreen();
-      }
-      else if (action === 'nav.back') {
-        navigateBack();
-      }
-      else if (action === 'nav.forward') {
-        navigateForward();
-      }
-      else if (action === 'nav.reload') {
-        navigateReload();
-      }
-      else if (action === 'nav.hard-reload') {
-        navigateHardReload();
-      }
-      else if (action === 'tab.close') {
-        handleCloseActiveTab();
-      }
-      else if (action === 'tab.next') {
-        handleActivateTabByOffset(1);
-      }
-      else if (action === 'tab.previous') {
-        handleActivateTabByOffset(-1);
-      }
-      else if (action === 'tab.go-to') {
-        const index = typeof params?.index === 'number' ? params.index : 1;
-        handleGoToTabIndex(index - 1);
-      }
-      else if (action === 'tab.go-to-last') {
-        const state = useTabStore.getState();
-        const currentId = state.activeTabId;
-        if (!currentId) return;
-        const current = state.tabs.find((tab) => tab.id === currentId);
-        if (!current) return;
-        const siblings = spaceTabsFor(current.spaceId);
-        if (siblings.length > 0) useTabStore.getState().setActiveTab(siblings[siblings.length - 1].id);
-      }
-      else if (action === 'tab.pin') {
-        handleTogglePinActiveTab();
-      }
-      else if (action === 'tab.mute') {
-        handleToggleMuteActiveTab();
-      }
-      else if (action === 'tab.duplicate') {
-        handleDuplicateActiveTab();
-      }
-      else if (action === 'tab.hibernate') {
-        handleHibernateActiveTab();
-      }
-      else if (action === 'tab.hibernate-others') {
-        handleHibernateOtherTabs();
-      }
-      else if (action === 'space.switch') {
-        const index = typeof params?.index === 'number' ? params.index : 1;
-        handleSwitchSpaceByIndex(index - 1);
-      }
-      else if (action === 'space.next') {
-        handleSwitchSpaceByOffset(1);
-      }
-      else if (action === 'space.previous') {
-        handleSwitchSpaceByOffset(-1);
-      }
-      else if (action === 'space.switch-profile') {
-        handleCycleSpaceProfile();
-      }
-      else if (action === 'view.zoom-in') {
-        handleZoom('in');
-      }
-      else if (action === 'view.zoom-out') {
-        handleZoom('out');
-      }
-      else if (action === 'view.zoom-reset') {
-        handleZoom('reset');
-      }
-      else if (action === 'view.toggle-sidebar') {
-        handleToggleSidebar();
-      }
-      else if (action === 'tools.devtools') {
-        handleDevtools();
-      }
-      else if (action === 'tools.copy-url') {
-        handleCopyUrl();
-      }
-      else if (action === 'tools.downloads') {
-        handleDownloads();
-      }
-      else if (action === 'tools.element-picker') {
-        handlePickElementShortcut();
-      }
-      else if (action === 'privacy.toggle-blocker') {
-        void handleToggleBlocker();
-      }
-      else if (action === 'privacy.toggle-https-only') {
-        void handleToggleHttpsOnly();
-      }
-      else if (action === 'app.toggle-devtools') {
-        handleDevtools();
-      }
-      else if (action === 'split.open') {
-        handleSplitOpen();
-      }
-      else if (action === 'split.swap') {
-        handleSplitSwap();
-      }
-      else if (action === 'split.close') {
-        handleSplitClose();
-      }
-    };
-    window.addEventListener('orb:shortcut', handleShortcut as EventListener);
 
     const handleDownloadUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<DownloadItem>;
@@ -1022,7 +1074,13 @@ export default function App() {
       const path = await window.orbApi?.getDownloadPath();
       if (typeof path === 'string') setCurrentDownloadPath(path);
     };
+    window.addEventListener('orb:shortcut', handleShortcut as EventListener);
     window.addEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
+
+    // A link that launched the app arrives once the shell is listening.
+    void window.orbApi?.takeLaunchUrl?.().then((url) => {
+      if (url) window.dispatchEvent(new CustomEvent('orb:popup-requested', { detail: { url } }));
+    }).catch(() => undefined);
 
     // Initialize download path
     handlePathSet();
@@ -1036,7 +1094,7 @@ export default function App() {
       window.removeEventListener('orb:download-updated', handleDownloadUpdated as EventListener);
       window.removeEventListener('orb:shortcut', handleShortcut as EventListener);
     };
-  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind, exportActivePdf, togglePictureInPicture, toggleMediaPlayback, replayOnboarding, welcomeOpen]);
+  }, [spaces.length, commandBarOpen, handleNavigate, findOpen, closeFind, exportActivePdf, togglePictureInPicture, toggleMediaPlayback, replayOnboarding, welcomeOpen, handleShortcut]);
 
   // Forward main-process push events (popups, permissions, downloads, menu
   // shortcuts) into the DOM events the shell already listens for.
@@ -1124,7 +1182,6 @@ export default function App() {
     : [];
   // Unloaded tabs keep no live page, except the active one which shows a placeholder.
   const mountedTabs = spaceTabs.filter((tab) => mountedTabIds.has(tab.id) && (!tab.isUnloaded || tab.id === activeTabId));
-  const activeTab = tabs.find((t: { id: string }) => t.id === activeTabId);
   const activeTabLoading = activeTab ? tabLoadingStates[activeTab.id] || false : false;
   const activeSnapshot = activeTab ? pageSnapshots[activeTab.id] : undefined;
   const activeSpace = spaces.find((space) => space.id === activeSpaceId);
@@ -1217,49 +1274,6 @@ export default function App() {
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
 
-  const handlePickElement = async () => {
-    if (!activeTab || activeTab.url === 'about:blank' || pickerBusy) return;
-    let hostname = '';
-    try {
-      const url = new URL(activeTab.url);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('This page does not support Boosts.');
-      hostname = url.hostname.toLowerCase();
-    } catch {
-      setPickerNotice('Open a website before starting the element picker.');
-      return;
-    }
-
-    setPickerBusy(true);
-    setPickerNotice('Move over an element and click to create a hide rule. Press Esc to cancel.');
-    try {
-      const selection = NATIVE_TABS
-        ? await window.orbApi?.tabs.pickElement(activeTab.id)
-        : await getActiveWebView()?.pickElement();
-      if (!selection) {
-        setPickerNotice('Element picker closed.');
-        return;
-      }
-      const boosts = useBoostStore.getState();
-      await boosts.loadBoosts();
-      const existing = useBoostStore.getState().getBoostForDomain(hostname);
-      const rule = `${selection.selector} {\n  display: none !important;\n}`;
-      if (existing) {
-        const css = existing.css.trim() ? `${existing.css.trimEnd()}\n\n${rule}` : rule;
-        await useBoostStore.getState().updateBoost(existing.id, { css });
-      } else {
-        await useBoostStore.getState().addBoost({ domain: hostname, css: rule, js: '', enabled: true });
-      }
-      const error = useBoostStore.getState().error;
-      if (error) throw new Error(error);
-      if (NATIVE_TABS) await window.orbApi?.tabs.applyCss(activeTab.id, rule);
-      else await getActiveWebView()?.applyCSS(rule);
-      setPickerNotice(`Saved and hid “${selection.label || selection.selector}” on ${hostname}.`);
-    } catch (error) {
-      setPickerNotice(error instanceof Error ? error.message : 'Could not save this Boost.');
-    } finally {
-      setPickerBusy(false);
-    }
-  };
 
   const renderTabPage = (tab: Tab, isActive = false) => {
     const pageSpace = spaces.find((space) => space.id === tab.spaceId);
