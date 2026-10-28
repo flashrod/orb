@@ -78,13 +78,13 @@ describe('preferences — keymap presets', () => {
     expect(state.passthroughRules['docs.google.com']).toEqual(['tab.go-to', 'space.switch']);
   });
 
-  it('setPassthroughRule with empty array clears the domain rule', () => {
+  it('setPassthroughRule with empty array removes the domain rule', () => {
     const store = useBrowserPreferencesStore.getState();
     store.setPassthroughRule('example.com', ['new-tab']);
     store.setPassthroughRule('example.com', []);
 
     const state = useBrowserPreferencesStore.getState();
-    expect(state.passthroughRules['example.com']).toEqual([]);
+    expect(state.passthroughRules['example.com']).toBeUndefined();
   });
 
   it('setPassthroughRule does not affect other domains', () => {

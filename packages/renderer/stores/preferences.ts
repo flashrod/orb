@@ -95,9 +95,12 @@ export const useBrowserPreferencesStore = create<BrowserPreferencesStore>()(pers
     }));
   },
   setPassthroughRule: (domain, commandIds) =>
-    set((state) => ({
-      passthroughRules: { ...state.passthroughRules, [domain]: commandIds },
-    })),
+    set((state) => {
+      const next = { ...state.passthroughRules };
+      if (commandIds.length === 0) delete next[domain];
+      else next[domain] = commandIds;
+      return { passthroughRules: next };
+    }),
   addNeverHibernate: (entry) => {
     const domain = normalizeNeverHibernateEntry(entry);
     if (!domain) return null;
