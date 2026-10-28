@@ -1,5 +1,5 @@
 import { COMMANDS, matchBinding } from '../shared/commands';
-import type { OrbShortcutAction } from '../shared/events';
+import type { MatchedShortcut, OrbShortcutAction } from '../shared/events';
 
 export interface ShortcutInput {
   type: string;
@@ -73,26 +73,24 @@ export function shortcutForInput(
   input: ShortcutInput,
   overrides: Record<string, string[] | null | undefined> = keymapOverrides,
   inTextField = false,
-): OrbShortcutAction | null {
+): MatchedShortcut | null {
   if (input.type !== 'keyDown' || input.isAutoRepeat || input.isComposing) return null;
 
   const platform = (process.platform as 'darwin' | 'win32' | 'linux') ?? 'darwin';
 
-  const tryMatch = (candidate: ShortcutInput): OrbShortcutAction | null => {
+  const tryMatch = (candidate: ShortcutInput): MatchedShortcut | null => {
     const result = matchBinding(toMatchInput(candidate), platform, COMMANDS, overrides);
     if (!result) return null;
     if (inTextField) {
       // Find the matched binding to check the text-field guard.
-      // Re-derive from overrides/defaults: simplest is to check all bindings
-      // of the matched command; if any is safe in a text field, allow it.
-      const command = COMMANDS.find((c) => c.id === result);
+      const command = COMMANDS.find((c) => c.id === result.commandId);
       if (!command) return null;
       const stored = overrides[command.id];
       const bindings = stored === undefined ? command.defaultBindings : stored ?? [];
-      if (bindings.some((b) => bindingSafeInTextField(b))) return result as OrbShortcutAction;
+      if (bindings.some((b) => bindingSafeInTextField(b))) return { action: result.commandId as OrbShortcutAction, params: result.params };
       return null;
     }
-    return result as OrbShortcutAction;
+    return { action: result.commandId as OrbShortcutAction, params: result.params };
   };
 
   const result = tryMatch(input);

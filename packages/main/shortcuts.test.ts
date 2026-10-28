@@ -15,20 +15,26 @@ const input = (overrides: Partial<Parameters<typeof shortcutForInput>[0]> = {}) 
 
 describe('shortcutForInput', () => {
   it('maps the core browser shortcuts', () => {
-    expect(shortcutForInput(input({ key: 't', meta: true }))).toBe('new-tab');
-    expect(shortcutForInput(input({ key: 'k', meta: true }))).toBe('command-bar');
-    expect(shortcutForInput(input({ key: 'l', control: true }))).toBe('focus-address');
-    expect(shortcutForInput(input({ key: 'f', meta: true }))).toBe('find');
-    expect(shortcutForInput(input({ key: 'p', meta: true }))).toBe('print');
+    expect(shortcutForInput(input({ key: 't', meta: true }))).toEqual({ action: 'new-tab', params: {} });
+    expect(shortcutForInput(input({ key: 'k', meta: true }))).toEqual({ action: 'command-bar', params: {} });
+    expect(shortcutForInput(input({ key: 'l', control: true }))).toEqual({ action: 'focus-address', params: {} });
+    expect(shortcutForInput(input({ key: 'f', meta: true }))).toEqual({ action: 'find', params: {} });
+    expect(shortcutForInput(input({ key: 'p', meta: true }))).toEqual({ action: 'print', params: {} });
   });
 
   it('maps shift combinations', () => {
-    expect(shortcutForInput(input({ key: 'T', meta: true, shift: true }))).toBe('tab.reopen-closed');
-    expect(shortcutForInput(input({ key: 'M', meta: true, shift: true }))).toBe('toggle-compact');
+    expect(shortcutForInput(input({ key: 'T', meta: true, shift: true }))).toEqual({
+      action: 'tab.reopen-closed',
+      params: {},
+    });
+    expect(shortcutForInput(input({ key: 'M', meta: true, shift: true }))).toEqual({
+      action: 'toggle-compact',
+      params: {},
+    });
   });
 
   it('maps escape without a modifier', () => {
-    expect(shortcutForInput(input({ key: 'Escape' }))).toBe('close-overlays');
+    expect(shortcutForInput(input({ key: 'Escape' }))).toEqual({ action: 'close-overlays', params: {} });
   });
 
   it('ignores key-up, repeats and plain typing', () => {
@@ -88,7 +94,7 @@ describe('shortcutForInput guards', () => {
   it('honors override bindings', () => {
     expect(
       shortcutForInput(input({ key: 'n', meta: true }), { 'new-tab': ['Mod+N'] }),
-    ).toBe('new-tab');
+    ).toEqual({ action: 'new-tab', params: {} });
   });
 
   it('text-field guard blocks plain key', () => {
@@ -100,19 +106,19 @@ describe('shortcutForInput guards', () => {
   it('text-field guard allows modifier key', () => {
     expect(
       shortcutForInput(input({ key: 't', meta: true }), {}, true),
-    ).toBe('new-tab');
+    ).toEqual({ action: 'new-tab', params: {} });
   });
 
   it('text-field guard allows escape', () => {
     expect(
       shortcutForInput(input({ key: 'Escape' }), {}, true),
-    ).toBe('close-overlays');
+    ).toEqual({ action: 'close-overlays', params: {} });
   });
 
   it('text-field guard allows escape', () => {
     expect(
       shortcutForInput(input({ key: 'Escape' }), {}, true),
-    ).toBe('close-overlays');
+    ).toEqual({ action: 'close-overlays', params: {} });
   });
 
   it('text-field guard does not block unbound function keys (guard passes, no command bound)', () => {
@@ -124,7 +130,7 @@ describe('shortcutForInput guards', () => {
   it('text-field guard allows command+shift in text field', () => {
     expect(
       shortcutForInput(input({ key: 't', meta: true, shift: true }), {}, true),
-    ).toBe('tab.reopen-closed');
+    ).toEqual({ action: 'tab.reopen-closed', params: {} });
   });
 });
 

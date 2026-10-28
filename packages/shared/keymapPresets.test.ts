@@ -21,13 +21,11 @@ describe('keymap presets', () => {
     expect(preset!.overrides['tab.reopen-closed']).toEqual(['Mod+Z']);
   });
 
-  it('arc preset binds spaces to Mod+1..5 and unbinds go-to-1..5', () => {
+  it('arc preset binds spaces to Mod+1..5 and unbinds go-to', () => {
     const preset = getPreset('arc');
     expect(preset).toBeDefined();
-    expect(preset!.overrides['space.switch-1']).toEqual(['Mod+1']);
-    expect(preset!.overrides['space.switch-5']).toEqual(['Mod+5']);
-    expect(preset!.overrides['tab.go-to-1']).toEqual([]);
-    expect(preset!.overrides['tab.go-to-5']).toEqual([]);
+    expect(preset!.overrides['space.switch']).toEqual(['Mod+1', 'Mod+2', 'Mod+3', 'Mod+4', 'Mod+5']);
+    expect(preset!.overrides['tab.go-to']).toEqual([]);
   });
 
   it('presetOverrides returns a copy, not the live record', () => {

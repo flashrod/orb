@@ -218,12 +218,12 @@ function forwardShortcutFromGuest(contents: WebContents, input: Electron.Input):
   if (contents === mainWindow?.webContents) return;
   if (contents.getType() === 'remote' || contents.getType() === 'backgroundPage') return;
 
-  const action = shortcutForInput(input);
-  if (!action) return;
+  const matched = shortcutForInput(input);
+  if (!matched) return;
 
   const host = contents.hostWebContents;
   const target = host && !host.isDestroyed() ? host : mainWindow?.webContents;
-  if (target && !target.isDestroyed()) target.send('orb:shortcut', action);
+  if (target && !target.isDestroyed()) target.send('orb:shortcut', matched);
 }
 
 app.whenReady().then(async () => {

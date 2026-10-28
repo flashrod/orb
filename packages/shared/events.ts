@@ -40,7 +40,15 @@ export type OrbShortcutAction =
   | 'save-pdf'
   | 'toggle-pip'
   | 'media-play-pause'
-  | 'close-overlays';
+  | 'close-overlays'
+  | 'tab.go-to'
+  | 'space.switch';
+
+/** A matched shortcut, including any parameters extracted from the binding. */
+export interface MatchedShortcut {
+  action: OrbShortcutAction;
+  params: Record<string, string | number>;
+}
 
 export type { TabStateSnapshot } from './tabModel';
 
@@ -48,7 +56,7 @@ export type OrbEventMap = {
   'orb:popup-requested': OrbPopupRequest;
   'orb:permission-request': OrbPermissionRequest;
   'orb:download-updated': OrbDownloadUpdate;
-  'orb:shortcut': OrbShortcutAction;
+  'orb:shortcut': MatchedShortcut;
   'orb:tabs-state': TabStateSnapshot;
   'orb:tab-snapshot': { tabId: string; dataUrl: string };
   /** A native page view gained focus (e.g. the user clicked a split pane). */

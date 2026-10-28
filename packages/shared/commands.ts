@@ -114,20 +114,29 @@ function matchesBinding(
 }
 
 /**
- * Find the command id that matches a key event, given the effective keymap.
+ * Find the command that matches a key event, given the effective keymap.
+ *
+ * For commands with `params`, the parameter value is extracted from the
+ * binding's key part (e.g. binding `Mod+3` on a command with
+ * `params: { index: 'number' }` yields `{ index: 3 }`).
  *
  * @param input - Normalized key event (key already lowercased by caller).
  * @param platform - 'darwin' | 'win32' | 'linux'.
  * @param commands - The command registry.
  * @param overrides - Stored keymap overrides: commandId → bindings or null (unbound).
- * @returns The matching command id, or null.
+ * @returns The matching command id plus extracted params, or null.
  */
+export interface MatchedBinding {
+  commandId: string;
+  params: Record<string, string | number>;
+}
+
 export function matchBinding(
   input: { key: string; ctrl: boolean; alt: boolean; shift: boolean; meta: boolean },
   platform: Platform,
   commands: readonly Command[],
   overrides: Record<string, string[] | null | undefined>,
-): string | null {
+): MatchedBinding | null {
   // Modifier-only presses never match (no key to compare).
   if (!input.key) return null;
 
@@ -141,7 +150,25 @@ export function matchBinding(
       const parsed = parseBinding(raw);
       if (!parsed) continue;
       const normalized = normalizeBinding(parsed, platform);
-      if (matchesBinding(input, normalized)) return command.id;
+      if (!matchesBinding(input, normalized)) continue;
+
+      // Extract parameters from the binding's key part for parameterized commands.
+      const params: Record<string, string | number> = {};
+      if (command.params) {
+        const paramNames = Object.keys(command.params);
+        const keyValue = normalized.key;
+        for (const paramName of paramNames) {
+          const paramType = command.params[paramName];
+          if (paramType === 'number') {
+            const n = Number(keyValue);
+            params[paramName] = Number.isFinite(n) ? n : keyValue;
+          } else {
+            params[paramName] = keyValue;
+          }
+        }
+      }
+
+      return { commandId: command.id, params };
     }
   }
   return null;
@@ -192,60 +219,12 @@ export const COMMANDS: readonly Command[] = [
     scope: 'both',
   },
   {
-    id: 'tab.go-to-1',
-    title: 'Go to Tab 1',
+    id: 'tab.go-to',
+    title: 'Go to Tab',
     category: 'Tabs',
-    defaultBindings: ['Mod+1'],
+    defaultBindings: ['Mod+1', 'Mod+2', 'Mod+3', 'Mod+4', 'Mod+5', 'Mod+6', 'Mod+7', 'Mod+8'],
     scope: 'both',
-  },
-  {
-    id: 'tab.go-to-2',
-    title: 'Go to Tab 2',
-    category: 'Tabs',
-    defaultBindings: ['Mod+2'],
-    scope: 'both',
-  },
-  {
-    id: 'tab.go-to-3',
-    title: 'Go to Tab 3',
-    category: 'Tabs',
-    defaultBindings: ['Mod+3'],
-    scope: 'both',
-  },
-  {
-    id: 'tab.go-to-4',
-    title: 'Go to Tab 4',
-    category: 'Tabs',
-    defaultBindings: ['Mod+4'],
-    scope: 'both',
-  },
-  {
-    id: 'tab.go-to-5',
-    title: 'Go to Tab 5',
-    category: 'Tabs',
-    defaultBindings: ['Mod+5'],
-    scope: 'both',
-  },
-  {
-    id: 'tab.go-to-6',
-    title: 'Go to Tab 6',
-    category: 'Tabs',
-    defaultBindings: ['Mod+6'],
-    scope: 'both',
-  },
-  {
-    id: 'tab.go-to-7',
-    title: 'Go to Tab 7',
-    category: 'Tabs',
-    defaultBindings: ['Mod+7'],
-    scope: 'both',
-  },
-  {
-    id: 'tab.go-to-8',
-    title: 'Go to Tab 8',
-    category: 'Tabs',
-    defaultBindings: ['Mod+8'],
-    scope: 'both',
+    params: { index: 'number' },
   },
   {
     id: 'tab.go-to-last',
@@ -299,39 +278,12 @@ export const COMMANDS: readonly Command[] = [
     scope: 'shell',
   },
   {
-    id: 'space.switch-1',
-    title: 'Switch to Space 1',
+    id: 'space.switch',
+    title: 'Switch to Space',
     category: 'Spaces',
-    defaultBindings: ['Ctrl+1'],
+    defaultBindings: ['Ctrl+1', 'Ctrl+2', 'Ctrl+3', 'Ctrl+4', 'Ctrl+5'],
     scope: 'shell',
-  },
-  {
-    id: 'space.switch-2',
-    title: 'Switch to Space 2',
-    category: 'Spaces',
-    defaultBindings: ['Ctrl+2'],
-    scope: 'shell',
-  },
-  {
-    id: 'space.switch-3',
-    title: 'Switch to Space 3',
-    category: 'Spaces',
-    defaultBindings: ['Ctrl+3'],
-    scope: 'shell',
-  },
-  {
-    id: 'space.switch-4',
-    title: 'Switch to Space 4',
-    category: 'Spaces',
-    defaultBindings: ['Ctrl+4'],
-    scope: 'shell',
-  },
-  {
-    id: 'space.switch-5',
-    title: 'Switch to Space 5',
-    category: 'Spaces',
-    defaultBindings: ['Ctrl+5'],
-    scope: 'shell',
+    params: { index: 'number' },
   },
   {
     id: 'space.next',

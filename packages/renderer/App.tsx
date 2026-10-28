@@ -865,8 +865,8 @@ export default function App() {
 
     const handleShortcut = (e: Event) => {
       if (welcomeOpen) return;
-      const customEvent = e as CustomEvent<string>;
-      const action = customEvent.detail;
+      const customEvent = e as CustomEvent<{ action: string; params?: Record<string, string | number> }>;
+      const { action, params } = customEvent.detail;
       if (action === 'new-tab') handleNewTab();
       else if (action === 'new-space') handleNewSpace();
       else if (action === 'command-bar') setCommandBarOpen(true);
@@ -921,29 +921,9 @@ export default function App() {
       else if (action === 'tab.previous') {
         handleActivateTabByOffset(-1);
       }
-      else if (action === 'tab.go-to-1') {
-        handleGoToTabIndex(0);
-      }
-      else if (action === 'tab.go-to-2') {
-        handleGoToTabIndex(1);
-      }
-      else if (action === 'tab.go-to-3') {
-        handleGoToTabIndex(2);
-      }
-      else if (action === 'tab.go-to-4') {
-        handleGoToTabIndex(3);
-      }
-      else if (action === 'tab.go-to-5') {
-        handleGoToTabIndex(4);
-      }
-      else if (action === 'tab.go-to-6') {
-        handleGoToTabIndex(5);
-      }
-      else if (action === 'tab.go-to-7') {
-        handleGoToTabIndex(6);
-      }
-      else if (action === 'tab.go-to-8') {
-        handleGoToTabIndex(7);
+      else if (action === 'tab.go-to') {
+        const index = typeof params?.index === 'number' ? params.index : 1;
+        handleGoToTabIndex(index - 1);
       }
       else if (action === 'tab.go-to-last') {
         const state = useTabStore.getState();
@@ -969,20 +949,9 @@ export default function App() {
       else if (action === 'tab.hibernate-others') {
         handleHibernateOtherTabs();
       }
-      else if (action === 'space.switch-1') {
-        handleSwitchSpaceByIndex(0);
-      }
-      else if (action === 'space.switch-2') {
-        handleSwitchSpaceByIndex(1);
-      }
-      else if (action === 'space.switch-3') {
-        handleSwitchSpaceByIndex(2);
-      }
-      else if (action === 'space.switch-4') {
-        handleSwitchSpaceByIndex(3);
-      }
-      else if (action === 'space.switch-5') {
-        handleSwitchSpaceByIndex(4);
+      else if (action === 'space.switch') {
+        const index = typeof params?.index === 'number' ? params.index : 1;
+        handleSwitchSpaceByIndex(index - 1);
       }
       else if (action === 'space.next') {
         handleSwitchSpaceByOffset(1);

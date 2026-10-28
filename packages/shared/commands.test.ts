@@ -108,23 +108,38 @@ describe('matchBinding', () => {
   });
 
   it('matches new-tab on darwin', () => {
-    expect(matchBinding(darwinInput('t', { meta: true }), 'darwin', COMMANDS, {})).toBe('new-tab');
+    expect(matchBinding(darwinInput('t', { meta: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'new-tab',
+      params: {},
+    });
   });
 
   it('matches new-tab on win32', () => {
-    expect(matchBinding(darwinInput('t', { ctrl: true }), 'win32', COMMANDS, {})).toBe('new-tab');
+    expect(matchBinding(darwinInput('t', { ctrl: true }), 'win32', COMMANDS, {})).toEqual({
+      commandId: 'new-tab',
+      params: {},
+    });
   });
 
   it('matches command-bar on darwin', () => {
-    expect(matchBinding(darwinInput('k', { meta: true }), 'darwin', COMMANDS, {})).toBe('command-bar');
+    expect(matchBinding(darwinInput('k', { meta: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'command-bar',
+      params: {},
+    });
   });
 
   it('matches focus-address on darwin', () => {
-    expect(matchBinding(darwinInput('l', { meta: true }), 'darwin', COMMANDS, {})).toBe('focus-address');
+    expect(matchBinding(darwinInput('l', { meta: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'focus-address',
+      params: {},
+    });
   });
 
   it('matches escape without modifiers', () => {
-    expect(matchBinding(darwinInput('escape'), 'darwin', COMMANDS, {})).toBe('close-overlays');
+    expect(matchBinding(darwinInput('escape'), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'close-overlays',
+      params: {},
+    });
   });
 
   it('ignores key repeats (empty key)', () => {
@@ -146,17 +161,38 @@ describe('matchBinding', () => {
   it('honors overrides that change bindings', () => {
     expect(
       matchBinding(darwinInput('n', { meta: true }), 'darwin', COMMANDS, { 'new-tab': ['Mod+N'] }),
-    ).toBe('new-tab');
+    ).toEqual({ commandId: 'new-tab', params: {} });
   });
 
   it('matches tab.close with Mod+W', () => {
-    expect(matchBinding(darwinInput('w', { meta: true }), 'darwin', COMMANDS, {})).toBe('tab.close');
+    expect(matchBinding(darwinInput('w', { meta: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'tab.close',
+      params: {},
+    });
   });
 
   it('matches tab.reopen-closed with Mod+Shift+T', () => {
-    expect(matchBinding(darwinInput('t', { meta: true, shift: true }), 'darwin', COMMANDS, {})).toBe(
-      'tab.reopen-closed',
+    expect(matchBinding(darwinInput('t', { meta: true, shift: true }), 'darwin', COMMANDS, {})).toEqual(
+      { commandId: 'tab.reopen-closed', params: {} },
     );
+  });
+
+  it('extracts index parameter from tab.go-to binding', () => {
+    expect(matchBinding(darwinInput('1', { meta: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'tab.go-to',
+      params: { index: 1 },
+    });
+    expect(matchBinding(darwinInput('8', { meta: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'tab.go-to',
+      params: { index: 8 },
+    });
+  });
+
+  it('extracts index parameter from space.switch binding', () => {
+    expect(matchBinding(darwinInput('3', { ctrl: true }), 'darwin', COMMANDS, {})).toEqual({
+      commandId: 'space.switch',
+      params: { index: 3 },
+    });
   });
 });
 

@@ -27,10 +27,8 @@ describe('preferences — keymap presets', () => {
 
     const state = useBrowserPreferencesStore.getState();
     expect(state.keymapPreset).toBe('arc');
-    expect(state.keymapOverrides['space.switch-1']).toEqual(['Mod+1']);
-    expect(state.keymapOverrides['space.switch-5']).toEqual(['Mod+5']);
-    expect(state.keymapOverrides['tab.go-to-1']).toEqual([]);
-    expect(state.keymapOverrides['tab.go-to-5']).toEqual([]);
+    expect(state.keymapOverrides['space.switch']).toEqual(['Mod+1', 'Mod+2', 'Mod+3', 'Mod+4', 'Mod+5']);
+    expect(state.keymapOverrides['tab.go-to']).toEqual([]);
   });
 
   it('applying chrome preset rebinds reopen-closed to Mod+Shift+T', () => {
