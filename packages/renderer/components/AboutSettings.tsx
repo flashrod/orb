@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, WarningCircle } from '@phosphor-icons/react';
-
-type BuildInfo = { version: string; electron: string; chromium: string; node: string; platform: string; arch: string };
+import { formatDiagnostics, platformLabel, type BuildInfo } from '../../shared/diagnostics';
 
 const emptyBuildInfo: BuildInfo = { version: '—', electron: '—', chromium: '—', node: '—', platform: '—', arch: '—' };
-
-/** "darwin" → "macOS", so the panel reads like a product rather than a stack trace. */
-function platformLabel(platform: string): string {
-  if (platform === 'darwin') return 'macOS';
-  if (platform === 'win32') return 'Windows';
-  if (platform === 'linux') return 'Linux';
-  return platform || '—';
-}
 
 export default function AboutSettings() {
   const [build, setBuild] = useState<BuildInfo>(emptyBuildInfo);
@@ -40,14 +31,7 @@ export default function AboutSettings() {
   ];
 
   const copyDiagnostics = async () => {
-    const text = [
-      `Orb ${build.version}`,
-      `Electron ${build.electron}`,
-      `Chromium ${build.chromium}`,
-      `Node ${build.node}`,
-      `${platformLabel(build.platform)} ${build.arch}`,
-      `User agent: ${navigator.userAgent}`,
-    ].join('\n');
+    const text = formatDiagnostics(build, navigator.userAgent);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);

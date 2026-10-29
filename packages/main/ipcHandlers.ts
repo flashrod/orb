@@ -1,7 +1,9 @@
 import { ipcMain, dialog, BrowserWindow, screen, session, shell, app } from 'electron';
+import path from 'node:path';
 import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { normalizeExceptionDomain } from './httpsOnly';
+import { appendErrorLog, clampReport, ERROR_LOG_NAME } from './errorLog';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
@@ -86,6 +88,15 @@ export function registerIpcHandlers(): void {
     platform: process.platform,
     arch: process.arch,
   }));
+
+  // Renderer crash log. Alpha testers will not have a debugger attached, so a
+  // render error leaves a file they can send.
+  ipcMain.handle('app:report-renderer-error', (_event, payload: unknown) => {
+    const report = clampReport((payload as { report?: unknown } | null)?.report);
+    if (!report) return { saved: false };
+    const saved = appendErrorLog(path.join(app.getPath('userData'), ERROR_LOG_NAME), report);
+    return { saved };
+  });
 
   ipcMain.handle('app:default-browser-status', () => getDefaultBrowserStatus());
   ipcMain.handle('app:set-default-browser', () => requestDefaultBrowser());
