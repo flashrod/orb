@@ -55,7 +55,7 @@ export default function Page() {
 
       <main id="main-content">
         {/* Hero with GLSL Hills background — text sits on top */}
-        <section id="top" aria-labelledby="hero-heading" className="relative px-6 pt-32 pb-32 md:pt-40 md:pb-40 lg:pt-48 lg:pb-48 overflow-hidden">
+        <section id="top" aria-labelledby="hero-heading" className="relative px-6 pt-40 pb-40 md:pt-52 md:pb-52 lg:pt-60 lg:pb-60 overflow-hidden">
           <div className="absolute inset-0 z-0">
             <GLSLHills className="w-full h-full" />
           </div>
@@ -76,7 +76,7 @@ export default function Page() {
                 in one keystroke, find anything from the command bar, and block ads and trackers
                 before they load.
               </p>
-              <div className="mx-auto mt-12 max-w-xl text-left">
+              <div className="mx-auto mt-16 max-w-xl text-center">
                 <a
                   href={release.dmg}
                   className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-semibold text-white transition-all duration-700 ease-fluid hover:bg-accent active:scale-[0.98]"
@@ -91,7 +91,7 @@ export default function Page() {
                   First launch steps
                 </a>
               </div>
-              <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs text-muted">
+              <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-xs text-muted">
                 <a
                   href="https://github.com/flashrod/orb"
                   target="_blank"
@@ -105,7 +105,7 @@ export default function Page() {
               </div>
             </Reveal>
 
-            <Reveal delay={150} className="mt-32 md:mt-40 lg:mt-48">
+            <Reveal delay={150} className="mt-40 md:mt-52 lg:mt-60">
               <BrowserMockup />
             </Reveal>
           </div>

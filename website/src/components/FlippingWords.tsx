@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const WORDS = ['Ultimate', 'fast', 'secure', 'private', 'calm'];
+const WORDS = ['Ultimate', 'Fast', 'Secure', 'Private', 'Calm'];
 
 /**
  * Cross-fades through a list of words in a fixed-size inline box.
