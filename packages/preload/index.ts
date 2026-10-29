@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld('orbApi', {
   /** Fire-and-forget: lets the benchmark know when the shell is usable. */
   reportShellReady: () => ipcRenderer.send('app:shell-ready'),
   reportRendererError: (payload: { report: string }) => ipcRenderer.invoke('app:report-renderer-error', payload),
+  checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
   clearBrowsingData: (request: unknown) => ipcRenderer.invoke('app:clear-browsing-data', request),
   takeLaunchUrl: () => ipcRenderer.invoke('app:take-launch-url') as Promise<string | null>,
   getDefaultBrowserStatus: () => ipcRenderer.invoke('app:default-browser-status'),
@@ -196,6 +197,7 @@ declare global {
       getBuildInfo: () => Promise<{ version: string; electron: string; chromium: string; node: string; platform: string; arch: string }>;
       reportShellReady: () => void;
       reportRendererError: (payload: { report: string }) => Promise<{ saved: boolean }>;
+      checkForUpdates: () => Promise<{ status: 'update-available' | 'up-to-date' | 'error'; currentVersion: string; latestVersion: string | null; url: string | null; notes: string | null; error?: string }>;
       clearBrowsingData: (request: { history?: boolean; cache?: boolean; cookies?: boolean; siteData?: boolean }) => Promise<{ ok: boolean; labels: string[]; profiles?: number; error?: string }>;
       takeLaunchUrl: () => Promise<string | null>;
       getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;

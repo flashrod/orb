@@ -17,6 +17,7 @@ export interface ExposedApi {
   getBuildInfo: () => Promise<{ version: string; electron: string; chromium: string; node: string; platform: string; arch: string }>;
   reportShellReady: () => void;
   reportRendererError: (payload: { report: string }) => Promise<{ saved: boolean }>;
+  checkForUpdates: () => Promise<{ status: 'update-available' | 'up-to-date' | 'error'; currentVersion: string; latestVersion: string | null; url: string | null; notes: string | null; error?: string }>;
   clearBrowsingData: (request: { history?: boolean; cache?: boolean; cookies?: boolean; siteData?: boolean }) => Promise<{ ok: boolean; labels: string[]; profiles?: number; error?: string }>;
   takeLaunchUrl?: () => Promise<string | null>;
   getDefaultBrowserStatus: () => Promise<{ isDefault: boolean; platform: string }>;
@@ -77,6 +78,7 @@ export const exposedApi: ExposedApi = {
   getBuildInfo: async () => ({ version: '0.1.0', electron: '', chromium: '', node: '', platform: 'darwin', arch: 'arm64' }),
   reportShellReady: () => {},
   reportRendererError: async () => ({ saved: false }),
+  checkForUpdates: async () => ({ status: 'error' as const, currentVersion: '0.1.0', latestVersion: null, url: null, notes: null }),
   clearBrowsingData: async () => ({ ok: true, labels: [] }),
   getDefaultBrowserStatus: async () => ({ isDefault: false, platform: 'darwin' }),
   setDefaultBrowser: async () => ({ isDefault: false, platform: 'darwin' }),

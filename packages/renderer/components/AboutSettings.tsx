@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { Check, Copy, WarningCircle } from '@phosphor-icons/react';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowClockwise, Check, Copy, WarningCircle } from '@phosphor-icons/react';
 import { formatDiagnostics, platformLabel, type BuildInfo } from '../../shared/diagnostics';
+import type { UpdateCheckResult } from '../../shared/updates';
 
 const emptyBuildInfo: BuildInfo = { version: '—', electron: '—', chromium: '—', node: '—', platform: '—', arch: '—' };
 
@@ -8,6 +9,8 @@ export default function AboutSettings() {
   const [build, setBuild] = useState<BuildInfo>(emptyBuildInfo);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [update, setUpdate] = useState<UpdateCheckResult | null>(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +24,21 @@ export default function AboutSettings() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const checkForUpdates = useCallback(async () => {
+    setChecking(true);
+    try {
+      setUpdate(await window.orbApi.checkForUpdates());
+    } catch {
+      setUpdate({ status: 'error', currentVersion: build.version, latestVersion: null, url: null, notes: null, error: 'The update check could not run.' });
+    } finally {
+      setChecking(false);
+    }
+  }, [build.version]);
+
+  // One check when the panel opens. Manual re-checks are a click away; GitHub
+  // rate-limits anonymous requests, so this is deliberately not on a timer.
+  useEffect(() => { void checkForUpdates(); }, [checkForUpdates]);
 
   const rows: { label: string; value: string }[] = [
     { label: 'Orb', value: build.version },
@@ -76,12 +94,30 @@ export default function AboutSettings() {
 
       <section className="border-t orb-border pt-6">
         <h3 className="orb-strong text-xs font-semibold">Updates</h3>
-        <p className="orb-muted mt-1 text-[11px] leading-5">
-          This build does not update itself. Automatic updates need a signed, notarized release, and these builds are unsigned.
-          To move to a newer version, download it and replace Orb in Applications.
-        </p>
-        <p className="orb-muted mt-2 text-[11px] leading-5">
-          Settings, history, and profiles stay in <span className="orb-strong font-mono text-[10px]">~/Library/Application Support/Orb</span> and are kept across an upgrade.
+
+        <div className="orb-elevated mt-3 rounded-lg border orb-border px-3 py-3">
+          {checking && <p className="orb-muted text-[11px]">Checking for updates…</p>}
+          {!checking && update?.status === 'update-available' && <>
+            <p className="orb-strong text-[11px]">Orb {update.latestVersion} is available.</p>
+            <p className="orb-muted mt-0.5 text-[10px]">You are on {update.currentVersion}. Download the new build and replace Orb in Applications.</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {update.url && <button type="button" onClick={() => void window.orbApi.openExternal(update.url as string)} className="orb-accent-soft orb-accent rounded-md border orb-border px-3 py-1.5 text-[11px] font-medium">Open release page</button>}
+              <button type="button" onClick={() => void checkForUpdates()} className="orb-control rounded-md border orb-border px-3 py-1.5 text-[11px]">Check again</button>
+            </div>
+          </>}
+          {!checking && update?.status === 'up-to-date' && <>
+            <p className="orb-strong text-[11px]">Orb {update.currentVersion} is the latest release.</p>
+            <button type="button" onClick={() => void checkForUpdates()} className="orb-muted mt-1 flex items-center gap-1 text-[10px]"><ArrowClockwise aria-hidden="true" className="h-3 w-3" />Check again</button>
+          </>}
+          {!checking && update?.status === 'error' && <>
+            <p className="orb-muted text-[11px]">{update.error || 'The update check failed.'}</p>
+            <button type="button" onClick={() => void checkForUpdates()} className="orb-control mt-2 rounded-md border orb-border px-3 py-1.5 text-[11px]">Try again</button>
+          </>}
+        </div>
+
+        <p className="orb-muted mt-3 text-[11px] leading-5">
+          This build does not update itself: automatic updates need a signed, notarized release, and these builds are unsigned.
+          Settings, history, and profiles live in <span className="orb-strong font-mono text-[10px]">~/Library/Application Support/Orb</span> and are kept when you replace the app.
         </p>
       </section>
     </div>

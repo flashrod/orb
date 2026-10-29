@@ -4,6 +4,7 @@ import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { normalizeExceptionDomain } from './httpsOnly';
 import { appendErrorLog, clampReport, ERROR_LOG_NAME } from './errorLog';
+import { interpretRelease } from '../shared/updates';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
@@ -96,6 +97,45 @@ export function registerIpcHandlers(): void {
     if (!report) return { saved: false };
     const saved = appendErrorLog(path.join(app.getPath('userData'), ERROR_LOG_NAME), report);
     return { saved };
+  });
+
+  // Update check. Orb does not update itself yet, so this only answers "is
+  // there a newer release?" and hands back its page. GitHub allows 60 anonymous
+  // requests an hour, which is why the renderer checks on demand and not on a
+  // timer.
+  ipcMain.handle('app:check-for-updates', async () => {
+    const currentVersion = app.getVersion();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch('https://api.github.com/repos/flashrod/orb/releases/latest', {
+        headers: { accept: 'application/vnd.github+json', 'user-agent': `Orb/${currentVersion}` },
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        return {
+          status: 'error',
+          currentVersion,
+          latestVersion: null,
+          url: null,
+          notes: null,
+          error: response.status === 404 ? 'No release has been published yet.' : `GitHub returned ${response.status}.`,
+        };
+      }
+      return interpretRelease(await response.json(), currentVersion);
+    } catch (error) {
+      const aborted = error instanceof Error && error.name === 'AbortError';
+      return {
+        status: 'error',
+        currentVersion,
+        latestVersion: null,
+        url: null,
+        notes: null,
+        error: aborted ? 'The update check timed out.' : 'Orb could not reach GitHub.',
+      };
+    } finally {
+      clearTimeout(timer);
+    }
   });
 
   ipcMain.handle('app:default-browser-status', () => getDefaultBrowserStatus());
