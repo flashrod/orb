@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
     template: '%s · Orb',
   },
   description:
-    'Orb is an open source browser for macOS with Spaces, a keyboard first command bar, and real ad and tracker blocking. Join the public beta waitlist.',
+    'Orb is an open source browser for macOS with Spaces, a keyboard first command bar, and real ad and tracker blocking.',
   applicationName: 'Orb',
   authors: [{ name: 'Dylan Mascarenhas', url: 'https://github.com/flashrod' }],
   keywords: [
@@ -35,13 +36,13 @@ export const metadata: Metadata = {
     siteName: 'Orb',
     title: 'Orb, a calmer private browser for macOS',
     description:
-      'Spaces for every context, a command bar for everything, and real ad and tracker blocking. Join the public beta waitlist.',
+      'Spaces for every context, a command bar for everything, and real ad and tracker blocking.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Orb, a calmer private browser for macOS',
     description:
-      'Spaces for every context, a command bar for everything, and real ad and tracker blocking. Join the public beta waitlist.',
+      'Spaces for every context, a command bar for everything, and real ad and tracker blocking.',
   },
 };
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <style>{`[data-reveal],[data-tagline-word]{opacity:1!important;transform:none!important;filter:none!important;color:#141310!important}`}</style>
         </noscript>
         {children}
+        <Analytics />
       </body>
     </html>
   );

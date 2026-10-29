@@ -10,12 +10,17 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
+    "@tabler/icons-react": "^3.50.0",
+    "@types/three": "^0.186.0",
+    "@vercel/analytics": "^2.0.1",
     "clsx": "^2.1.1",
     "geist": "^1.8.2",
     "next": "14.2.15",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "tailwind-merge": "^3.7.0"
+    "react-ga": "^3.3.1",
+    "tailwind-merge": "^3.7.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/node": "^20",
