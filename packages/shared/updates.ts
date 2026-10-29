@@ -131,3 +131,42 @@ export function interpretRelease(release: unknown, currentVersion: string): Upda
     error: comparison === null ? 'Versions could not be compared.' : undefined,
   };
 }
+
+/**
+ * Interprets the GitHub `/releases` list.
+ *
+ * `/releases/latest` deliberately skips prereleases, which is exactly what the
+ * alpha channel ships. Listing instead means a tester on `0.1.0-alpha.1` is told
+ * about `0.1.0-alpha.2`, while still never being offered an older final release.
+ * Drafts are ignored: they are not downloadable yet.
+ */
+export function interpretReleaseList(releases: unknown, currentVersion: string): UpdateCheckResult {
+  const base: UpdateCheckResult = {
+    status: 'error',
+    currentVersion,
+    latestVersion: null,
+    url: null,
+    notes: null,
+  };
+
+  if (!Array.isArray(releases)) {
+    return { ...base, error: 'No release information was returned.' };
+  }
+
+  const usable = releases.filter((entry): entry is Record<string, unknown> => {
+    if (!entry || typeof entry !== 'object') return false;
+    const payload = entry as Record<string, unknown>;
+    return payload.draft !== true && parseVersion(payload.tag_name) !== null;
+  });
+
+  if (usable.length === 0) {
+    return { ...base, error: 'No release has been published yet.' };
+  }
+
+  const newest = usable.reduce((best, entry) => {
+    const comparison = compareVersions(entry.tag_name, best.tag_name);
+    return comparison !== null && comparison > 0 ? entry : best;
+  });
+
+  return interpretRelease(newest, currentVersion);
+}

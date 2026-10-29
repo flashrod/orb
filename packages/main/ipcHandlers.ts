@@ -4,7 +4,7 @@ import { windowManager } from './windowManager';
 import { adBlocker } from './adBlocker';
 import { normalizeExceptionDomain } from './httpsOnly';
 import { appendErrorLog, clampReport, ERROR_LOG_NAME } from './errorLog';
-import { interpretRelease } from '../shared/updates';
+import { interpretReleaseList } from '../shared/updates';
 import { getBoostsDatabase } from './boostsDatabase';
 import { NewBoost } from '../shared/boosts';
 import { installExtension, listExtensions, removeExtension } from './extensions';
@@ -80,15 +80,16 @@ export function registerIpcHandlers(): void {
   });
 
   // Update check. Orb does not update itself yet, so this only answers "is
-  // there a newer release?" and hands back its page. GitHub allows 60 anonymous
-  // requests an hour, which is why the renderer checks on demand and not on a
-  // timer.
+  // there a newer release?" and hands back its page. The list endpoint is used
+  // because /releases/latest hides prereleases, and the alpha channel is all
+  // prereleases. GitHub allows 60 anonymous requests an hour, which is why the
+  // renderer checks on demand and not on a timer.
   ipcMain.handle('app:check-for-updates', async () => {
     const currentVersion = app.getVersion();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
     try {
-      const response = await fetch('https://api.github.com/repos/flashrod/orb/releases/latest', {
+      const response = await fetch('https://api.github.com/repos/flashrod/orb/releases?per_page=20', {
         headers: { accept: 'application/vnd.github+json', 'user-agent': `Orb/${currentVersion}` },
         signal: controller.signal,
       });
@@ -102,7 +103,7 @@ export function registerIpcHandlers(): void {
           error: response.status === 404 ? 'No release has been published yet.' : `GitHub returned ${response.status}.`,
         };
       }
-      return interpretRelease(await response.json(), currentVersion);
+      return interpretReleaseList(await response.json(), currentVersion);
     } catch (error) {
       const aborted = error instanceof Error && error.name === 'AbortError';
       return {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions, interpretRelease, parseVersion } from './updates';
+import { compareVersions, interpretRelease, interpretReleaseList, parseVersion } from './updates';
 
 describe('parseVersion', () => {
   it('accepts plain, prefixed and prerelease versions', () => {
@@ -71,5 +71,47 @@ describe('interpretRelease', () => {
   it('ignores an insecure or missing release URL', () => {
     expect(interpretRelease({ ...release, html_url: 'javascript:alert(1)' }, '0.1.0').url).toBeNull();
     expect(interpretRelease({ tag_name: 'v0.2.0' }, '0.1.0').url).toBeNull();
+  });
+});
+
+describe('interpretReleaseList', () => {
+  const release = (tag: string, extra: Record<string, unknown> = {}) => ({
+    tag_name: tag,
+    html_url: `https://github.com/flashrod/orb/releases/tag/${tag}`,
+    body: `${tag} notes`,
+    ...extra,
+  });
+
+  it('sees prereleases, which /releases/latest hides', () => {
+    const list = [release('v0.1.0-alpha.1'), release('v0.1.0-alpha.2')];
+    expect(interpretReleaseList(list, '0.1.0-alpha.1')).toMatchObject({
+      status: 'update-available',
+      latestVersion: '0.1.0-alpha.2',
+    });
+  });
+
+  it('picks the newest by version, not by array order', () => {
+    const list = [release('v0.2.0'), release('v0.10.0'), release('v0.9.9')];
+    expect(interpretReleaseList(list, '0.1.0').latestVersion).toBe('0.10.0');
+  });
+
+  it('never offers a downgrade', () => {
+    const list = [release('v0.1.0-alpha.1'), release('v0.0.9')];
+    expect(interpretReleaseList(list, '0.1.0-alpha.2').status).toBe('up-to-date');
+  });
+
+  it('ignores drafts and unusable tags', () => {
+    const list = [release('v0.3.0', { draft: true }), release('nightly'), { nope: true }, release('v0.2.0')];
+    expect(interpretReleaseList(list, '0.1.0').latestVersion).toBe('0.2.0');
+  });
+
+  it('says so when there is nothing published', () => {
+    expect(interpretReleaseList([], '0.1.0')).toMatchObject({ status: 'error', error: 'No release has been published yet.' });
+    expect(interpretReleaseList([{ draft: true, tag_name: 'v1.0.0' }], '0.1.0').status).toBe('error');
+  });
+
+  it('rejects a payload that is not a list', () => {
+    expect(interpretReleaseList(null, '0.1.0').status).toBe('error');
+    expect(interpretReleaseList({ message: 'rate limited' }, '0.1.0').status).toBe('error');
   });
 });
