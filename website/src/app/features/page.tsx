@@ -1,4 +1,4 @@
-import FeaturesBento from '@/components/FeaturesBento';
+import FeatureGrid from '@/components/FeatureGrid';
 import SectionHeader from '@/components/SectionHeader';
 
 export default function FeaturesPage() {
@@ -11,7 +11,7 @@ export default function FeaturesPage() {
           description=
             {'No feature grid for its own sake. These are the parts of Orb that remove friction, each one real and already in the build.'}
         />
-        <FeaturesBento />
+        <FeatureGrid />
       </div>
     </main>
   );

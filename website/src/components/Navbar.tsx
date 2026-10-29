@@ -118,7 +118,7 @@ export default function Navbar() {
             return (
               <a
                 key={link.id}
-                href={link.href || `#${link.id}`}
+                href={`#${link.id}`}
                 aria-current={current ? 'location' : undefined}
                 className={`relative rounded-full px-4 py-2 text-sm font-medium transition-colors duration-700 ease-fluid hover:text-ink ${
                   current ? 'text-ink' : 'text-muted'
