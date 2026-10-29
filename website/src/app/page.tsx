@@ -62,7 +62,7 @@ export default function Page() {
             <Reveal className="mx-auto max-w-[680px] text-center">
               <h1
                 id="hero-heading"
-                className="text-5xl md:text-7xl lg:text-8xl font-semibold tracking-tight text-ink leading-[1.1]"
+                className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
                 Your personal browser, redefined.
               </h1>
