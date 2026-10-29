@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import BrowserMockup from '@/components/BrowserMockup';
-import FlippingWords from '@/components/FlippingWords';
+import { FlipWords } from '@/components/ui/flip-words';
 import Footer from '@/components/Footer';
 import SectionHeader from '@/components/SectionHeader';
 import Faq from '@/components/Faq';
@@ -66,7 +66,9 @@ export default function Page() {
                 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
                 <span className="hero-heading block">
-                  Your <FlippingWords />{' '} Browser
+                  Your{' '}
+                  <FlipWords words={['Ultimate', 'Fast', 'Secure', 'Private', 'Calm']} />{' '}
+                  Browser
                 </span>
                 <span className="hero-heading block">Redefined</span>
               </h1>
