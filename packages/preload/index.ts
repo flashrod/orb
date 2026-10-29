@@ -30,6 +30,7 @@ function unsubscribeFromOrbEvent(subscriptionId: number): void {
 contextBridge.exposeInMainWorld('orbApi', {
   on: subscribeToOrbEvent,
   off: unsubscribeFromOrbEvent,
+  invoke: (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args),
   listExtensions: () => ipcRenderer.invoke('extensions:list'),
   installExtension: () => ipcRenderer.invoke('extensions:install'),
   removeExtension: (id: string) => ipcRenderer.invoke('extensions:remove', id),
@@ -294,6 +295,7 @@ declare global {
       // Main -> renderer events (allowlisted channels only)
       on: (channel: string, listener: (payload: unknown) => void) => number;
       off: (subscriptionId: number) => void;
+      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
     };
   }
 }

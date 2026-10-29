@@ -48,6 +48,7 @@ export class NativeTabHost {
   private pageVisible = true;
   private desiredPageVisible = true;
   private closed = false;
+  private readonly crashedTabs = new Set<string>();
 
   constructor(window: BrowserWindow, ctx: SessionContext) {
     this.window = window;
@@ -508,6 +509,23 @@ export class NativeTabHost {
         activeMatchOrdinal: result.activeMatchOrdinal,
         matches: result.matches,
       });
+    });
+
+    // Renderer process died: tell the shell so it can show an in-tab crash
+    // page. Track the crash time so auto-reload is rate-limited.
+    contents.on('render-process-gone', (_event, details) => {
+      if (details?.reason === 'killed' || details?.reason === 'clean-exit') return;
+      const reason = (details as { reason?: string }).reason ?? 'unknown';
+      this.crashedTabs.add(tabId);
+      this.window.webContents.send('orb:tab-crashed', { tabId, reason, crashTime: Date.now() });
+    });
+
+    // If a previously crashed tab finishes loading, tell the shell to clear
+    // the crash page.
+    contents.on('did-finish-load', () => {
+      if (this.crashedTabs.delete(tabId)) {
+        this.window.webContents.send('orb:tab-recovered', { tabId });
+      }
     });
 
     return {

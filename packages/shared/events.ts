@@ -69,6 +69,10 @@ export type OrbEventMap = {
   'orb:https-fallback': { host: string; url: string };
   /** A page hovered a link; forwarded to the renderer for Glance preview. */
   'orb:glance-link': { url: string; tabId: string };
+  /** A tab's renderer process crashed; shell shows an in-tab crash page. */
+  'orb:tab-crashed': { tabId: string; reason: string; crashTime: number };
+  /** A previously crashed tab finished loading; shell clears the crash page. */
+  'orb:tab-recovered': { tabId: string };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -85,6 +89,8 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:fullscreen-changed',
   'orb:https-fallback',
   'orb:glance-link',
+  'orb:tab-crashed',
+  'orb:tab-recovered',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {

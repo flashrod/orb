@@ -149,4 +149,43 @@ describe('tab store — shortcut handler operations', () => {
     get().clearClosedTabs();
     expect(get().closedTabs.length).toBe(0);
   });
+
+  it('crashTab marks a tab crashed with reason and time', () => {
+    const state = get();
+    state.addTab({ spaceId: 's1', url: 'https://a.com', title: 'A', favicon: '', isPinned: false, isActive: true });
+    const id = get().tabs[0].id;
+    state.crashTab(id, 'abnormal-exit');
+    const next = get();
+    const tab = next.tabs.find((t) => t.id === id);
+    expect(tab?.isCrashed).toBe(true);
+    expect(tab?.crashReason).toBe('abnormal-exit');
+    expect(typeof tab?.crashTime).toBe('number');
+    expect(tab?.crashReloadCount).toBe(0);
+  });
+
+  it('reloadTab clears crash state', () => {
+    const state = get();
+    state.addTab({ spaceId: 's1', url: 'https://a.com', title: 'A', favicon: '', isPinned: false, isActive: true });
+    const id = get().tabs[0].id;
+    state.crashTab(id, 'crashed');
+    expect(get().tabs.find((t) => t.id === id)?.isCrashed).toBe(true);
+    state.reloadTab(id);
+    const next = get();
+    const tab = next.tabs.find((t) => t.id === id);
+    expect(tab?.isCrashed).toBe(false);
+    expect(tab?.crashReason).toBeUndefined();
+    expect(tab?.crashReloadCount).toBeUndefined();
+  });
+
+  it('crashTab preserves crashReloadCount to prevent reload loops', () => {
+    const state = get();
+    state.addTab({ spaceId: 's1', url: 'https://a.com', title: 'A', favicon: '', isPinned: false, isActive: true });
+    const id = get().tabs[0].id;
+    state.crashTab(id, 'crashed');
+    // Simulate auto-reload marking crashReloadCount = 1
+    state.updateTab(id, { crashReloadCount: 1 });
+    // A second crash should NOT reset crashReloadCount to 0
+    state.crashTab(id, 'crashed-again');
+    expect(get().tabs.find((t) => t.id === id)?.crashReloadCount).toBe(1);
+  });
 });

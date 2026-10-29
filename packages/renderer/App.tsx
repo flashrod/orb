@@ -1296,6 +1296,40 @@ export default function App() {
     };
   }, []);
 
+  // A tab's renderer process crashed: show an in-tab crash page with a Reload
+  // button. Auto-reload once per tab, rate-limited to once per minute.
+  useEffect(() => {
+    const api = window.orbApi;
+    if (!api) return;
+    const subscription = api.on('orb:tab-crashed', (payload) => {
+      const detail = payload as { tabId?: unknown; reason?: unknown; crashTime?: unknown };
+      if (typeof detail?.tabId !== 'string') return;
+      const reason = typeof detail.reason === 'string' ? detail.reason : 'unknown';
+      useTabStore.getState().crashTab(detail.tabId, reason);
+      // Auto-reload once per tab, no more than once per minute.
+      setTimeout(() => {
+        const tab = useTabStore.getState().tabs.find((t) => t.id === detail.tabId);
+        if (!tab?.isCrashed) return;
+        if ((tab.crashReloadCount ?? 0) > 0) return;
+        const now = Date.now();
+        const lastCrash = tab.crashTime ?? tab.updatedAt;
+        if (now - lastCrash <= 60_000) return;
+        // Mark reload attempted so we don't loop if it crashes again.
+        useTabStore.getState().updateTab(tab.id, { crashReloadCount: 1 });
+        void api.invoke?.('tabs:reload', tab.id, true);
+      }, 1000);
+    });
+    const recovered = api.on('orb:tab-recovered', (payload) => {
+      const detail = payload as { tabId?: unknown };
+      if (typeof detail?.tabId !== 'string') return;
+      useTabStore.getState().reloadTab(detail.tabId);
+    });
+    return () => {
+      if (subscription) api.off(subscription);
+      api.off(recovered);
+    };
+  }, []);
+
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, false, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
@@ -1305,6 +1339,37 @@ export default function App() {
     const pageSpace = spaces.find((space) => space.id === tab.spaceId);
     const pageProfile = resolveSpaceProfile(pageSpace?.profileId, profiles);
     const pageTabCount = tabs.filter((item) => item.spaceId === tab.spaceId).length;
+
+    // Crashed tab: show an in-tab error page instead of the (dead) view.
+    if (tab.isCrashed) {
+      const host = (() => { try { return new URL(tab.url).hostname; } catch { return tab.url; } })();
+      const now = Date.now();
+      const lastCrash = tab.crashTime ?? tab.updatedAt;
+      const minuteElapsed = now - lastCrash > 60_000;
+      const shouldAutoReload = tab.crashReloadCount === 0 && minuteElapsed;
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-6">
+          <div className="orb-strong text-sm font-medium">This tab crashed</div>
+          <p className="orb-muted max-w-sm truncate text-xs">{host}</p>
+          <p className="orb-muted text-[10px]">{tab.crashReason || 'The renderer process terminated unexpectedly.'}</p>
+          <button
+            type="button"
+            onClick={() => {
+              useTabStore.getState().reloadTab(tab.id);
+              const api = window.orbApi;
+              void api?.invoke?.('tabs:reload', tab.id, true);
+            }}
+            className="orb-control mt-2 rounded-md border orb-border px-3 py-1.5 text-xs"
+          >
+            Reload
+          </button>
+          {shouldAutoReload && (
+            <p className="orb-muted text-[10px]">Reloading automatically…</p>
+          )}
+        </div>
+      );
+    }
+
     if (tab.url === 'about:blank') {
       return showStartPage
         ? <StartPage spaceName={pageSpace?.name || 'Personal'} spaceId={tab.spaceId} profileId={pageProfile.id} tabCount={pageTabCount} onNavigate={handleNavigate} />

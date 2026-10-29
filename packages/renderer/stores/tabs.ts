@@ -15,6 +15,14 @@ export interface Tab {
   groupId?: string | null;
   /** Unloaded tabs keep their identity and URL but have no live renderer. */
   isUnloaded?: boolean;
+  /** The tab's renderer process crashed. */
+  isCrashed?: boolean;
+  /** Human-readable crash reason. */
+  crashReason?: string;
+  /** Timestamp of the last crash, for auto-reload rate limiting. */
+  crashTime?: number;
+  /** Number of automatic reload attempts after crash (capped at 1). */
+  crashReloadCount?: number;
   isActive: boolean;
   createdAt: number;
   updatedAt: number;
@@ -55,6 +63,10 @@ interface TabStore {
   updateTab: (id: string, partial: Partial<Tab>) => void;
   unloadTab: (id: string) => void;
   loadTab: (id: string) => void;
+  /** Mark a tab as crashed; main process notifies via orb:tab-crashed. */
+  crashTab: (id: string, reason: string) => void;
+  /** User-initiated reload after a crash. */
+  reloadTab: (id: string) => void;
   moveTab: (tabId: string, newSpaceId: string, index: number) => void;
   getTabsForSpace: (spaceId: string) => Tab[];
   createGroup: (spaceId: string, tabId: string, name?: string) => string | null;
@@ -164,6 +176,18 @@ export const useTabStore = create<TabStore>()(persist((set, get) => ({
   loadTab: (id: string) =>
     set((state) => ({
       tabs: state.tabs.map((tab: Tab) => tab.id === id ? { ...tab, isUnloaded: false, updatedAt: Date.now() } : tab),
+    })),
+  crashTab: (id, reason) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab: Tab) => tab.id === id
+        ? { ...tab, isCrashed: true, crashReason: reason, crashTime: Date.now(), crashReloadCount: tab.crashReloadCount ?? 0, updatedAt: Date.now() }
+        : tab),
+    })),
+  reloadTab: (id) =>
+    set((state) => ({
+      tabs: state.tabs.map((tab: Tab) => tab.id === id
+        ? { ...tab, isCrashed: false, crashReason: undefined, crashTime: undefined, crashReloadCount: undefined, updatedAt: Date.now() }
+        : tab),
     })),
 
   moveTab: (tabId: string, newSpaceId: string, index: number) =>
