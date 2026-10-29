@@ -942,6 +942,12 @@ export default function App() {
     else if (action === 'split.close') {
       handleSplitClose();
     }
+    else if (action === 'glance.open-link') {
+      // Acts on the link currently hovered in the page, the same candidate the
+      // toolbar Glance button previews. With nothing hovered there is nothing
+      // to preview, so the command is a no-op rather than an error.
+      if (glanceCandidate) setGlanceUrl(glanceCandidate.url);
+    }
   }, [
     welcomeOpen, openFind, printActive, exportActivePdf, togglePictureInPicture, toggleMediaPlayback, replayOnboarding,
     findOpen, closeFind,
@@ -952,6 +958,7 @@ export default function App() {
     handleSwitchSpaceByIndex, handleSwitchSpaceByOffset, handleCycleSpaceProfile,
     handleZoom, handleToggleSidebar, handleDevtools, handleCopyUrl, handleDownloads, handlePickElementShortcut,
     handleToggleBlocker, handleToggleHttpsOnly, handleSplitOpen, handleSplitSwap, handleSplitClose,
+    glanceCandidate,
   ]);
 
   useEffect(() => {
