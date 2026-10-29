@@ -25,10 +25,7 @@ export default function FlippingWords() {
   }, []);
 
   useEffect(() => {
-    if (reducedMotion) {
-      setBoxHeight(null);
-      return;
-    }
+    if (reducedMotion) return;
 
     const measure = () => {
       const node = containerRef.current;
@@ -52,25 +49,25 @@ export default function FlippingWords() {
     return () => clearInterval(timer);
   }, [reducedMotion]);
 
-  if (reducedMotion || boxHeight === null) {
-    return <span className="inline-block">{WORDS[0]}</span>;
-  }
+  const showFlipping = !reducedMotion && boxHeight !== null;
 
   return (
     <span
       ref={containerRef}
       className="relative inline-block"
-      style={{ height: boxHeight }}
+      style={{ height: showFlipping ? boxHeight : undefined }}
     >
-      {WORDS.map((word, i) => (
-        <span
-          key={word}
-          className="absolute left-0 top-0 opacity-0 transition-opacity duration-500 ease-fluid"
-          style={{ opacity: i === index ? 1 : 0 }}
-        >
-          {word}
-        </span>
-      ))}
+      {showFlipping
+        ? WORDS.map((word, i) => (
+            <span
+              key={word}
+              className="absolute left-0 top-0 opacity-0 transition-opacity duration-500 ease-fluid"
+              style={{ opacity: i === index ? 1 : 0 }}
+            >
+              {word}
+            </span>
+          ))
+        : WORDS[0]}
     </span>
   );
 }
