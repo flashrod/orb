@@ -64,7 +64,8 @@ export default function Page() {
                 id="hero-heading"
                 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
-                Make it your browser
+                <span className="hero-heading block">Your ultimate browser</span>
+                <span className="hero-heading block">Redefined</span>
               </h1>
               <p className="mx-auto mt-8 max-w-[60ch] text-lg text-muted leading-7">
                 Orb is a private browser for macOS that gives every context its own Space. Switch
