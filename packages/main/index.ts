@@ -23,10 +23,15 @@ import {
   type PendingPermission,
   type SessionContext,
 } from './sessions';
+import { buildUserAgent } from '../shared/userAgent';
 import { planClearBrowsingData, planIsEmpty } from '../shared/browsingData';
 import { startupMarkerPath, writeStartupMarker } from './startupMarker';
 
 app.setAppUserModelId('org.orb.browser');
+
+// Report a Chrome-style user agent that does not reveal Orb or Electron.
+// Must be set before the app is ready so the fallback covers every session.
+app.userAgentFallback = buildUserAgent();
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.ELECTRON_DEV === 'true';
 // Native tabs are the default engine. Set ORB_NATIVE_TABS=0 to fall back to the

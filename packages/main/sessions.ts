@@ -5,6 +5,7 @@ import type { PermissionName, PermissionStore } from './permissions';
 import type { DownloadState, DownloadStore } from './downloads';
 import { decidePermission, hostFromUrl, uniqueFilename } from '../shared/sessionPolicy';
 import type { OrbPermissionName } from '../shared/sessionPolicy';
+import { buildUserAgent } from '../shared/userAgent';
 
 export { isOrbPartition, isWebUrl } from '../shared/sessionPolicy';
 
@@ -171,6 +172,9 @@ function installWebAuthnPolicy(ses: Session): void {
 export function hardenSession(ses: Session, ctx: SessionContext): void {
   if (hardenedSessions.has(ses)) return;
   hardenedSessions.add(ses);
+
+  // Chrome-style UA that does not reveal Orb or Electron.
+  ses.setUserAgent(buildUserAgent());
 
   installPermissionPolicy(ses, ctx);
   installDownloadPolicy(ses, ctx);
