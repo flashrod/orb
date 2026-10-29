@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import BrowserMockup from '@/components/BrowserMockup';
+import FlippingWords from '@/components/FlippingWords';
 import Footer from '@/components/Footer';
 import SectionHeader from '@/components/SectionHeader';
 import Faq from '@/components/Faq';
@@ -64,7 +65,10 @@ export default function Page() {
                 id="hero-heading"
                 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
-                <span className="hero-heading block">Your ultimate browser</span>
+                <span className="hero-heading block">
+                  <FlippingWords />{' '}
+                  Browser
+                </span>
                 <span className="hero-heading block">Redefined</span>
               </h1>
               <p className="mx-auto mt-8 max-w-[60ch] text-lg text-muted leading-7">
