@@ -49,6 +49,7 @@ export class NativeTabHost {
   private desiredPageVisible = true;
   private closed = false;
   private readonly crashedTabs = new Set<string>();
+  private htmlFullscreenCount = 0;
 
   constructor(window: BrowserWindow, ctx: SessionContext) {
     this.window = window;
@@ -525,6 +526,22 @@ export class NativeTabHost {
     contents.on('did-finish-load', () => {
       if (this.crashedTabs.delete(tabId)) {
         this.window.webContents.send('orb:tab-recovered', { tabId });
+      }
+    });
+
+    // Page-initiated (HTML5) fullscreen: hide all shell chrome so the page
+    // fills the window; restore when it leaves. Track a count so split view
+    // or multiple tabs don't desync the state.
+    contents.on('enter-html-full-screen', () => {
+      if (this.htmlFullscreenCount === 0) {
+        this.window.webContents.send('orb:html-fullscreen-changed', { fullscreen: true });
+      }
+      this.htmlFullscreenCount++;
+    });
+    contents.on('leave-html-full-screen', () => {
+      this.htmlFullscreenCount = Math.max(0, this.htmlFullscreenCount - 1);
+      if (this.htmlFullscreenCount === 0) {
+        this.window.webContents.send('orb:html-fullscreen-changed', { fullscreen: false });
       }
     });
 

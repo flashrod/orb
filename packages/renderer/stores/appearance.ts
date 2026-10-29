@@ -21,6 +21,7 @@ export function migrateAppearanceSettings(persistedState: unknown, version: numb
     // People already using Orb should not be dropped into a first-run tour
     // after an update. Fresh installs get the default (false) instead.
     ...(version < 7 ? { onboardingComplete: true } : {}),
+    ...(version < 8 ? { showTabsInFullscreen: true } : {}),
   };
 }
 
@@ -39,6 +40,8 @@ interface AppearanceStore {
   showNavigation: boolean;
   compactMode: boolean;
   compactSideTabs: boolean;
+  /** Keep tabs, toolbar and bookmarks bar visible in window fullscreen. */
+  showTabsInFullscreen: boolean;
   onboardingComplete: boolean;
   motion: MotionPreference;
   customColors: Partial<Record<PaletteToken, string>>;
@@ -78,6 +81,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       showNavigation: true,
       compactMode: false,
       compactSideTabs: false,
+      showTabsInFullscreen: true,
       onboardingComplete: false,
       motion: 'gentle',
       customColors: {},
@@ -94,6 +98,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
       setShowNavigation: (showNavigation) => set({ showNavigation }),
       setCompactMode: (compactMode) => set({ compactMode }),
       setCompactSideTabs: (compactSideTabs) => set({ compactSideTabs }),
+      setShowTabsInFullscreen: (showTabsInFullscreen: boolean) => set({ showTabsInFullscreen }),
       completeOnboarding: () => set({ onboardingComplete: true }),
       replayOnboarding: () => set({ onboardingComplete: false }),
       setMotion: (motion) => set({ motion }),
@@ -107,7 +112,7 @@ export const useAppearanceStore = create<AppearanceStore>()(
     }),
     {
       name: 'orb-appearance',
-      version: 7,
+      version: 8,
       migrate: migrateAppearanceSettings,
       storage: createJSONStorage(() => localStorage),
     }

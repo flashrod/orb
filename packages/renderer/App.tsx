@@ -114,7 +114,7 @@ export default function App() {
   const swapSplit = useSplitViewStore((state) => state.swap);
   const openSplit = useSplitViewStore((state) => state.open);
   const mutedSites = useBrowserPreferencesStore((state) => state.mutedSites);
-  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, customColors, setTabLayout, setCompactMode, setShowTabStrip, setShowNavigation, setCompactSideTabs } = useAppearanceStore();
+  const { theme, accent, density, motion, tabLayout, bookmarksBarVisible, compactSideTabs, showStartPage, showTabStrip, showNavigation, compactMode, customColors, setTabLayout, setCompactMode, setShowTabStrip, setShowNavigation, setCompactSideTabs, showTabsInFullscreen } = useAppearanceStore();
 
   const webviewRefs = useRef<Record<string, any>>({});
   // Tabs whose site-wide mute has already been pushed to the native view.
@@ -1330,6 +1330,23 @@ export default function App() {
     };
   }, []);
 
+  // Page-initiated (HTML5) fullscreen hides all shell chrome regardless of
+  // the showTabsInFullscreen preference; restore when it leaves.
+  const [htmlFullscreen, setHtmlFullscreen] = React.useState(false);
+  useEffect(() => {
+    const api = window.orbApi;
+    if (!api) return;
+    const subscription = api.on('orb:html-fullscreen-changed', (payload) => {
+      const detail = payload as { fullscreen?: unknown };
+      if (typeof detail?.fullscreen === 'boolean') setHtmlFullscreen(detail.fullscreen);
+    });
+    return () => {
+      if (subscription) api.off(subscription);
+    };
+  }, []);
+
+  const effectiveFullscreen = isFullscreen || htmlFullscreen;
+
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, false, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;
@@ -1441,7 +1458,7 @@ export default function App() {
         {...(welcomeOpen ? { inert: '' } : {})}
         className="relative flex min-w-0 flex-1 overflow-hidden"
       >
-        {showSideTabs && !isFullscreen ? (
+        {showSideTabs && (!isFullscreen || showTabsInFullscreen) && !htmlFullscreen ? (
           <VerticalTabPanel
             isOpen
             embedded
@@ -1460,7 +1477,7 @@ export default function App() {
           />
         ) : null}
         <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        {showTopTabs && !isFullscreen ? <TabBar
+        {showTopTabs && (!isFullscreen || showTabsInFullscreen) && !htmlFullscreen ? <TabBar
           tabs={spaceTabs}
           activeTabId={activeTabId}
           activeSpaceId={activeSpaceId || ''}
@@ -1474,7 +1491,7 @@ export default function App() {
         /> : null}
         {/* Traffic lights sit over the sidebar, so only inset the content
             column when there is no sidebar at all. */}
-        {!showTopTabs && !showSideTabs && hasMacTrafficLights && !isFullscreen && <div aria-hidden="true" className="h-12 shrink-0" />}
+        {!showTopTabs && !showSideTabs && hasMacTrafficLights && (!isFullscreen || showTabsInFullscreen) && !htmlFullscreen && <div aria-hidden="true" className="h-12 shrink-0" />}
         {showNavigation && !compactMode && <BrowserToolbar
           activeTab={activeTab}
           onNavigate={handleNavigate}
@@ -1484,7 +1501,7 @@ export default function App() {
           loadingProgress={activeTabLoading ? 1 : 0}
           onDownloadsToggle={() => setDownloadsOpen((o) => !o)}
           onOpenSettings={() => { setSettingsSection('appearance'); setSettingsOpen(true); }}
-          trafficLightInset={hasMacTrafficLights && !isFullscreen}
+          trafficLightInset={hasMacTrafficLights && (!isFullscreen || showTabsInFullscreen) && !htmlFullscreen}
           onPickElement={() => void handlePickElement()}
           canPickElement={Boolean(activeTab && activeTab.url !== 'about:blank') && !pickerBusy}
           glanceUrl={glanceCandidate?.url || null}
@@ -1493,7 +1510,7 @@ export default function App() {
           onSwapSplit={swapSplit}
           onCloseSplit={closeSplit}
         />}
-        {bookmarksBarVisible && !compactMode && !isFullscreen && <BookmarksBar onNavigate={handleNavigate} />}
+        {bookmarksBarVisible && !compactMode && (!isFullscreen || showTabsInFullscreen) && !htmlFullscreen && <BookmarksBar onNavigate={handleNavigate} />}
 
         {!compactMode && (!showTabStrip || !showNavigation) && <div className="pointer-events-none absolute left-2 top-[58px] z-30 flex gap-1">
           {!showTabStrip && <button type="button" onClick={() => setShowTabStrip(true)} aria-label="Show tabs" title="Show tabs" className="orb-elevated orb-control pointer-events-auto flex h-7 w-7 items-center justify-center rounded-md border orb-border shadow-sm"><List className="h-3.5 w-3.5" /></button>}

@@ -30,4 +30,11 @@ describe('appearance migrations', () => {
       onboardingComplete: false,
     });
   });
+
+  it('defaults showTabsInFullscreen to true on migration to v8', () => {
+    expect(migrateAppearanceSettings({ theme: 'night' }, 7)).toMatchObject({
+      theme: 'night',
+      showTabsInFullscreen: true,
+    });
+  });
 });

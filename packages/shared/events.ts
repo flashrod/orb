@@ -73,6 +73,8 @@ export type OrbEventMap = {
   'orb:tab-crashed': { tabId: string; reason: string; crashTime: number };
   /** A previously crashed tab finished loading; shell clears the crash page. */
   'orb:tab-recovered': { tabId: string };
+  /** A page entered or left HTML5 (video) fullscreen; shell hides/shows chrome. */
+  'orb:html-fullscreen-changed': { fullscreen: boolean };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -91,6 +93,7 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:glance-link',
   'orb:tab-crashed',
   'orb:tab-recovered',
+  'orb:html-fullscreen-changed',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {
