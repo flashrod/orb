@@ -88,7 +88,7 @@ export default function Page() {
           </div>
         </section>
 
-        <section aria-labelledby="tagline" className="px-6 py-16 md:py-24">
+        <section id="tagline" aria-labelledby="tagline" className="px-6 py-16 md:py-24">
           <div className="mx-auto max-w-6xl">
             <div className="h-px w-12 bg-line" aria-hidden="true" />
             <p className="mt-6 text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
