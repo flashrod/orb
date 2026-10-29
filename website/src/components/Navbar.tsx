@@ -137,10 +137,10 @@ export default function Navbar() {
         </div>
 
         <Link
-          href="#waitlist"
+          href="/download"
           className="hidden rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition-all duration-700 ease-fluid hover:bg-accent active:scale-[0.98] md:inline-flex"
         >
-          Join the beta
+          Download
         </Link>
 
         <button
@@ -201,7 +201,7 @@ export default function Navbar() {
               );
             })}
             <Link
-              href="#waitlist"
+              href="/download"
               tabIndex={open ? 0 : -1}
               onClick={closeMenu}
               style={{ transitionDelay: open ? '350ms' : '0ms' }}
@@ -209,7 +209,7 @@ export default function Navbar() {
                 open ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'
               }`}
             >
-              Join the beta
+              Download
             </Link>
           </div>
 
