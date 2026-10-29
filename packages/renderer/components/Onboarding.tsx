@@ -81,6 +81,18 @@ function OrbMark({ className = 'h-7 w-7' }: { className?: string }) {
 
 function HelloArt() {
   const artRef = useRef<HTMLDivElement>(null);
+  const [version, setVersion] = useState<string | null>(null);
+
+  // The version comes from the build, not from a literal. A hardcoded "0.1"
+  // starts lying the moment the first tagged build ships.
+  useEffect(() => {
+    let cancelled = false;
+    void window.orbApi
+      ?.getBuildInfo?.()
+      .then((info) => { if (!cancelled) setVersion(info.version); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
 
   // A few pixels of lean toward the cursor. Small on purpose: it should feel
   // like the orb noticed you, not like the page is sliding around.
@@ -135,7 +147,7 @@ function HelloArt() {
       </div>
       <div className="orb-enter text-center" style={{ '--i': 3 } as React.CSSProperties}>
         <p className="orb-muted text-[10px]">The web, with the volume down.</p>
-        <p className="orb-muted mt-1 text-[10px] opacity-70">Made for macOS · Version 0.1</p>
+        <p className="orb-muted mt-1 text-[10px] opacity-70">Made for macOS{version ? ` · Version ${version}` : ''}</p>
       </div>
     </div>
   );
