@@ -64,7 +64,7 @@ export default function Page() {
                 id="hero-heading"
                 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
-                Your personal browser, redefined.
+                Make it your browser
               </h1>
               <p className="mx-auto mt-8 max-w-[60ch] text-lg text-muted leading-7">
                 Orb is a private browser for macOS that gives every context its own Space. Switch
@@ -100,7 +100,7 @@ export default function Page() {
               </div>
             </Reveal>
 
-            <Reveal delay={150} className="mt-20 md:mt-24 lg:mt-28">
+            <Reveal delay={150} className="mt-32 md:mt-40 lg:mt-48">
               <BrowserMockup />
             </Reveal>
           </div>
