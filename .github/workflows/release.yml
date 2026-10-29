@@ -86,6 +86,17 @@ jobs:
             release/*.zip
           if-no-files-found: error
 
+      - name: Attach release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # electron-builder's releaseInfo.releaseNotesFile did not reach the
+          # GitHub release body, so set it explicitly after publishing.
+          if [ -f docs/release-notes.md ]; then
+            gh release edit "$GITHUB_REF_NAME" --notes-file docs/release-notes.md
+          fi
+
       - name: Mark prerelease
         if: startsWith(github.ref, 'refs/tags/') && contains(github.ref_name, '-')
         env:
