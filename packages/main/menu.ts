@@ -1,5 +1,6 @@
-import { BrowserWindow, Menu, shell } from 'electron';
+import { BrowserWindow, Menu, app, shell } from 'electron';
 import { getCommandAccelerator } from '../shared/commands';
+import { feedbackIssueUrl } from '../shared/feedback';
 
 /**
  * Menu items cannot call into React directly, so they dispatch the same
@@ -16,6 +17,18 @@ const WEBSITE_URL = 'https://browserorb.vercel.app';
 
 function openWebsite(): void {
   void shell.openExternal(WEBSITE_URL);
+}
+
+/** The same prefilled report the About panel opens, built from the running app. */
+function openFeedback(): void {
+  void shell.openExternal(feedbackIssueUrl({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chromium: process.versions.chrome,
+    node: process.versions.node,
+    platform: process.platform,
+    arch: process.arch,
+  }, `Orb/${app.getVersion()} (${process.platform} ${process.arch})`));
 }
 
 /** Accelerator for a command, read from the shared registry. */
@@ -196,6 +209,11 @@ export function createMenu(): void {
         {
           label: 'Website & waitlist',
           click: openWebsite,
+        },
+        { type: 'separator' },
+        {
+          label: 'Send feedback…',
+          click: openFeedback,
         },
       ],
     },

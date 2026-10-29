@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowClockwise, Check, Copy, WarningCircle } from '@phosphor-icons/react';
+import { ArrowClockwise, ChatCircleText, Check, Copy, WarningCircle } from '@phosphor-icons/react';
 import { formatDiagnostics, platformLabel, type BuildInfo } from '../../shared/diagnostics';
+import { feedbackIssueUrl } from '../../shared/feedback';
 import type { UpdateCheckResult } from '../../shared/updates';
 
 const emptyBuildInfo: BuildInfo = { version: '—', electron: '—', chromium: '—', node: '—', platform: '—', arch: '—' };
@@ -48,6 +49,15 @@ export default function AboutSettings() {
     { label: 'Platform', value: `${platformLabel(build.platform)} (${build.arch})` },
   ];
 
+  const openFeedback = async () => {
+    try {
+      await window.orbApi.openExternal(feedbackIssueUrl(build, navigator.userAgent));
+      setError('');
+    } catch {
+      setError('Could not open your browser. Copy diagnostics instead and send them however you like.');
+    }
+  };
+
   const copyDiagnostics = async () => {
     const text = formatDiagnostics(build, navigator.userAgent);
     try {
@@ -82,14 +92,31 @@ export default function AboutSettings() {
             </div>
           ))}
         </dl>
+        {error && <p role="alert" className="mt-2 flex items-center gap-1.5 text-[11px] text-red-700"><WarningCircle aria-hidden="true" className="h-3.5 w-3.5" />{error}</p>}
+      </section>
+
+      <section className="border-t orb-border pt-6">
+        <h3 className="orb-strong text-xs font-semibold">Feedback</h3>
+        <p className="orb-muted mt-1 text-[11px] leading-5">
+          Alpha builds are expected to break. If something looks wrong, say so — a rough description is more useful than a polished one.
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void openFeedback()}
+            className="orb-accent-soft orb-accent flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs font-medium"
+          >
+            <ChatCircleText aria-hidden="true" className="h-3.5 w-3.5" />
+            Send feedback
+          </button>
           <button type="button" onClick={() => void copyDiagnostics()} className="orb-control flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs">
             {copied ? <Check aria-hidden="true" className="h-3.5 w-3.5" /> : <Copy aria-hidden="true" className="h-3.5 w-3.5" />}
             {copied ? 'Copied' : 'Copy diagnostics'}
           </button>
-          <span className="orb-muted text-[10px]">Paste this into a bug report so versions are never a guess.</span>
         </div>
-        {error && <p role="alert" className="mt-2 flex items-center gap-1.5 text-[11px] text-red-700"><WarningCircle aria-hidden="true" className="h-3.5 w-3.5" />{error}</p>}
+        <p className="orb-muted mt-2 text-[10px] leading-5">
+          Opens a GitHub issue in your browser with your Orb, Electron and macOS versions already filled in. Nothing is sent until you press Submit.
+        </p>
       </section>
 
       <section className="border-t orb-border pt-6">

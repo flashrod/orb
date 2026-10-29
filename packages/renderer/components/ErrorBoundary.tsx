@@ -1,6 +1,7 @@
 import React from 'react';
-import { ArrowClockwise, Copy, Check, WarningOctagon } from '@phosphor-icons/react';
+import { ArrowClockwise, ChatCircleText, Copy, Check, WarningOctagon } from '@phosphor-icons/react';
 import { formatDiagnostics, formatErrorReport, type BuildInfo } from '../../shared/diagnostics';
+import { feedbackIssueUrl } from '../../shared/feedback';
 
 type Props = { children: React.ReactNode };
 type State = {
@@ -8,6 +9,7 @@ type State = {
   build: BuildInfo | null;
   copied: boolean;
   reported: boolean;
+  reportError: string;
 };
 
 /**
@@ -19,7 +21,7 @@ type State = {
  * the fallback must not depend on anything that could itself be broken.
  */
 export default class ErrorBoundary extends React.Component<Props, State> {
-  state: State = { error: null, build: null, copied: false, reported: false };
+  state: State = { error: null, build: null, copied: false, reported: false, reportError: '' };
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -73,6 +75,30 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     window.location.reload();
   };
 
+  /**
+   * Opens a prefilled issue with the message and stack. The URL is only a
+   * draft: nothing is filed until the tester presses Submit in their browser.
+   */
+  private reportOnGitHub = async (): Promise<void> => {
+    const error = this.state.error;
+    if (!error) return;
+    const build = this.state.build ?? emptyBuild;
+    const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+    const message = error.message || String(error);
+    const stack = error.stack ? error.stack.split('\n').slice(0, 24).join('\n') : '(no stack)';
+    const url = feedbackIssueUrl(build, userAgent, {
+      title: `Crash: ${message}`.slice(0, 90),
+      details: ['### Error', '', '```', stack, '```'].join('\n'),
+    });
+    try {
+      await window.orbApi?.openExternal?.(url);
+      this.setState({ reportError: '' });
+    } catch {
+      // Say so instead of looking like the click did nothing.
+      this.setState({ reportError: 'Could not open your browser. Use Copy details instead.' });
+    }
+  };
+
   render(): React.ReactNode {
     if (!this.state.error) return this.props.children;
 
@@ -102,8 +128,13 @@ export default class ErrorBoundary extends React.Component<Props, State> {
               {this.state.copied ? <Check aria-hidden="true" className="h-3.5 w-3.5" /> : <Copy aria-hidden="true" className="h-3.5 w-3.5" />}
               {this.state.copied ? 'Copied' : 'Copy details'}
             </button>
+            <button type="button" onClick={() => void this.reportOnGitHub()} className="orb-control flex items-center gap-1.5 rounded-md border orb-border px-3 py-2 text-xs">
+              <ChatCircleText aria-hidden="true" className="h-3.5 w-3.5" />
+              Report on GitHub
+            </button>
             {this.state.reported && <span className="orb-muted text-[10px]">Saved to the error log</span>}
           </div>
+          {this.state.reportError && <p role="alert" className="orb-muted mt-2 text-[11px]">{this.state.reportError}</p>}
 
           <p className="orb-muted mt-4 text-[10px] leading-5">
             If reloading brings the window back, copy the details and send them with a note about what you clicked.

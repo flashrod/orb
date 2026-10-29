@@ -12,33 +12,13 @@ import { setKeymapOverride, setKeymapOverrides, keymapOverrides, setPassthroughR
 import { profilePartition } from '../shared/profiles';
 import { getDefaultBrowserStatus, openDefaultBrowserSettings, requestDefaultBrowser } from './defaultBrowser';
 import { savePdfBuffer } from './pdf';
-
-function requireString(value: unknown, label: string, maxLength = 2048): string {
-  if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
-    throw new Error(`Invalid ${label}.`);
-  }
-  return value;
-}
+import { requireString, requireWebUrl } from './webUrl';
 
 function requireId(value: unknown, label: string): number {
   if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
     throw new Error(`Invalid ${label}.`);
   }
   return value;
-}
-
-function requireWebUrl(value: unknown): string {
-  const raw = requireString(value, 'URL');
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error('Invalid URL.');
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error('Only http and https URLs can be opened externally.');
-  }
-  return parsed.toString();
 }
 
 function requireDialogOptions(value: unknown): Electron.OpenDialogOptions | Electron.SaveDialogOptions {
