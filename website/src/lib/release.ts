@@ -5,7 +5,7 @@
  * `${productName}-${version}-${arch}.${ext}`) and the release page all derive
  * from it, so a new alpha cannot half-update the download page.
  */
-const version = '0.1.0-alpha.1';
+const version = '0.1.0-alpha.2';
 const tag = `v${version}`;
 const downloadBase = `https://github.com/flashrod/orb/releases/download/${tag}`;
 
