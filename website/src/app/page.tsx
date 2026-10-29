@@ -66,8 +66,7 @@ export default function Page() {
                 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-ink leading-[1.1]"
               >
                 <span className="hero-heading block">
-                  <FlippingWords />{' '}
-                  Browser
+                  Your <FlippingWords />{' '} Browser
                 </span>
                 <span className="hero-heading block">Redefined</span>
               </h1>
