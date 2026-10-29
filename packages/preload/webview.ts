@@ -11,23 +11,35 @@ if (YOUTUBE_HOST_PATTERN.test(location.hostname)) {
   }
 }
 
-// A deliberately narrow bridge for website content. Do not expose the main
-// renderer's orbApi here: pages may only suggest an HTTP(S) link to Glance.
-contextBridge.exposeInMainWorld('orbPageApi', {
-  // The native-view engine has no <webview> host, so the picker reports its
-  // choice to the main process instead of resolving executeJavaScript.
-  reportPickedElement: (result: unknown) => {
-    try { ipcRenderer.send('orb:page-picked-element', result); } catch {}
-  },
-  // sendToHost only exists for <webview> guests; in a WebContentsView there is
-  // no host, so the suggestion is a no-op instead of an exception.
-  suggestGlanceLink: (url: string) => {
-    try {
-      ipcRenderer.sendToHost('orb:glance-link', url);
-    } catch {
-      // no host to receive it
-    }
-  },
+// Page-to-main channels forwarded from DOM custom events. The page must never
+// be able to call these directly: it can only dispatch events that the preload
+// validates and relays. This removes window.orbPageApi entirely so sites
+// cannot fingerprint Orb or spoof picker results.
+const MAX_PICKED_ELEMENT_DEPTH = 50;
+
+export function isValidPickedElement(payload: unknown): payload is { selector: string; label: string; score: number } {  if (!payload || typeof payload !== 'object') return false;
+  const p = payload as Record<string, unknown>;
+  return (
+    typeof p.selector === 'string' && p.selector.length > 0 && p.selector.length <= 1000 &&
+    typeof p.label === 'string' && p.label.length <= 500 &&
+    typeof p.score === 'number' && Number.isFinite(p.score)
+  );
+}
+
+export function isValidGlanceUrl(payload: unknown): payload is string {
+  return typeof payload === 'string' && payload.length > 0 && payload.length <= 2048;
+}
+
+document.addEventListener('orb:page-picked-element', (event) => {
+  const detail = (event as CustomEvent).detail;
+  if (!isValidPickedElement(detail)) return;
+  try { ipcRenderer.send('orb:page-picked-element', detail); } catch {}
+});
+
+document.addEventListener('orb:glance-link', (event) => {
+  const detail = (event as CustomEvent).detail;
+  if (!isValidGlanceUrl(detail)) return;
+  try { ipcRenderer.send('orb:glance-link', detail); } catch {}
 });
 
 // Tell the main process when the page holds typed input that a reload would
@@ -74,3 +86,16 @@ document.addEventListener('submit', () => {
   reportUnsavedInput();
 }, true);
 
+// Track hovered links for Glance previews. Runs in the page's main world so it
+// can see pointerover on anchors; the preload relays the CustomEvent to main.
+void webFrame.executeJavaScript(`(() => {
+  if (window.__orbGlanceLinkTracking) return;
+  window.__orbGlanceLinkTracking = true;
+  document.addEventListener('pointerover', (event) => {
+    const target = event.target;
+    const anchor = target instanceof Element ? target.closest('a[href]') : null;
+    if (anchor) {
+      document.dispatchEvent(new CustomEvent('orb:glance-link', { detail: anchor.href, bubbles: true }));
+    }
+  }, true);
+})()`).catch(() => undefined);

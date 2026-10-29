@@ -165,15 +165,6 @@ export default forwardRef<WebViewHandle, {
     };
     const handleDomReady = () => {
       const wv = webview as any;
-      void wv.executeJavaScript(`(() => {
-        if (window.__orbGlanceLinkTracking) return;
-        window.__orbGlanceLinkTracking = true;
-        document.addEventListener('pointerover', (event) => {
-          const target = event.target;
-          const anchor = target instanceof Element ? target.closest('a[href]') : null;
-          if (anchor && window.orbPageApi?.suggestGlanceLink) window.orbPageApi.suggestGlanceLink(anchor.href);
-        }, true);
-      })()`).catch(() => undefined);
 
       void (async () => {
         try {

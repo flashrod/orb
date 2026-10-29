@@ -462,6 +462,19 @@ app.whenReady().then(async () => {
     const win = BrowserWindow.fromWebContents(event.sender);
     return win ? nativeHosts.get(win) : undefined;
   });
+
+  // Page-to-main: glance link hovered in a tab page. Validate sender and
+  // payload, then forward to the renderer shell so the Glance preview can show.
+  ipcMain.on('orb:glance-link', (event, url) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return;
+    if (typeof url !== 'string' || url.length === 0 || url.length > 2048) return;
+    try { new URL(url); } catch { return; }
+    // Only forward http(s) URLs; ignore javascript:, data:, etc.
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+    mainWindow?.webContents.send('orb:glance-link', { url, tabId: win.webContents.id.toString() });
+  });
+
   createMenu();
 });
 

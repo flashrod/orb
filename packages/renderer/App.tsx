@@ -1280,6 +1280,22 @@ export default function App() {
     };
   }, []);
 
+  // Page hovered a link: show a Glance preview. Validated in the main process.
+  useEffect(() => {
+    const api = window.orbApi;
+    if (!api) return;
+    const subscription = api.on('orb:glance-link', (payload) => {
+      const detail = payload as { url?: unknown; tabId?: unknown };
+      if (typeof detail?.url !== 'string') return;
+      const safeUrl = normalizeGlanceUrl(detail.url);
+      if (!safeUrl) return;
+      setGlanceCandidate({ url: safeUrl, tabId: typeof detail.tabId === 'string' ? detail.tabId : '' });
+    });
+    return () => {
+      if (subscription) api.off(subscription);
+    };
+  }, []);
+
   const tabPresentation = getTabRailPresentation(tabLayout, compactSideTabs, false, false);
   const showTopTabs = !compactMode && showTabStrip && tabPresentation.horizontalTabsVisible;
   const showSideTabs = !compactMode && showTabStrip && !tabPresentation.horizontalTabsVisible;

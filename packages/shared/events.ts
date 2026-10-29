@@ -67,6 +67,8 @@ export type OrbEventMap = {
   'orb:fullscreen-changed': { fullscreen: boolean };
   /** HTTPS-only fell back to HTTP because the site has no working TLS. */
   'orb:https-fallback': { host: string; url: string };
+  /** A page hovered a link; forwarded to the renderer for Glance preview. */
+  'orb:glance-link': { url: string; tabId: string };
 };
 
 export type OrbEventChannel = keyof OrbEventMap;
@@ -82,6 +84,7 @@ export const ORB_EVENT_CHANNELS: readonly OrbEventChannel[] = [
   'orb:find-result',
   'orb:fullscreen-changed',
   'orb:https-fallback',
+  'orb:glance-link',
 ];
 
 export function isOrbEventChannel(channel: unknown): channel is OrbEventChannel {

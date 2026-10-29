@@ -92,7 +92,7 @@ export const PICK_ELEMENT_SCRIPT = String.raw`(() => new Promise((resolve) => {
       style.remove();
       tip.remove();
       panel.remove();
-      try { window.orbPageApi?.reportPickedElement?.(result); } catch {}
+      try { document.dispatchEvent(new CustomEvent('orb:page-picked-element', { detail: result, bubbles: true })); } catch {}
       resolve(result);
     }
 

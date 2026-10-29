@@ -723,6 +723,9 @@ export function registerNativeTabHandlers(getHost: HostLookup): void {
 
   // Page content reports dirty form state; there is no invoke response.
   ipcMain.on('orb:page-unsaved-input', (event, dirty) => {
-    getHost(event)?.noteUnsavedInput(event.sender, dirty === true);
+    const host = getHost(event);
+    if (!host) return;
+    if (typeof dirty !== 'boolean') return;
+    host.noteUnsavedInput(event.sender, dirty === true);
   });
 }
