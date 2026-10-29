@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BookmarkSimple, CaretDown, DotsThree, Folder, FolderOpen, Plus, Trash } from '@phosphor-icons/react';
 import { BookmarkItem, useBookmarkStore } from '../stores/bookmarks';
 import { exportBookmarkHtml, parseBookmarkHtml } from '../lib/bookmarkHtml';
+import ConfirmDialog from './ConfirmDialog';
 
 export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string) => void }) {
   const { items, addFolder, moveItem, removeItem, renameItem, importItems } = useBookmarkStore();
@@ -10,10 +11,25 @@ export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string)
   const [folderDraft, setFolderDraft] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [importError, setImportError] = useState('');
-  const importRef = React.useRef<HTMLInputElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: 'bookmark' | 'folder' } | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  // Undo state
+  const [undodelete, setUndodelete] = useState<{ id: string; item: BookmarkItem } | null>(null);
 
   const roots = items.filter((item) => item.parentId === null);
   const children = (id: string) => items.filter((item) => item.parentId === id);
+
+  // Dismiss undo toast after 5 seconds
+  useEffect(() => {
+    if (!undodelete) return;
+    const timer = setTimeout(() => setUndodelete(null), 5_000);
+    return () => clearTimeout(timer);
+  }, [undodelete]);
+
   const handleDrop = (event: React.DragEvent, item?: BookmarkItem) => {
     event.preventDefault();
     const id = event.dataTransfer.getData('text/plain') || draggingId;
@@ -22,22 +38,62 @@ export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string)
     setDraggingId(null);
   };
 
-  const renderItem = (item: BookmarkItem, nested = false) => item.kind === 'folder' ? (
-    <div key={item.id} className="relative shrink-0" draggable onDragStart={(event) => { setDraggingId(item.id); event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, item)}>
-      <button type="button" aria-expanded={openFolder === item.id} onClick={() => setOpenFolder(openFolder === item.id ? null : item.id)} onDoubleClick={() => { const name = window.prompt('Rename bookmark folder', item.title); if (name?.trim()) renameItem(item.id, name.trim()); }} className={`orb-control flex h-7 items-center gap-1.5 rounded px-2 text-[11px] ${draggingId === item.id ? 'opacity-40' : ''}`}>
-        {openFolder === item.id ? <FolderOpen className="orb-muted h-3.5 w-3.5" /> : <Folder className="orb-muted h-3.5 w-3.5" />}{item.title}<CaretDown className="orb-muted h-3 w-3" />
-      </button>
-      {openFolder === item.id && <div className={`orb-elevated orb-shadow absolute ${nested ? 'left-full top-0 ml-1' : 'left-0 top-full mt-1'} z-30 min-w-48 rounded-lg border orb-border p-1`}>
-        {children(item.id).length ? children(item.id).map((child) => renderItem(child, true)) : <p className="orb-muted px-2 py-2 text-[10px]">Drop bookmarks here</p>}
-        <button type="button" onClick={() => removeItem(item.id)} className="orb-control flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px]"><Trash className="h-3 w-3" /> Delete folder</button>
-      </div>}
-    </div>
-  ) : (
-    <div key={item.id} draggable onDragStart={(event) => { setDraggingId(item.id); event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, item)} className={`group relative flex shrink-0 items-center ${draggingId === item.id ? 'opacity-40' : ''}`}>
-      <button type="button" title={`${item.title} · ${item.url}`} onClick={() => onNavigate(item.url)} onDoubleClick={() => { const name = window.prompt('Rename bookmark', item.title); if (name?.trim()) renameItem(item.id, name.trim()); }} className="orb-control flex h-7 max-w-40 items-center gap-1.5 rounded px-2 text-[11px]"><BookmarkSimple className="orb-muted h-3.5 w-3.5 shrink-0" /><span className="truncate">{item.title}</span></button>
-      <button type="button" aria-label={`Remove ${item.title} bookmark`} onClick={() => removeItem(item.id)} className="orb-elevated absolute -right-1 -top-1 z-10 hidden h-4 w-4 items-center justify-center rounded-full border orb-border group-hover:flex"><Trash className="h-2.5 w-2.5" /></button>
-    </div>
-  );
+  const startRename = (id: string, currentTitle: string) => {
+    setRenameId(id);
+    setRenameDraft(currentTitle);
+  };
+
+  const finishRename = (id: string) => {
+    if (renameDraft.trim()) renameItem(id, renameDraft.trim());
+    setRenameId(null);
+    setRenameDraft('');
+  };
+
+  const renderItem = (item: BookmarkItem, nested = false) => {
+    const isRenaming = renameId === item.id;
+    const titleInput = (
+      <input
+        autoFocus
+        value={renameDraft}
+        onChange={(event) => setRenameDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') { event.preventDefault(); finishRename(item.id); }
+          if (event.key === 'Escape') { setRenameId(null); setRenameDraft(item.title); }
+        }}
+        onBlur={() => finishRename(item.id)}
+        className="orb-frame h-6 w-28 rounded border orb-border px-1.5 text-[10px] outline-none"
+      />
+    );
+
+    if (item.kind === 'folder') {
+      return (
+        <div key={item.id} className="relative shrink-0" draggable onDragStart={(event) => { setDraggingId(item.id); event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, item)}>
+          {isRenaming ? (
+            <div className="flex h-7 items-center gap-1.5 rounded px-2 text-[11px]">{titleInput}</div>
+          ) : (
+            <button type="button" aria-expanded={openFolder === item.id} onClick={() => setOpenFolder(openFolder === item.id ? null : item.id)} onDoubleClick={() => startRename(item.id, item.title)} className={`orb-control flex h-7 items-center gap-1.5 rounded px-2 text-[11px] ${draggingId === item.id ? 'opacity-40' : ''}`}>
+              {openFolder === item.id ? <FolderOpen className="orb-muted h-3.5 w-3.5" /> : <Folder className="orb-muted h-3.5 w-3.5" />}{item.title}<CaretDown className="orb-muted h-3 w-3" />
+            </button>
+          )}
+          {openFolder === item.id && <div className={`orb-elevated orb-shadow absolute ${nested ? 'left-full top-0 ml-1' : 'left-0 top-full mt-1'} z-30 min-w-48 rounded-lg border orb-border p-1`}>
+            {children(item.id).length ? children(item.id).map((child) => renderItem(child, true)) : <p className="orb-muted px-2 py-2 text-[10px]">Drop bookmarks here</p>}
+            <button type="button" onClick={() => { setDeleteTarget({ id: item.id, title: item.title, kind: 'folder' }); setDeleteConfirmOpen(true); }} className="orb-control flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[10px]"><Trash className="h-3 w-3" /> Delete folder</button>
+          </div>}
+        </div>
+      );
+    }
+
+    return (
+      <div key={item.id} draggable onDragStart={(event) => { setDraggingId(item.id); event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDraggingId(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event, item)} className={`group relative flex shrink-0 items-center ${draggingId === item.id ? 'opacity-40' : ''}`}>
+        {isRenaming ? (
+          <div className="group relative flex shrink-0 items-center">{titleInput}</div>
+        ) : (
+          <button type="button" title={`${item.title} · ${item.url}`} onClick={() => onNavigate(item.url)} onDoubleClick={() => startRename(item.id, item.title)} className="orb-control flex h-7 max-w-40 items-center gap-1.5 rounded px-2 text-[11px]"><BookmarkSimple className="orb-muted h-3.5 w-3.5 shrink-0" /><span className="truncate">{item.title}</span></button>
+        )}
+        <button type="button" aria-label={`Remove ${item.title} bookmark`} onClick={() => { setDeleteTarget({ id: item.id, title: item.title, kind: 'bookmark' }); setDeleteConfirmOpen(true); }} className="orb-elevated absolute -right-1 -top-1 z-10 hidden h-4 w-4 items-center justify-center rounded-full border orb-border group-hover:flex"><Trash className="h-2.5 w-2.5" /></button>
+      </div>
+    );
+  };
 
   const importFile = async (file?: File) => {
     if (!file) return;
@@ -51,14 +107,50 @@ export default function BookmarksBar({ onNavigate }: { onNavigate: (url: string)
     const link = document.createElement('a'); link.href = url; link.download = 'orb-bookmarks.html'; link.click(); URL.revokeObjectURL(url);
   };
 
-  return <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event)} className="orb-surface flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b orb-border px-3 scrollbar-hide">
-    {roots.map((item) => renderItem(item))}
-    {folderDraft ? <form className="flex shrink-0 items-center gap-1" onSubmit={(event) => { event.preventDefault(); const input = event.currentTarget.elements.namedItem('folder') as HTMLInputElement; if (input.value.trim()) addFolder(input.value.trim()); setFolderDraft(false); }}><input name="folder" autoFocus aria-label="New bookmark folder name" placeholder="Folder name" className="orb-frame h-6 w-28 rounded border orb-border px-1.5 text-[10px] outline-none" onKeyDown={(event) => { if (event.key === 'Escape') setFolderDraft(false); }} /><button type="submit" className="orb-accent text-[10px]">Add</button></form> : <button type="button" onClick={() => setFolderDraft(true)} title="New bookmark folder" aria-label="New bookmark folder" className="orb-control flex h-7 w-7 shrink-0 items-center justify-center rounded"><Plus className="h-3.5 w-3.5" /></button>}
-    <div className="relative shrink-0"><button type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Bookmark options" title="Bookmark options" className="orb-control flex h-7 w-7 items-center justify-center rounded"><DotsThree className="h-4 w-4" /></button>{menuOpen && <div className="orb-elevated orb-shadow absolute right-0 top-full z-40 mt-1 w-44 rounded-lg border orb-border p-1">
-      <button type="button" onClick={() => { setMenuOpen(false); importRef.current?.click(); }} className="orb-control w-full rounded px-2 py-1.5 text-left text-[10px]">Import bookmarks…</button>
-      <button type="button" onClick={() => { exportFile(); setMenuOpen(false); }} className="orb-control w-full rounded px-2 py-1.5 text-left text-[10px]">Export as HTML</button>
-      {importError && <p role="alert" className="px-2 py-1 text-[9px] text-red-700">{importError}</p>}
-    </div>}</div>
-    <input ref={importRef} type="file" accept=".html,text/html" className="hidden" onChange={(event) => { void importFile(event.target.files?.[0]); event.currentTarget.value = ''; }} />
-  </div>;
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    const { id, title, kind } = deleteTarget;
+    // Capture the item for undo before removing
+    const item = items.find((i) => i.id === id);
+    if (item) setUndodelete({ id, item });
+    removeItem(id);
+    setDeleteTarget(null);
+    setDeleteConfirmOpen(false);
+  };
+
+  const handleUndo = () => {
+    if (!undodelete) return;
+    const { id, item } = undodelete;
+    if (item.kind === 'folder') addFolder(item.title, item.parentId);
+    else useBookmarkStore.getState().addBookmark(item.title, item.url, item.parentId);
+    // Note: re-added items get a new id; this is acceptable for undo.
+    setUndodelete(null);
+  };
+
+  return (
+    <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => handleDrop(event)} className="orb-surface flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b orb-border px-3 scrollbar-hide">
+      {roots.map((item) => renderItem(item))}
+      {folderDraft ? <form className="flex shrink-0 items-center gap-1" onSubmit={(event) => { event.preventDefault(); const input = event.currentTarget.elements.namedItem('folder') as HTMLInputElement; if (input.value.trim()) addFolder(input.value.trim()); setFolderDraft(false); }}><input name="folder" autoFocus aria-label="New bookmark folder name" placeholder="Folder name" className="orb-frame h-6 w-28 rounded border orb-border px-1.5 text-[10px] outline-none" onKeyDown={(event) => { if (event.key === 'Escape') setFolderDraft(false); }} /><button type="submit" className="orb-accent text-[10px]">Add</button></form> : <button type="button" onClick={() => setFolderDraft(true)} title="New bookmark folder" aria-label="New bookmark folder" className="orb-control flex h-7 w-7 shrink-0 items-center justify-center rounded"><Plus className="h-3.5 w-3.5" /></button>}
+      <div className="relative shrink-0"><button type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Bookmark options" title="Bookmark options" className="orb-control flex h-7 w-7 items-center justify-center rounded"><DotsThree className="h-4 w-4" /></button>{menuOpen && <div className="orb-elevated orb-shadow absolute right-0 top-full z-40 mt-1 w-44 rounded-lg border orb-border p-1">
+        <button type="button" onClick={() => { setMenuOpen(false); importRef.current?.click(); }} className="orb-control w-full rounded px-2 py-1.5 text-left text-[10px]">Import bookmarks…</button>
+        <button type="button" onClick={() => { exportFile(); setMenuOpen(false); }} className="orb-control w-full rounded px-2 py-1.5 text-left text-[10px]">Export as HTML</button>
+        {importError && <p role="alert" className="px-2 py-1 text-[9px] text-red-700">{importError}</p>}
+      </div>}</div>
+      <input ref={importRef} type="file" accept=".html,text/html" className="hidden" onChange={(event) => { void importFile(event.target.files?.[0]); event.currentTarget.value = ''; }} />
+      {deleteConfirmOpen && deleteTarget && (
+        <ConfirmDialog
+          title={`Delete ${deleteTarget.kind}?`}
+          message={`“${deleteTarget.title}” will be removed from your bookmarks.`}
+          onConfirm={handleDelete}
+          onCancel={() => { setDeleteConfirmOpen(false); setDeleteTarget(null); }}
+        />
+      )}
+      {undodelete && (
+        <div className="fixed bottom-4 left-4 z-[80] orb-elevated orb-shadow rounded-lg border orb-border px-3 py-2 text-xs flex items-center gap-2">
+          <span className="text-muted">Deleted “{undodelete.item.title}”.</span>
+          <button type="button" onClick={handleUndo} className="orb-control text-xs font-medium text-accent-strong">Undo</button>
+        </div>
+      )}
+    </div>
+  );
 }
