@@ -1,7 +1,7 @@
 {
   "name": "orb",
   "productName": "Orb",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "An Arc-inspired browser built with Electron and React",
   "main": "dist/main.js",
   "author": "flashrod",
