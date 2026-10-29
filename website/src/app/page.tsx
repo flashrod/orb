@@ -53,9 +53,11 @@ export default function Page() {
       <Navbar />
 
       <main id="main-content">
-        {/* Hero with GLSL Hills background */}
+        {/* Hero with GLSL Hills background — text sits on top */}
         <section id="top" aria-labelledby="hero-heading" className="relative px-6 pt-32 pb-32 md:pt-40 md:pb-40 lg:pt-48 lg:pb-48 overflow-hidden">
-          <GLSLHills className="w-full h-full" />
+          <div className="absolute inset-0 z-0">
+            <GLSLHills className="w-full h-full" />
+          </div>
           <div className="mx-auto max-w-6xl relative z-10">
             <Reveal className="mx-auto max-w-[680px] text-center">
               <h1
@@ -178,54 +180,6 @@ export default function Page() {
         </section>
 
         <Benefits />
-
-        <section aria-labelledby="how-heading" className="px-6 py-16 md:py-24">
-          <div className="mx-auto max-w-6xl">
-            <Reveal className="max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-accent-strong">
-                How it works
-              </p>
-              <h2
-                id="how-heading"
-                className="mt-3 text-3xl font-semibold tracking-tight text-ink md:text-4xl"
-              >
-                Three steps, then it disappears.
-              </h2>
-              <p className="mt-4 text-lg text-muted">
-                Orb should take a few minutes to set up and then stop asking for attention.
-              </p>
-            </Reveal>
-
-            <ol className="mt-12 grid gap-4 md:grid-cols-3">
-              {steps.map((step, index) => (
-                <li key={step.title}>
-                  <Reveal delay={index * 50} className="h-full">
-                    <article className="h-full rounded-2xl border border-line bg-surface p-6 md:p-8">
-                      <p className="font-mono text-sm text-accent-strong">
-                        {String(index + 1).padStart(2, '0')}
-                      </p>
-                      <h3 className="mt-6 text-xl font-semibold tracking-tight text-ink">
-                        {step.title}
-                      </h3>
-                      <p className="mt-3 text-base text-muted">{step.body}</p>
-                    </article>
-                  </Reveal>
-                </li>
-              ))}
-            </ol>
-
-            <Reveal delay={150} className="mt-8">
-              <a
-                href="https://github.com/flashrod/orb#getting-started"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-semibold text-accent-strong underline decoration-line underline-offset-4 transition-colors duration-700 ease-fluid hover:text-ink hover:decoration-accent"
-              >
-                Prefer to build from source? Read the setup guide.
-              </a>
-            </Reveal>
-          </div>
-        </section>
 
         <PrivacySection />
         <ProofSection />

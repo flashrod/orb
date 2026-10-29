@@ -1,11 +1,11 @@
-export const navLinks = [
+export const navLinks: { id: string; label: string; href?: string }[] = [
   { id: 'top', label: 'Overview' },
   { id: 'product', label: 'Product' },
   { id: 'features', label: 'Features' },
   { id: 'privacy', label: 'Privacy' },
-  { id: 'shortcuts', label: 'Shortcuts' },
+  { id: 'shortcuts', label: 'Shortcuts', href: '/shortcuts' },
   { id: 'faq', label: 'FAQ' },
-] as const;
+];
 
 export const benefits = [
   {
