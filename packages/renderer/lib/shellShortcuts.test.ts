@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+
+/**
+ * @vitest-environment jsdom
+ */
 import { detectPlatform, shortcutForKeyboardEvent } from './shellShortcuts';
 
 const mac = { platform: 'darwin' as const };
@@ -74,5 +78,32 @@ describe('shortcutForKeyboardEvent', () => {
 
   it('falls back to swapping Ctrl and Meta for legacy Ctrl+L presses', () => {
     expect(shortcutForKeyboardEvent({ key: 'l', ctrlKey: true }, {}, mac)?.action).toBe('focus-address');
+  });
+
+  it('does not throw when a real KeyboardEvent has no match (Ctrl/Meta swap path)', () => {
+    // A real DOM KeyboardEvent: spreading it would lose `key` and crash.
+    const event = new KeyboardEvent('keydown', { key: 'a', ctrlKey: true });
+    expect(() => shortcutForKeyboardEvent(event, {}, mac)).not.toThrow();
+    expect(shortcutForKeyboardEvent(event, {}, mac)).toBeNull();
+  });
+
+  it('matches via Ctrl/Meta swap with a real KeyboardEvent', () => {
+    const event = new KeyboardEvent('keydown', { key: 'l', ctrlKey: true });
+    expect(shortcutForKeyboardEvent(event, {}, mac)?.action).toBe('focus-address');
+  });
+
+  it('matches normally with a real KeyboardEvent', () => {
+    const event = new KeyboardEvent('keydown', { key: 't', metaKey: true });
+    expect(shortcutForKeyboardEvent(event, {}, mac)?.action).toBe('new-tab');
+  });
+
+  it('returns null for real KeyboardEvent typing keys (no modifier)', () => {
+    const event = new KeyboardEvent('keydown', { key: 'a' });
+    expect(shortcutForKeyboardEvent(event, {}, mac)).toBeNull();
+  });
+
+  it('ignores repeats on real KeyboardEvents', () => {
+    const event = new KeyboardEvent('keydown', { key: 't', metaKey: true, repeat: true });
+    expect(shortcutForKeyboardEvent(event, {}, mac)).toBeNull();
   });
 });

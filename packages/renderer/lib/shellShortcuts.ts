@@ -44,6 +44,7 @@ export function shortcutForKeyboardEvent(
   const platform = options.platform ?? detectPlatform();
 
   const tryMatch = (candidate: KeyboardLike): MatchedShortcut | null => {
+    if (!candidate.key) return null;
     const result = matchBinding(
       {
         key: candidate.key.toLowerCase(),
@@ -69,5 +70,16 @@ export function shortcutForKeyboardEvent(
     return { action: result.commandId as OrbShortcutAction, params: result.params };
   };
 
-  return tryMatch(event) ?? tryMatch({ ...event, ctrlKey: event.metaKey, metaKey: event.ctrlKey });
+  // Build the swapped-modifiers candidate explicitly instead of spreading the
+  // real KeyboardEvent: spreading only copies own enumerable properties, so a
+  // DOM KeyboardEvent can lose `key` and crash inside tryMatch's toLowerCase().
+  return tryMatch(event) ?? tryMatch({
+    key: event.key,
+    ctrlKey: event.metaKey,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    metaKey: event.ctrlKey,
+    repeat: event.repeat,
+    isComposing: event.isComposing,
+  });
 }
